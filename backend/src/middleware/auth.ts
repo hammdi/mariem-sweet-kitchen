@@ -4,8 +4,11 @@ import { User, IUser } from '../models/User';
 import { createError } from './errorHandler';
 import { logger } from '../utils/logger';
 
-// Étendre l'interface Request pour inclure user
+// Étendre l'interface Request pour inclure user.
+// Le "namespace" est le pattern officiel Express : on l'autorise explicitement ici.
+// eslint-disable-next-line @typescript-eslint/no-namespace
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       user?: IUser;

@@ -6,9 +6,9 @@ services:
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password123
-      MONGO_INITDB_DATABASE: mariem_kitchen
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?Set MONGO_PASSWORD in .env.docker}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-mariem_kitchen}
     volumes:
       - mongodb_data:/data/db
       - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
@@ -24,15 +24,15 @@ services:
     ports:
       - "3001:3001"
     environment:
-      NODE_ENV: production
+      NODE_ENV: ${NODE_ENV:-production}
       PORT: 3001
-      MONGODB_URI: mongodb://admin:password123@mongodb:27017/mariem_kitchen?authSource=admin
-      JWT_SECRET: mariem-sweet-kitchen-jwt-secret-2026
-      JWT_EXPIRES_IN: 7d
-      ADMIN_EMAIL: admin@mariemkitchen.com
-      ADMIN_PASSWORD: admin123
-      RATE_LIMIT_MAX_REQUESTS: 1000
-      CORS_ORIGIN: http://localhost:3000
+      MONGODB_URI: mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD}@mongodb:27017/${MONGO_DATABASE:-mariem_kitchen}?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env.docker}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@mariemkitchen.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env.docker}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-1000}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
     depends_on:
       - mongodb
     volumes:
@@ -45,7 +45,7 @@ services:
       context: .
       dockerfile: ./frontend/Dockerfile
       args:
-        VITE_API_URL: http://localhost:3001/api
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3001/api}
     container_name: mariem-frontend
     restart: unless-stopped
     ports:

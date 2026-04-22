@@ -1,8 +1,6 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { Recipe } from '../models/Recipe';
-import { Ingredient } from '../models/Ingredient';
-import { Appliance } from '../models/Appliance';
-import { authenticate, authorize, optionalAuth } from '../middleware/auth';
+import { authenticate, authorize } from '../middleware/auth';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 
@@ -10,12 +8,12 @@ const router = express.Router();
 
 // @desc    Liste des recettes (public)
 // @route   GET /api/recipes
-router.get('/', asyncHandler(async (req, res) => {
+router.get('/', asyncHandler(async (req: Request, res: Response) => {
   const { page = 1, limit = 10, search, category } = req.query;
 
   const query: any = { isActive: true };
-  if (search) query.$text = { $search: search as string };
-  if (category) query.categories = category;
+  if (search) {query.$text = { $search: search as string };}
+  if (category) {query.categories = category;}
 
   const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
 
@@ -44,7 +42,7 @@ router.get('/', asyncHandler(async (req, res) => {
 
 // @desc    Détail d'une recette (public)
 // @route   GET /api/recipes/:id
-router.get('/:id', asyncHandler(async (req, res) => {
+router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
   const recipe = await Recipe.findById(req.params.id)
     .populate('variants.ingredients.ingredientId', 'name pricePerUnit unit category')
     .populate('variants.appliances.applianceId', 'name powerConsumption category');
@@ -58,7 +56,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
 // @desc    Créer une recette (admin)
 // @route   POST /api/recipes
-router.post('/', authenticate, authorize('admin'), asyncHandler(async (req, res) => {
+router.post('/', authenticate, authorize('admin'), asyncHandler(async (req: Request, res: Response) => {
   const { name, description, categories, variants } = req.body;
 
   if (!variants || !Array.isArray(variants) || variants.length === 0) {
@@ -83,9 +81,9 @@ router.post('/', authenticate, authorize('admin'), asyncHandler(async (req, res)
 
 // @desc    Dupliquer une recette (admin)
 // @route   POST /api/recipes/:id/duplicate
-router.post('/:id/duplicate', authenticate, authorize('admin'), asyncHandler(async (req, res) => {
+router.post('/:id/duplicate', authenticate, authorize('admin'), asyncHandler(async (req: Request, res: Response) => {
   const original = await Recipe.findById(req.params.id);
-  if (!original) throw createError('Recette non trouvee', 404);
+  if (!original) {throw createError('Recette non trouvee', 404);}
 
   const duplicate = new Recipe({
     name: `${original.name} (copie)`,
@@ -119,16 +117,16 @@ router.post('/:id/duplicate', authenticate, authorize('admin'), asyncHandler(asy
 
 // @desc    Modifier une recette (admin)
 // @route   PUT /api/recipes/:id
-router.put('/:id', authenticate, authorize('admin'), asyncHandler(async (req, res) => {
+router.put('/:id', authenticate, authorize('admin'), asyncHandler(async (req: Request, res: Response) => {
   const recipe = await Recipe.findById(req.params.id);
-  if (!recipe) throw createError('Recette non trouvee', 404);
+  if (!recipe) {throw createError('Recette non trouvee', 404);}
 
   const { name, description, categories, variants, images } = req.body;
-  if (name !== undefined) recipe.name = name;
-  if (description !== undefined) recipe.description = description;
-  if (categories !== undefined) recipe.categories = categories;
-  if (variants !== undefined) recipe.variants = variants;
-  if (images !== undefined) recipe.images = images;
+  if (name !== undefined) {recipe.name = name;}
+  if (description !== undefined) {recipe.description = description;}
+  if (categories !== undefined) {recipe.categories = categories;}
+  if (variants !== undefined) {recipe.variants = variants;}
+  if (images !== undefined) {recipe.images = images;}
 
   await recipe.save();
 
@@ -144,9 +142,9 @@ router.put('/:id', authenticate, authorize('admin'), asyncHandler(async (req, re
 
 // @desc    Supprimer une recette (soft delete, admin)
 // @route   DELETE /api/recipes/:id
-router.delete('/:id', authenticate, authorize('admin'), asyncHandler(async (req, res) => {
+router.delete('/:id', authenticate, authorize('admin'), asyncHandler(async (req: Request, res: Response) => {
   const recipe = await Recipe.findById(req.params.id);
-  if (!recipe) throw createError('Recette non trouvee', 404);
+  if (!recipe) {throw createError('Recette non trouvee', 404);}
 
   recipe.isActive = false;
   await recipe.save();

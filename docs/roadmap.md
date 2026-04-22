@@ -62,6 +62,12 @@ Vision phasée pour Mariem's Sweet Kitchen. Chaque phase est livrable indépenda
 - [ ] Vue calendrier des commandes à venir.
 - [ ] Mise à jour prix en masse depuis Excel/CSV.
 
+### Features IA V2 (voir [ai-features.md](./ai-features.md))
+- [ ] **AI-1** Assistant création de recette (Gemini free tier) — détection oublis, suggestions quantités, génération description.
+- [ ] **AI-4** Résumé quotidien Telegram pour Mariem (briefing du matin).
+- [ ] **AI-13** Analyse de sentiment des notes clients.
+- [ ] **AI-14** Détection de commandes frauduleuses (no-show).
+
 ### Qualité
 - [ ] Tests E2E avec Playwright (parcours commande complet).
 - [ ] Sentry pour monitoring d'erreurs.
@@ -92,10 +98,34 @@ Vision phasée pour Mariem's Sweet Kitchen. Chaque phase est livrable indépenda
 - [ ] Traduction arabe complète (i18n avec `react-i18next`).
 - [ ] Arabisation de la DB (noms recettes, ingrédients en AR et FR).
 
-### Progressive Web App
+### Progressive Web App (reporté si priorité faible)
 - [ ] Service worker + manifest.
-- [ ] Installation sur écran d'accueil mobile.
+- [ ] Installation sur écran d'accueil mobile (Android + iOS 16.4+).
 - [ ] Mode hors ligne pour le catalogue.
+- [ ] Push notifications web (alternative gratuite à l'app native).
+
+### Mobile natif — hors scope V3, à revisiter en V4
+- Décision 2026-04-22 : pas d'app mobile tant qu'il n'y a pas de pivot marketplace.
+- Raisons : Hamdi sans expérience mobile, pas d'abo App Store (99 $/an), scope web encore à finir.
+- Piste si nécessaire : **Capacitor** (wrap le web, ~3-5 jours) avant **React Native** (~3-4 semaines).
+
+### Features IA V3 (voir [ai-features.md](./ai-features.md))
+- [ ] **AI-2** Voice-to-recipe (Mariem dicte une recette, IA la structure).
+- [ ] **AI-3** OCR factures fournisseurs (photo → mise à jour auto des prix).
+- [ ] **AI-5** Prédiction de demande hebdomadaire.
+- [ ] **AI-6** Optimiseur de planning du jour.
+- [ ] **AI-7** Détection d'anomalies de prix.
+- [ ] **AI-9** Chatbot conversationnel multilingue FR/AR/darija.
+- [ ] **AI-11** Traduction automatique FR ↔ AR.
+- [ ] **AI-12** Génération d'images placeholder pour recettes.
+- [ ] **AI-16** Génération automatique des posts réseaux sociaux.
+
+### Infrastructure IA
+- [ ] Service unifié `AIGateway` (abstraction providers).
+- [ ] Rate-limiter IA dédié par feature et par utilisateur.
+- [ ] Budget tracker avec alertes Telegram + coupure auto.
+- [ ] Feature flags pour toggle IA à la volée.
+- [ ] Cache Redis pour prompts récurrents.
 
 ### Qualité
 - [ ] Documentation OpenAPI/Swagger auto-générée.
@@ -116,11 +146,12 @@ Vision phasée pour Mariem's Sweet Kitchen. Chaque phase est livrable indépenda
 - [ ] API publique pour intégrations tierces.
 
 ### Features IA (différenciation)
-- [ ] **Suggestions de recettes** personnalisées par client (filtrage collaboratif).
-- [ ] **Génération de descriptions** de recettes (OpenAI ou Claude) depuis les ingrédients.
-- [ ] **Reconnaissance d'image** : client upload photo d'un gâteau → suggestions de recettes similaires chez les artisans.
-- [ ] **Chatbot** de commande en langage naturel (FR/AR/darija).
-- [ ] **Prédiction de demande** pour aider les artisans à anticiper la production.
+Catalogue complet des idées IA avec priorités, coûts estimés et providers gratuits dans [ai-features.md](./ai-features.md). Les features IA sont réparties sur V2, V3 et V4 selon le rapport valeur/complexité.
+
+Highlights V4 :
+- **Reconnaissance photo → recette** (Claude vision / CLIP).
+- **Chatbot WhatsApp Business** piloté par LLM (création de commande depuis WhatsApp).
+- **Analyse de la concurrence** (crawler + synthèse LLM).
 
 ---
 

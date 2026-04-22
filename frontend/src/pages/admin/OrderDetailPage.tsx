@@ -1,14 +1,18 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import toast from 'react-hot-toast'
+import { toast } from 'react-toastify'
 import api from '../../services/api'
 import {
   Container, Typography, Box, Button, Card, CardContent, Grid,
   Table, TableBody, TableCell, TableContainer, TableRow,
   IconButton, Chip, Checkbox, FormControlLabel, Paper,
-  FormControl, Select, MenuItem,
+  TextField,
+  Dialog, DialogTitle, DialogContent, DialogActions, Stepper, Step, StepLabel,
 } from '@mui/material'
 import { ArrowBack } from '@mui/icons-material'
+
+// Ordre logique des étapes
+const STATUS_STEPS = ['pending', 'confirmed', 'paid', 'preparing', 'ready'] as const
 
 const statusLabels: Record<string, { label: string; color: any }> = {
   pending: { label: 'En attente', color: 'warning' },
@@ -25,6 +29,7 @@ const OrderDetailPage = () => {
   const [order, setOrder] = useState<any>(null)
   const [allIngredients, setAllIngredients] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; status: string; label: string }>({ open: false, status: '', label: '' })
 
   // Charger ingredients pour avoir les noms
   useEffect(() => {
@@ -86,13 +91,25 @@ const OrderDetailPage = () => {
     try {
       await api.put(`/orders/${id}/status`, { status })
       await load()
-      toast.success(`Statut change : ${statusLabels[status]?.label || status}`)
-    } catch {
-      toast.error('Erreur lors du changement de statut')
+      const label = statusLabels[status]?.label || status
+      if (status === 'paid') {
+        toast.success(`Commande payee ! Merci ${order.clientName}`)
+      } else if (status === 'ready') {
+        toast.success(`Commande prete ! Appelez ${order.clientName}`)
+      } else if (status === 'cancelled') {
+        toast.warn('Commande annulee')
+      } else {
+        toast.success(`Statut : ${label}`)
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Erreur lors du changement de statut')
     }
   }
 
   if (!order) return null
+
+  const isEditable = ['pending', 'confirmed', 'paid'].includes(order.status)
+  const isTerminal = ['ready', 'cancelled'].includes(order.status)
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#fafafa' }}>
@@ -100,7 +117,7 @@ const OrderDetailPage = () => {
         <Container maxWidth="lg">
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <IconButton onClick={() => navigate('/admin/orders')}><ArrowBack /></IconButton>
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+            <Typography variant="h5" sx={{ fontWeight: 600, fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' } }}>
               Commande de {order.clientName}
             </Typography>
             <Chip
@@ -112,6 +129,22 @@ const OrderDetailPage = () => {
         </Container>
       </Box>
 
+      {/* Bandeau statut terminal */}
+      {order.status === 'ready' && (
+        <Box sx={{ bgcolor: '#e8f5e9', borderBottom: '2px solid #4caf50', py: 1.5, px: 3, textAlign: 'center' }}>
+          <Typography variant="body1" sx={{ fontWeight: 600, color: '#2e7d32' }}>
+            Commande prete — {order.totalPrice?.toFixed(2)} DT — Appelez {order.clientName} !
+          </Typography>
+        </Box>
+      )}
+      {order.status === 'cancelled' && (
+        <Box sx={{ bgcolor: '#ffebee', borderBottom: '2px solid #ef5350', py: 1.5, px: 3, textAlign: 'center' }}>
+          <Typography variant="body1" sx={{ fontWeight: 600, color: '#c62828' }}>
+            Commande annulee
+          </Typography>
+        </Box>
+      )}
+
       <Container maxWidth="lg" sx={{ py: 3 }}>
         <Grid container spacing={3}>
           {/* Info client */}
@@ -122,17 +155,79 @@ const OrderDetailPage = () => {
                 <Typography><strong>Nom :</strong> {order.clientName}</Typography>
                 <Typography><strong>Tel :</strong> {order.clientPhone}</Typography>
                 {order.notes && <Typography sx={{ mt: 1 }}><strong>Notes :</strong> {order.notes}</Typography>}
-                <Typography sx={{ mt: 1 }}><strong>Date :</strong> {new Date(order.createdAt).toLocaleString('fr-TN')}</Typography>
+                <Typography sx={{ mt: 1 }}><strong>Commande le :</strong> {new Date(order.createdAt).toLocaleString('fr-TN')}</Typography>
 
+                {/* Rendez-vous */}
+                {order.requestedDate && (
+                  <Paper variant="outlined" sx={{ p: 1.5, mt: 2, bgcolor: '#fff3e0', borderColor: '#ffb74d' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#e65100' }}>
+                      RDV souhaite par le client :
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      {new Date(order.requestedDate).toLocaleString('fr-TN', { dateStyle: 'full', timeStyle: 'short' })}
+                    </Typography>
+                  </Paper>
+                )}
+
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600 }}>
+                    Date confirmee :
+                  </Typography>
+                  <TextField
+                    fullWidth size="small" type="datetime-local"
+                    disabled={isTerminal}
+                    value={order.confirmedDate ? new Date(order.confirmedDate).toISOString().slice(0, 16) : ''}
+                    InputLabelProps={{ shrink: true }}
+                    onChange={async (e) => {
+                      try {
+                        await api.put(`/orders/${id}`, { confirmedDate: e.target.value || null })
+                        await load()
+                        toast.success(e.target.value ? 'Date confirmee' : 'Date retiree')
+                      } catch { toast.error('Erreur') }
+                    }}
+                  />
+                  {order.confirmedDate && (
+                    <Chip label="Confirme" color="success" size="small" sx={{ mt: 0.5 }} />
+                  )}
+                </Box>
+
+                {/* Etapes de la commande */}
                 <Box sx={{ mt: 3 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>Changer le statut :</Typography>
-                  <FormControl fullWidth size="small">
-                    <Select value={order.status} onChange={e => changeStatus(e.target.value)}>
-                      {Object.entries(statusLabels).map(([k, v]) => (
-                        <MenuItem key={k} value={k}>{v.label}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Progression :</Typography>
+                  <Stepper
+                    activeStep={STATUS_STEPS.indexOf(order.status as any)}
+                    orientation="vertical"
+                    sx={{ '& .MuiStepLabel-label': { fontSize: '0.8rem' } }}
+                  >
+                    {STATUS_STEPS.map((s) => (
+                      <Step key={s} completed={STATUS_STEPS.indexOf(order.status) > STATUS_STEPS.indexOf(s)}>
+                        <StepLabel
+                          sx={{ cursor: s !== order.status ? 'pointer' : 'default', '&:hover': s !== order.status ? { bgcolor: '#f5f5f5' } : {} }}
+                          onClick={() => {
+                            if (s !== order.status) {
+                              setConfirmDialog({ open: true, status: s, label: statusLabels[s]?.label || s })
+                            }
+                          }}
+                        >
+                          {statusLabels[s]?.label || s}
+                        </StepLabel>
+                      </Step>
+                    ))}
+                  </Stepper>
+                  {order.status !== 'cancelled' && (
+                    <Button size="small" color="error" variant="outlined" fullWidth sx={{ mt: 2 }}
+                      onClick={() => setConfirmDialog({ open: true, status: 'cancelled', label: 'Annulee' })}
+                    >
+                      Annuler la commande
+                    </Button>
+                  )}
+                  {order.status === 'cancelled' && (
+                    <Button size="small" color="primary" variant="outlined" fullWidth sx={{ mt: 2 }}
+                      onClick={() => setConfirmDialog({ open: true, status: 'pending', label: 'En attente' })}
+                    >
+                      Reactiver la commande
+                    </Button>
+                  )}
                 </Box>
 
                 {/* Contact rapide */}
@@ -154,6 +249,48 @@ const OrderDetailPage = () => {
                 </Box>
               </CardContent>
             </Card>
+
+            {/* Bouton Ingrédients prêts — visible quand payée, avant preparation */}
+            {order.status === 'paid' && (
+              <Card sx={{ mt: 2, border: '2px solid #ff9800' }}>
+                <CardContent>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                    Lancer la preparation ?
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Verifiez les ingredients a droite, puis confirmez. Le stock sera deduit automatiquement.
+                  </Typography>
+                  <Button
+                    variant="contained" color="success" fullWidth
+                    onClick={async () => {
+                      try {
+                        await api.put(`/orders/${id}`, { ingredientsReady: true })
+                        await load()
+                        toast.success('Preparation lancee ! Stock deduit.')
+                      } catch (err: any) {
+                        toast.error(err.response?.data?.message || 'Erreur')
+                      }
+                    }}
+                  >
+                    Ingredients prets — Lancer la preparation
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Indicateur si en preparation */}
+            {order.status === 'preparing' && (
+              <Card sx={{ mt: 2, border: '2px solid #4caf50', bgcolor: '#e8f5e9' }}>
+                <CardContent>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#2e7d32' }}>
+                    En cours de preparation
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Stock deduit. Marquez "Prete" quand c'est fini.
+                  </Typography>
+                </CardContent>
+              </Card>
+            )}
           </Grid>
 
           {/* Articles */}
@@ -194,7 +331,7 @@ const OrderDetailPage = () => {
 
                     {/* Ingredients avec checkbox — sauvegarde auto */}
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                      Confirmer les ingredients que le client ramene :
+                      {isEditable ? 'Confirmer les ingredients que le client ramene :' : 'Ingredients :'}
                     </Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 2 }}>
                       {variant?.ingredients?.map((vi: any) => {
@@ -210,14 +347,14 @@ const OrderDetailPage = () => {
                         const hasEnough = stock >= vi.quantity
 
                         return (
-                          <Box key={ingId} sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                          <Box key={ingId} sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, gap: { xs: 0.5, sm: 1 }, flexWrap: 'wrap' }}>
                             <FormControlLabel
-                              sx={{ flex: 1 }}
+                              sx={{ flex: 1, minWidth: 0 }}
                               control={
                                 <Checkbox
                                   checked={isProvided}
                                   onChange={() => toggleIngredient(itemIndex, ingId)}
-                                  disabled={saving}
+                                  disabled={saving || !isEditable}
                                 />
                               }
                               label={
@@ -297,39 +434,6 @@ const OrderDetailPage = () => {
               )
             })}
 
-            {/* Confirmation ingredients prets */}
-            {['pending', 'confirmed'].includes(order.status) && (
-              <Card sx={{ mb: 2, border: order.ingredientsReady ? '2px solid #4caf50' : '2px solid #ff9800' }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' }, gap: 2 }}>
-                    <Box>
-                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                        {order.ingredientsReady ? 'Ingredients prets !' : 'Ingredients pas encore confirmes'}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {order.ingredientsReady
-                          ? 'Vous pouvez lancer la preparation'
-                          : 'Confirmez que tous les ingredients sont disponibles avant de lancer la preparation'}
-                      </Typography>
-                    </Box>
-                    <Button
-                      variant="contained"
-                      color={order.ingredientsReady ? 'error' : 'success'}
-                      onClick={async () => {
-                        try {
-                          await api.put(`/orders/${id}`, { ingredientsReady: !order.ingredientsReady })
-                          await load()
-                          toast.success(order.ingredientsReady ? 'Confirmation retiree' : 'Ingredients confirmes prets')
-                        } catch { toast.error('Erreur') }
-                      }}
-                    >
-                      {order.ingredientsReady ? 'Annuler' : 'Confirmer prets'}
-                    </Button>
-                  </Box>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Total global */}
             <Card>
               <CardContent>
@@ -344,6 +448,33 @@ const OrderDetailPage = () => {
           </Grid>
         </Grid>
       </Container>
+
+      {/* Dialog de confirmation changement de statut */}
+      <Dialog open={confirmDialog.open} onClose={() => setConfirmDialog({ ...confirmDialog, open: false })}>
+        <DialogTitle>Confirmer le changement</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Changer le statut de <strong>{statusLabels[order?.status]?.label}</strong> vers <strong>{confirmDialog.label}</strong> ?
+          </Typography>
+          {confirmDialog.status === 'cancelled' && (
+            <Typography color="error" sx={{ mt: 1 }}>
+              La commande sera annulee. Vous pourrez la reactiver plus tard.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDialog({ ...confirmDialog, open: false })}>Non, annuler</Button>
+          <Button variant="contained"
+            color={confirmDialog.status === 'cancelled' ? 'error' : 'primary'}
+            onClick={async () => {
+              setConfirmDialog({ ...confirmDialog, open: false })
+              await changeStatus(confirmDialog.status)
+            }}
+          >
+            Oui, confirmer
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

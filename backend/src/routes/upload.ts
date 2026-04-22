@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -50,7 +50,7 @@ router.post(
   '/',
   authenticate,
   authorize('admin'),
-  (req, res, next) => {
+  (req: Request, res: Response, next: NextFunction) => {
     upload.array('images', 10)(req, res, (err) => {
       if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
@@ -67,7 +67,7 @@ router.post(
       next();
     });
   },
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const files = req.files as Express.Multer.File[];
 
     if (!files || files.length === 0) {

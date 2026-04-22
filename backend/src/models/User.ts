@@ -78,7 +78,7 @@ userSchema.index({ isActive: 1 });
 // Middleware pour hasher le mot de passe avant sauvegarde
 userSchema.pre('save', async function(next) {
   // Ne hasher que si le mot de passe a été modifié
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password')) {return next();}
 
   try {
     // Hasher le mot de passe avec un salt de 12

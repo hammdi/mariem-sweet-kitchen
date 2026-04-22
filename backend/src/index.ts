@@ -1,3 +1,10 @@
+// IMPORTANT: dotenv doit etre charge AVANT tout autre import.
+// Les modules telegramService, geminiProvider, groqProvider lisent process.env
+// au "module scope" (a l'import). Si dotenv.config() s'execute apres leurs
+// imports, les variables sont undefined et les services se desactivent
+// silencieusement.
+import 'dotenv/config';
+
 import express from 'express';
 import http from 'http';
 import path from 'path';
@@ -7,7 +14,6 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
 
 import { connectDatabase } from './config/database';
 import { errorHandler } from './middleware/errorHandler';
@@ -22,9 +28,8 @@ import applianceRoutes from './routes/appliances';
 import priceRoutes from './routes/prices';
 import settingsRoutes from './routes/settings';
 import uploadRoutes from './routes/upload';
-
-// Charger les variables d'environnement
-dotenv.config();
+import aiRoutes from './routes/ai';
+import availabilityRoutes from './routes/availability';
 
 // Fail-fast: refuser de démarrer sans un JWT_SECRET fort.
 // Sans ça, n'importe qui peut forger un token si la valeur d'exemple reste en place.
@@ -95,6 +100,8 @@ app.use('/api/appliances', applianceRoutes);
 app.use('/api/prices', priceRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/availability', availabilityRoutes);
 
 // Route de santé
 app.get('/api/health', (req, res) => {

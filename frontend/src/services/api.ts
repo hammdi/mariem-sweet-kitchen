@@ -1,5 +1,5 @@
 import axios from 'axios'
-import toast from 'react-hot-toast'
+import { toast } from 'react-toastify'
 
 // Configuration de base d'axios
 const api = axios.create({

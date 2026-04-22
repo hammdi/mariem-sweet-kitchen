@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import toast from 'react-hot-toast'
+import { toast } from 'react-toastify'
 import api from '../../services/api'
 import {
   Container, Typography, Box, Button, Card, CardContent,
@@ -25,9 +25,9 @@ const SettingsPage = () => {
   const [prefs, setPrefs] = useState({
     darkMode: false,
     language: 'fr',
-    whatsappNumber: '+21612345678',
+    whatsappNumber: `+${import.meta.env.VITE_WHATSAPP_NUMBER || '21612345678'}`,
     businessName: "Mariem's Sweet Kitchen",
-    businessPhone: '+21612345678',
+    businessPhone: `+${import.meta.env.VITE_WHATSAPP_NUMBER || '21612345678'}`,
     businessAddress: '',
     currency: 'DT',
     telegramEnabled: false,

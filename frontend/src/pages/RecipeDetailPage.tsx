@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import toast from 'react-hot-toast'
+import { toast } from 'react-toastify'
 import api from '../services/api'
 import {
   Container, Typography, Box, Grid, Card, CardContent, CardMedia,
@@ -9,6 +9,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, Skeleton, Divider,
 } from '@mui/material'
 import { ArrowBack, Cake, ShoppingBag, Phone } from '@mui/icons-material'
+import OrderDatePicker from '../components/common/OrderDatePicker'
 
 const RecipeDetailPage = () => {
   const { id } = useParams()
@@ -23,7 +24,7 @@ const RecipeDetailPage = () => {
 
   // Commande
   const [orderOpen, setOrderOpen] = useState(false)
-  const [orderForm, setOrderForm] = useState({ clientName: '', clientPhone: '', quantity: 1, notes: '' })
+  const [orderForm, setOrderForm] = useState({ clientName: '', clientPhone: '', quantity: 1, requestedDate: '', notes: '' })
   const [clientOffered, setClientOffered] = useState<string[]>([])
   const [orderSending, setOrderSending] = useState(false)
 
@@ -72,6 +73,7 @@ const RecipeDetailPage = () => {
       await api.post('/orders', {
         clientName: orderForm.clientName,
         clientPhone: orderForm.clientPhone,
+        requestedDate: orderForm.requestedDate || null,
         items: [{
           recipeId: recipe._id,
           variantIndex: selectedVariant,
@@ -126,7 +128,7 @@ const RecipeDetailPage = () => {
               </Box>
             )}
             <CardContent>
-              <Typography variant="h4" sx={{ fontFamily: 'Playfair Display', fontWeight: 600, mb: 1 }}>
+              <Typography variant="h4" sx={{ fontFamily: 'Playfair Display', fontWeight: 600, mb: 1, fontSize: { xs: '1.5rem', md: '2.125rem' } }}>
                 {recipe.name}
               </Typography>
               <Typography variant="body1" color="text.secondary" sx={{ mb: 2, lineHeight: 1.6 }}>
@@ -137,6 +139,24 @@ const RecipeDetailPage = () => {
                   <Chip key={i} label={cat} color="primary" variant="outlined" />
                 ))}
               </Box>
+            </CardContent>
+          </Card>
+
+          {/* Calendrier sous la carte recette */}
+          <Card sx={{ mt: 2 }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, fontSize: { xs: '1rem', md: '1.25rem' } }}>
+                Quand voulez-vous votre commande ?
+              </Typography>
+              <OrderDatePicker
+                value={orderForm.requestedDate}
+                onChange={(v: string) => setOrderForm({ ...orderForm, requestedDate: v })}
+              />
+              {orderForm.requestedDate && (
+                <Typography variant="body2" color="success.main" sx={{ mt: 1, fontWeight: 500 }}>
+                  Mariem confirmera la date apres votre commande
+                </Typography>
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -285,13 +305,14 @@ const RecipeDetailPage = () => {
             <Button variant="contained" size="large" fullWidth
               startIcon={<ShoppingBag />}
               onClick={() => setOrderOpen(true)}
+              disabled={!orderForm.requestedDate}
               sx={{ py: 1.5, fontSize: '1.1rem' }}
             >
-              Commander
+              {orderForm.requestedDate ? 'Commander' : 'Choisissez une date'}
             </Button>
-            <Button variant="outlined" size="large"
+            <Button variant="outlined" size="large" fullWidth
               startIcon={<Phone />}
-              href="https://wa.me/21612345678"
+              href={`https://wa.me/${import.meta.env.VITE_WHATSAPP_NUMBER || '21612345678'}`}
               target="_blank"
               sx={{ py: 1.5 }}
             >
@@ -310,7 +331,7 @@ const RecipeDetailPage = () => {
           </Typography>
           <Grid container spacing={3}>
             {suggestions.map((s) => (
-              <Grid item xs={6} sm={6} md={3} key={s._id}>
+              <Grid item xs={12} sm={6} md={3} key={s._id}>
                 <Card
                   sx={{
                     cursor: 'pointer',
@@ -351,31 +372,44 @@ const RecipeDetailPage = () => {
       )}
 
       {/* Dialog de commande */}
-      <Dialog open={orderOpen} onClose={() => setOrderOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={orderOpen} onClose={() => setOrderOpen(false)} maxWidth="sm" fullWidth scroll="body">
         <DialogTitle>Commander — {recipe.name}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Taille : {variant?.sizeName} — Prix : {priceInfo?.total?.toFixed(2)} DT
           </Typography>
 
-          <TextField fullWidth label="Votre nom" required sx={{ mb: 2, mt: 1 }}
+          <TextField fullWidth size="small" label="Votre nom" required sx={{ mb: 2, mt: 1 }}
             value={orderForm.clientName}
             onChange={e => setOrderForm({ ...orderForm, clientName: e.target.value })}
           />
-          <TextField fullWidth label="Votre telephone" required sx={{ mb: 2 }}
+          <TextField fullWidth size="small" label="Votre telephone" required sx={{ mb: 2 }}
             value={orderForm.clientPhone}
             onChange={e => setOrderForm({ ...orderForm, clientPhone: e.target.value })}
             placeholder="+216 XX XXX XXX"
           />
-          <TextField fullWidth label="Quantite" type="number" sx={{ mb: 2 }}
+          <TextField fullWidth size="small" label="Quantite" type="number" sx={{ mb: 2 }}
             value={orderForm.quantity}
             onChange={e => setOrderForm({ ...orderForm, quantity: Math.max(1, parseInt(e.target.value) || 1) })}
             inputProps={{ min: 1 }}
           />
-          <TextField fullWidth label="Notes (optionnel)" multiline rows={2} sx={{ mb: 1 }}
+          {/* Rappel de la date choisie (le calendrier est sur la page principale) */}
+          {orderForm.requestedDate && (
+            <Box sx={{ mb: 2, p: 1.5, bgcolor: '#fff3e0', borderRadius: 2, border: '1px solid #ffe0b2' }}>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                Date souhaitee : {new Date(orderForm.requestedDate).toLocaleString('fr-TN', {
+                  weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit',
+                })}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Mariem confirmera par telephone
+              </Typography>
+            </Box>
+          )}
+          <TextField fullWidth size="small" label="Notes (optionnel)" multiline rows={2} sx={{ mb: 1 }}
             value={orderForm.notes}
             onChange={e => setOrderForm({ ...orderForm, notes: e.target.value })}
-            placeholder="Date souhaitee, demande speciale..."
+            placeholder="Demande speciale, allergies..."
           />
 
           <Divider sx={{ my: 2 }} />

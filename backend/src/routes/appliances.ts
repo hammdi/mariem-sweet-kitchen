@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { Appliance } from '../models/Appliance';
 import { authenticate, authorize } from '../middleware/auth';
 import { asyncHandler, createError } from '../middleware/errorHandler';
@@ -9,7 +9,7 @@ const router = express.Router();
 // @desc    Récupérer tous les appareils
 // @route   GET /api/appliances
 // @access  Public
-router.get('/', asyncHandler(async (req, res) => {
+router.get('/', asyncHandler(async (req: Request, res: Response) => {
   const {
     page = 1,
     limit = 50,
@@ -64,7 +64,7 @@ router.get('/', asyncHandler(async (req, res) => {
 // @desc    Récupérer un appareil par ID
 // @route   GET /api/appliances/:id
 // @access  Public
-router.get('/:id', asyncHandler(async (req, res) => {
+router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
   const appliance = await Appliance.findById(req.params.id);
 
   if (!appliance || !appliance.isActive) {
@@ -80,7 +80,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 // @desc    Créer un nouvel appareil
 // @route   POST /api/appliances
 // @access  Private (Admin)
-router.post('/', authenticate, authorize('admin'), asyncHandler(async (req, res) => {
+router.post('/', authenticate, authorize('admin'), asyncHandler(async (req: Request, res: Response) => {
   const { name, powerConsumption, unit, category, description, brand, model } = req.body;
 
   // Vérifier si l'appareil existe déjà
@@ -113,7 +113,7 @@ router.post('/', authenticate, authorize('admin'), asyncHandler(async (req, res)
 // @desc    Mettre à jour un appareil
 // @route   PUT /api/appliances/:id
 // @access  Private (Admin)
-router.put('/:id', authenticate, authorize('admin'), asyncHandler(async (req, res) => {
+router.put('/:id', authenticate, authorize('admin'), asyncHandler(async (req: Request, res: Response) => {
   const appliance = await Appliance.findById(req.params.id);
 
   if (!appliance) {
@@ -144,7 +144,7 @@ router.put('/:id', authenticate, authorize('admin'), asyncHandler(async (req, re
 // @desc    Supprimer un appareil
 // @route   DELETE /api/appliances/:id
 // @access  Private (Admin)
-router.delete('/:id', authenticate, authorize('admin'), asyncHandler(async (req, res) => {
+router.delete('/:id', authenticate, authorize('admin'), asyncHandler(async (req: Request, res: Response) => {
   const appliance = await Appliance.findById(req.params.id);
 
   if (!appliance) {
@@ -166,7 +166,7 @@ router.delete('/:id', authenticate, authorize('admin'), asyncHandler(async (req,
 // @desc    Calculer la consommation électrique
 // @route   POST /api/appliances/:id/calculate-consumption
 // @access  Public
-router.post('/:id/calculate-consumption', asyncHandler(async (req, res) => {
+router.post('/:id/calculate-consumption', asyncHandler(async (req: Request, res: Response) => {
   const { hours, pricePerKwh = 0.15 } = req.body;
 
   if (!hours || hours <= 0) {

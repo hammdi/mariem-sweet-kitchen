@@ -28,7 +28,7 @@ const HeroSection = () => {
     <Box
       sx={{
         background: 'linear-gradient(135deg, #fef7ee 0%, #fad7a5 100%)',
-        py: { xs: 8, md: 12 },
+        py: { xs: 5, md: 12 },
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -71,7 +71,7 @@ const HeroSection = () => {
                 sx={{
                   fontFamily: 'Playfair Display',
                   fontWeight: 700,
-                  fontSize: { xs: '2.5rem', md: '3.5rem' },
+                  fontSize: { xs: '1.75rem', sm: '2.25rem', md: '3rem' },
                   color: 'primary.main',
                   mb: 2,
                   lineHeight: 1.2,

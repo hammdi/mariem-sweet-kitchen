@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import toast from 'react-hot-toast'
+import { toast } from 'react-toastify'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
 import {
   Container, Typography, Box, Button, Card, CardContent,

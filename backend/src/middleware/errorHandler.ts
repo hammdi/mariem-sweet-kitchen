@@ -10,7 +10,7 @@ export const errorHandler = (
   error: AppError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   let { statusCode = 500, message } = error;
 
@@ -68,7 +68,9 @@ export const createError = (message: string, statusCode: number = 500): AppError
   return error;
 };
 
-export const asyncHandler = (fn: Function) => {
+type AsyncRouteHandler = (req: Request, res: Response, next: NextFunction) => Promise<unknown>;
+
+export const asyncHandler = (fn: AsyncRouteHandler) => {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };

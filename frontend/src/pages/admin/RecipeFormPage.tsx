@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import toast from 'react-hot-toast'
+import { toast } from 'react-toastify'
 import api from '../../services/api'
 import {
   Container, Typography, Box, Button, Card, CardContent,

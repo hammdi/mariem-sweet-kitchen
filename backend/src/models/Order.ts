@@ -25,6 +25,10 @@ export interface IOrder extends Document {
   totalPrice: number;
   status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'paid' | 'cancelled';
   ingredientsReady: boolean;
+  requestedDate: Date | null;
+  confirmedDate: Date | null;
+  additionalFees: { label: string; amount: number }[];
+  source: 'website' | 'manual';   // d'où vient la commande
   notes: string;
   createdAt: Date;
   updatedAt: Date;
@@ -101,6 +105,23 @@ const orderSchema = new Schema<IOrder>({
     type: Boolean,
     default: false
   },
+  requestedDate: {
+    type: Date,
+    default: null
+  },
+  confirmedDate: {
+    type: Date,
+    default: null
+  },
+  additionalFees: [{
+    label: { type: String, required: true, trim: true },
+    amount: { type: Number, required: true, min: 0 }
+  }],
+  source: {
+    type: String,
+    enum: ['website', 'manual'],
+    default: 'website'
+  },
   notes: {
     type: String,
     trim: true,
@@ -119,11 +140,12 @@ orderSchema.index({ clientPhone: 1 });
 // Recalculer totalPrice quand items changent.
 // Arrondi au millime près (3 décimales) pour éviter les dérives flottantes sur la somme.
 orderSchema.pre('save', function(next) {
-  if (this.isModified('items')) {
-    const raw = this.items.reduce((sum, item) => {
+  if (this.isModified('items') || this.isModified('additionalFees')) {
+    const itemsTotal = this.items.reduce((sum, item) => {
       return sum + (item.calculatedPrice?.total || 0) * item.quantity;
     }, 0);
-    this.totalPrice = Math.round(raw * 1000) / 1000;
+    const feesTotal = (this.additionalFees || []).reduce((sum, fee) => sum + (fee.amount || 0), 0);
+    this.totalPrice = Math.round((itemsTotal + feesTotal) * 1000) / 1000;
   }
   next();
 });

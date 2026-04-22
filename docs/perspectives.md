@@ -24,22 +24,38 @@ Faire la démo d'un SaaS de A à Z (product thinking + tech + go-to-market) est 
 
 ---
 
+## Axe 1.5 — Mobile (reporté à V4 minimum)
+
+**Décision prise le 2026-04-22** : on reste 100 % web jusqu'à V3 au moins.
+
+### Pourquoi on ne fait pas d'app mobile maintenant
+- Hamdi n'a pas d'expérience mobile et n'a pas d'abonnement App Store (99 $/an Apple) ni Google Play (25 $ unique).
+- Le scope web V1 n'est pas encore livré — ajouter mobile = retard produit.
+- Une app native double la charge de maintenance pour un gain marginal sur ce marché.
+- Les notifications transactionnelles passent très bien par Telegram (admin) et WhatsApp/SMS (client).
+
+### Quand revisiter la question
+- **V3** : si le volume justifie la présence App Store pour crédibilité → **Capacitor** (wrap le site web, 100 % réutilisable, ~3-5 jours de dev, frais store seulement).
+- **V4** : si pivot marketplace multi-artisans → **React Native + Expo** (vraie app native, OTA updates via Expo Push API gratuit, ~3-4 semaines pour un MVP).
+
+### Piste intermédiaire — PWA
+La Progressive Web App reste une option intéressante même en V2 : installable sur écran d'accueil Android + iOS, push notifications natives, zéro store fee, réutilise 100 % du code React existant. Effort estimé : **1-2 jours** (manifest + service worker + notifications web push). À considérer quand le trafic justifie.
+
 ## Axe 2 — Intelligence artificielle pragmatique
 
-Pas de hype. Utiliser l'IA uniquement si elle résout un vrai problème utilisateur.
+Pas de hype. Utiliser l'IA uniquement si elle résout un vrai problème utilisateur. **Tier gratuit privilégié** (Gemini, Groq, Cloudflare Workers AI, Hugging Face).
 
-### IA "utile tout de suite"
-- **Génération de description de recettes** depuis les ingrédients → Mariem gagne du temps quand elle crée une recette. API Claude ou OpenAI, ~0,001 $ par description.
-- **Suggestions de tailles automatiques** : l'IA analyse les recettes similaires existantes et propose les quantités par taille.
-- **Chatbot de commande en darija** (FR/AR/tunisien) : baisse la barrière pour les clients non-tech. Un vrai différenciateur en Tunisie.
+Le catalogue exhaustif de **17 features IA** avec priorités, coûts estimés et choix de providers est dans [ai-features.md](./ai-features.md).
 
-### IA "qui fait rêver" (V4+)
-- **Reconnaissance d'image gâteau** : le client upload une photo trouvée sur Instagram, l'IA détecte le type (fraisier, Saint-Honoré, baklawa…) et suggère des artisans qui en font. Modèle CLIP ou similaire.
-- **Prédiction de demande** : basé sur historique + météo + calendrier (ramadan, Aïd, mariage), on prédit les commandes de la semaine pour aider Mariem à préparer.
-- **Pricing dynamique** (optionnel, controversé) : ajuster la marge selon la demande.
+### Highlights — features les plus valorisantes
+- **Assistant création de recette** pour Mariem (détection oublis, suggestions quantités) — V2, gratuit via Gemini.
+- **Voice-to-recipe** : Mariem dicte, l'IA structure — V3, waouh garanti en démo.
+- **OCR factures fournisseurs** : photo → mise à jour auto des prix ingrédients — V3.
+- **Chatbot multilingue FR/AR/darija** avec function calling sur le catalogue — V3.
+- **Reconnaissance photo → recette** : client upload photo Insta, match avec le catalogue — V4.
 
 ### Bénéfice pour la carrière
-Savoir **intégrer** un LLM à une app réelle (prompt engineering, coûts, latence, fallback) est une compétence rare et payée. Bonus : tu ne fais pas "un chatbot de plus", tu résous un problème.
+Savoir **intégrer** un LLM à une app réelle (prompt engineering, coûts, latence, fallback, multi-provider) est une compétence rare et payée. Bonus : tu ne fais pas "un chatbot de plus", tu résous des problèmes concrets d'une TPE. Argument portfolio solide : *"5 features IA en production, budget plafonné à 20 DT/mois, architecture multi-provider."*
 
 ---
 

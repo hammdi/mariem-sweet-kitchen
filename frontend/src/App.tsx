@@ -20,7 +20,11 @@ import OrderDetailPage from './pages/admin/OrderDetailPage'
 import StockPage from './pages/admin/StockPage'
 import CategoriesPage from './pages/admin/CategoriesPage'
 import SettingsPage from './pages/admin/SettingsPage'
+import CalendarPage from './pages/admin/CalendarPage'
+import ManualOrderPage from './pages/admin/ManualOrderPage'
+import ShoppingListPage from './pages/admin/ShoppingListPage'
 import NotFoundPage from './pages/NotFoundPage'
+import ProtectedRoute from './components/common/ProtectedRoute'
 
 // Theme
 const theme = createTheme({
@@ -94,18 +98,23 @@ function App() {
         {/* Login admin */}
         <Route path="/auth/login" element={<LoginPage />} />
 
-        {/* Admin */}
-        <Route path="/admin" element={<DashboardPage />} />
-        <Route path="/admin/recipes" element={<AdminRecipesPage />} />
-        <Route path="/admin/recipes/new" element={<RecipeFormPage />} />
-        <Route path="/admin/recipes/:id/edit" element={<RecipeFormPage />} />
-        <Route path="/admin/ingredients" element={<IngredientsPage />} />
-        <Route path="/admin/appliances" element={<AppliancesPage />} />
-        <Route path="/admin/orders" element={<OrdersPage />} />
-        <Route path="/admin/orders/:id" element={<OrderDetailPage />} />
-        <Route path="/admin/stock" element={<StockPage />} />
-        <Route path="/admin/categories" element={<CategoriesPage />} />
-        <Route path="/admin/settings" element={<SettingsPage />} />
+        {/* Admin — protégé par authentification */}
+        <Route path="/admin" element={<ProtectedRoute />}>
+          <Route index element={<DashboardPage />} />
+          <Route path="recipes" element={<AdminRecipesPage />} />
+          <Route path="recipes/new" element={<RecipeFormPage />} />
+          <Route path="recipes/:id/edit" element={<RecipeFormPage />} />
+          <Route path="ingredients" element={<IngredientsPage />} />
+          <Route path="appliances" element={<AppliancesPage />} />
+          <Route path="orders" element={<OrdersPage />} />
+          <Route path="orders/new" element={<ManualOrderPage />} />
+          <Route path="orders/:id" element={<OrderDetailPage />} />
+          <Route path="stock" element={<StockPage />} />
+          <Route path="categories" element={<CategoriesPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="calendar" element={<CalendarPage />} />
+          <Route path="shopping-list" element={<ShoppingListPage />} />
+        </Route>
 
         {/* 404 */}
         <Route path="*" element={<NotFoundPage />} />

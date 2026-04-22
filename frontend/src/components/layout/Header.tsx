@@ -76,9 +76,9 @@ const Header = () => {
           <Button
             variant="outlined"
             size="small"
-            href="https://wa.me/21612345678"
+            href={`https://wa.me/${import.meta.env.VITE_WHATSAPP_NUMBER || '21612345678'}`}
             target="_blank"
-            sx={{ mr: 1, fontSize: { xs: '0.7rem', sm: '0.875rem' } }}
+            sx={{ mr: 1, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
           >
             Contacter Mariem
           </Button>

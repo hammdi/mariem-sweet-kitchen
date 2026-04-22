@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { Ingredient } from '../models/Ingredient';
 import { authenticate, authorize } from '../middleware/auth';
 import { asyncHandler, createError } from '../middleware/errorHandler';
@@ -9,7 +9,7 @@ const router = express.Router();
 // @desc    Récupérer tous les ingrédients
 // @route   GET /api/ingredients
 // @access  Public
-router.get('/', asyncHandler(async (req, res) => {
+router.get('/', asyncHandler(async (req: Request, res: Response) => {
   const {
     page = 1,
     limit = 50,
@@ -64,7 +64,7 @@ router.get('/', asyncHandler(async (req, res) => {
 // @desc    Récupérer un ingrédient par ID
 // @route   GET /api/ingredients/:id
 // @access  Public
-router.get('/:id', asyncHandler(async (req, res) => {
+router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
   const ingredient = await Ingredient.findById(req.params.id);
 
   if (!ingredient || !ingredient.isActive) {
@@ -80,7 +80,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 // @desc    Créer un nouvel ingrédient
 // @route   POST /api/ingredients
 // @access  Private (Admin)
-router.post('/', authenticate, authorize('admin'), asyncHandler(async (req, res) => {
+router.post('/', authenticate, authorize('admin'), asyncHandler(async (req: Request, res: Response) => {
   const { name, pricePerUnit, unit, category, description, supplier } = req.body;
 
   // Vérifier si l'ingrédient existe déjà
@@ -113,7 +113,7 @@ router.post('/', authenticate, authorize('admin'), asyncHandler(async (req, res)
 // @route   PUT /api/ingredients/bulk-update-prices
 // @access  Private (Admin)
 // NOTE: doit être déclarée AVANT /:id pour ne pas être capturée comme paramètre
-router.put('/bulk-update-prices', authenticate, authorize('admin'), asyncHandler(async (req, res) => {
+router.put('/bulk-update-prices', authenticate, authorize('admin'), asyncHandler(async (req: Request, res: Response) => {
   const { priceUpdates } = req.body; // Array of { ingredientId, newPrice }
 
   if (!Array.isArray(priceUpdates)) {
@@ -149,7 +149,7 @@ router.put('/bulk-update-prices', authenticate, authorize('admin'), asyncHandler
 // @desc    Mettre à jour un ingrédient
 // @route   PUT /api/ingredients/:id
 // @access  Private (Admin)
-router.put('/:id', authenticate, authorize('admin'), asyncHandler(async (req, res) => {
+router.put('/:id', authenticate, authorize('admin'), asyncHandler(async (req: Request, res: Response) => {
   const ingredient = await Ingredient.findById(req.params.id);
 
   if (!ingredient) {
@@ -180,7 +180,7 @@ router.put('/:id', authenticate, authorize('admin'), asyncHandler(async (req, re
 // @desc    Supprimer un ingrédient
 // @route   DELETE /api/ingredients/:id
 // @access  Private (Admin)
-router.delete('/:id', authenticate, authorize('admin'), asyncHandler(async (req, res) => {
+router.delete('/:id', authenticate, authorize('admin'), asyncHandler(async (req: Request, res: Response) => {
   const ingredient = await Ingredient.findById(req.params.id);
 
   if (!ingredient) {

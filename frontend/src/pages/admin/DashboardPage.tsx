@@ -21,6 +21,8 @@ import {
   Language,
   Settings as SettingsIcon,
   Inventory,
+  CalendarMonth,
+  ShoppingCart,
 } from '@mui/icons-material'
 
 const DashboardPage = () => {
@@ -96,7 +98,7 @@ const DashboardPage = () => {
           <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 1 }}>
             <Typography
               variant="h5"
-              sx={{ fontFamily: 'Playfair Display', fontWeight: 600, color: 'primary.main' }}
+              sx={{ fontFamily: 'Playfair Display', fontWeight: 600, color: 'primary.main', fontSize: { xs: '1.1rem', md: '1.5rem' } }}
             >
               Mariem's Sweet Kitchen — Admin
             </Typography>
@@ -116,12 +118,18 @@ const DashboardPage = () => {
                 <SettingsIcon />
               </IconButton>
               <IconButton
-                onClick={() => navigate('/admin/orders')}
-                title="Commandes"
+                onClick={() => navigate('/admin/shopping-list')}
+                title="Liste de courses"
+                sx={{ color: 'text.secondary' }}
               >
-                <Badge badgeContent={pendingCount} color="error" max={99}>
-                  <ShoppingBag />
-                </Badge>
+                <ShoppingCart />
+              </IconButton>
+              <IconButton
+                onClick={() => navigate('/admin/calendar')}
+                title="Calendrier"
+                sx={{ color: 'text.secondary' }}
+              >
+                <CalendarMonth />
               </IconButton>
               <Button
                 startIcon={<Logout />}

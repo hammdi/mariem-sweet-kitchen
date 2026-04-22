@@ -13,7 +13,7 @@ const Footer = () => {
       }}
     >
       <Container maxWidth="lg">
-        <Grid container spacing={4}>
+        <Grid container spacing={{ xs: 2, md: 4 }}>
           {/* Logo et description */}
           <Grid item xs={12} md={4}>
             <Typography

@@ -1,4 +1,4 @@
-import { Recipe, IRecipe } from '../models/Recipe';
+import { Recipe } from '../models/Recipe';
 import { Settings } from '../models/Settings';
 
 export interface PriceBreakdown {
@@ -71,7 +71,7 @@ export class PriceCalculationService {
 
     for (const vi of variant.ingredients) {
       const ingredient = vi.ingredientId as any;
-      if (!ingredient) continue;
+      if (!ingredient) {continue;}
 
       const providedByClient = clientProvidedIngredients.includes(ingredient._id.toString());
       const cost = providedByClient ? 0 : ingredient.pricePerUnit * vi.quantity;
@@ -93,7 +93,7 @@ export class PriceCalculationService {
 
     for (const va of variant.appliances) {
       const appliance = va.applianceId as any;
-      if (!appliance) continue;
+      if (!appliance) {continue;}
 
       // Convertir en kW puis multiplier par heures et tarif STEG
       const powerKw = appliance.unit === 'kW' ? appliance.powerConsumption : appliance.powerConsumption / 1000;

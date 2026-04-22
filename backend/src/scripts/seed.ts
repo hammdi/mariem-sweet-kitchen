@@ -48,6 +48,7 @@ const seedData = async () => {
       { key: 'waterForfaitSmall', value: 0.3, label: 'Forfait eau petit (DT)' },
       { key: 'waterForfaitLarge', value: 0.5, label: 'Forfait eau grand (DT)' },
       { key: 'marginPercent', value: 15, label: 'Marge effort (%)' },
+      { key: 'orderMinLeadHours', value: 24, label: 'Delai minimum de commande (heures)' },
     ];
     for (const s of defaultSettings) {
       await Settings.findOneAndUpdate({ key: s.key }, s, { upsert: true });

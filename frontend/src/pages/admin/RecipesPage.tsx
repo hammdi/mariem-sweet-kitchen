@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import toast from 'react-hot-toast'
+import { toast } from 'react-toastify'
 import api from '../../services/api'
 import {
   Container, Typography, Box, Button, Card, CardContent, CardMedia,
@@ -18,7 +18,7 @@ const RecipesPage = () => {
 
   const load = async () => {
     try {
-      const res = await api.get('/recipes?limit=100')
+      const res = await api.get('/recipes?limit=200')
       setRecipes(res.data.data?.recipes || [])
     } catch { /* ignore */ }
   }
