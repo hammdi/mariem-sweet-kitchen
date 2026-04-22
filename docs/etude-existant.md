@@ -1,163 +1,136 @@
-# Étude de l'existant — Analyse du code actuel
+# Audit technique — État du projet
 
-## Résumé
+> Cette note documente l'audit technique réalisé le 2026-04-22 sur la base existante, les problèmes identifiés, les correctifs appliqués, et les décisions d'architecture en cours. Elle remplace l'ancien document de plan de refonte (obsolète — la refonte a été effectuée).
 
-Le code actuel fournit une bonne infrastructure (Express, React, Docker, auth) mais le modèle de données et la logique métier ne correspondent pas aux besoins réels définis. Cette étude identifie ce qu'on garde, ce qu'on modifie et ce qu'on supprime.
+## Résumé exécutif
 
----
+Le code est fonctionnel et bien structuré sur le plan architectural. L'audit a identifié **1 vulnérabilité critique**, **1 bug fonctionnel silencieux** et plusieurs points de dette technique à corriger avant la mise en production.
 
-## Backend
+Tous les problèmes critiques et majeurs ont été traités dans le commit d'audit.
 
-### À GARDER tel quel
+## Vulnérabilités et bugs corrigés
 
-| Fichier | Raison |
-|---------|--------|
-| `backend/src/index.ts` | Setup Express solide : helmet, cors, compression, morgan, rate-limit. Juste retirer la route `POST /api/seed` (dangereux). |
-| `backend/src/config/database.ts` | Connexion MongoDB — fonctionne |
-| `backend/src/utils/logger.ts` | Winston logger — fonctionne |
-| `backend/src/middleware/errorHandler.ts` | `createError()` + `asyncHandler()` — bon pattern |
-| `backend/src/middleware/auth.ts` | `authenticate`, `authorize`, `optionalAuth` — garder tel quel |
-| `backend/jest.config.js` | Config Jest — garder |
-| `backend/.eslintrc.js` | Config ESLint — garder |
-| `backend/tsconfig.json` | Config TypeScript — garder |
-| `backend/package.json` | Dépendances — garder (ajouter `node-telegram-bot-api`) |
+### 🔴 Critique — Inscription admin publique
+**Symptôme** : `POST /api/auth/register` était public, et le schéma `User` définissait `role` avec `enum: ['admin'], default: 'admin'`. N'importe quel visiteur sur Internet pouvait donc créer un compte admin et accéder à **toutes** les routes protégées (lire les commandes = fuite RGPD, modifier prix, supprimer recettes).
 
-### À MODIFIER en profondeur
+**Correctif** : ajout du rôle `client` dans le schéma. L'endpoint `/register` force désormais `role = 'client'` côté serveur. Impossible de créer un admin via l'API.
 
-| Fichier | Changements nécessaires |
-|---------|------------------------|
-| **`backend/src/models/Recipe.ts`** | Remplacer le schéma actuel (ingredients plats + sizes fixes + multiplicateur x2) par le nouveau modèle `variants[]` où chaque taille a ses propres ingrédients et machines avec durées |
-| **`backend/src/models/Order.ts`** | Remplacer `userId` par `clientName` + `clientPhone`. Remplacer le champ `mode` (full/preparation/ingredients) par `clientProvidedIngredients[]` par item. Ajouter `calculatedPrice` par item. Nouveau statut `paid`. |
-| **`backend/src/models/Appliance.ts`** | Retirer le champ `unit` (toujours en Watts). Le reste est bon. |
-| **`backend/src/services/priceCalculationService.ts`** | Réécrire complètement. Nouveaux paramètres : variant (pas size), clientProvidedIngredients (pas mode). Lire tarifs depuis collection `settings` au lieu de constantes en dur. |
-| **`backend/src/routes/recipes.ts`** | Adapter au nouveau modèle Recipe (variants). Ajouter route `POST /:id/duplicate`. Filtrer `req.body` dans le PUT (ne plus faire `Object.assign(recipe, req.body)`). |
-| **`backend/src/routes/orders.ts`** | Adapter au nouveau modèle Order (clientName/Phone, clientProvidedIngredients). Pas besoin d'auth pour `POST /orders`. Ajouter route pour cocher les ingrédients. Intégrer notification Telegram. |
-| **`backend/src/routes/prices.ts`** | Adapter au nouveau calcul (variantIndex au lieu de size/mode). |
-| **`backend/src/scripts/seed.ts`** | Réécrire avec le nouveau modèle (variants, pas de test user). Ajouter seed pour `settings`. Ajouter guard `NODE_ENV !== 'production'`. |
+### 🔴 Critique — Route `/bulk-update-prices` morte
+**Symptôme** : la route `PUT /api/ingredients/bulk-update-prices` était déclarée après `PUT /api/ingredients/:id`. Express matche dans l'ordre → l'URL était capturée avec `id = "bulk-update-prices"`. La mise à jour en masse ne fonctionnait jamais.
 
-### À CRÉER
+**Correctif** : la route bulk est désormais déclarée avant `/:id`.
 
-| Fichier | Description |
-|---------|-------------|
-| `backend/src/models/Settings.ts` | Modèle Mongoose pour les paramètres configurables (tarif STEG, forfait eau, marge) |
-| `backend/src/routes/settings.ts` | CRUD paramètres (admin uniquement) |
-| `backend/src/services/telegramService.ts` | Bot Telegram — envoyer notifications à Mariem quand une commande arrive |
+### 🟠 Majeur — Pas de fail-fast sur JWT_SECRET
+**Symptôme** : si `JWT_SECRET` était absent ou faible, le serveur démarrait quand même. Risque de forge de tokens.
 
-### À SUPPRIMER
+**Correctif** : refus de démarrage si `JWT_SECRET` manquant ou < 32 caractères, avec message explicite indiquant comment générer une valeur forte.
 
-| Fichier / Code | Raison |
-|----------------|--------|
-| Route `POST /api/seed` dans `index.ts` | Dangereuse — le seed ne doit pas être accessible via API |
-| `backend/src/scripts/start-dev.ts` | Inutile — `nodemon` fait le travail |
-| `backend/src/models/User.ts` champs `phone`, `role: 'user'` | Plus de comptes client — garder seulement le nécessaire pour admin |
+### 🟠 Majeur — `optionalAuth` avalait les erreurs JWT
+**Symptôme** : les tokens invalides étaient ignorés silencieusement sans log. Piège pour le debug futur.
 
----
+**Correctif** : le middleware log l'erreur en `warn` avant de continuer sans utilisateur.
 
-## Frontend
+### 🟠 Majeur — Rate-limit trop laxe sur `/api/auth/*`
+**Symptôme** : rate-limit global 100/15 min couvrait aussi `/auth/login`. Brute-force possible.
 
-### À GARDER tel quel
+**Correctif** : limiter strict dédié (5 tentatives/15 min, seules les tentatives échouées comptent) en plus du rate-limit global.
 
-| Fichier | Raison |
-|---------|--------|
-| `frontend/src/main.tsx` | Point d'entrée React — ok |
-| `frontend/src/services/api.ts` | Client Axios avec intercepteurs — bon |
-| `frontend/src/store/store.ts` | Config Redux Toolkit — garder |
-| `frontend/src/store/slices/authSlice.ts` | Auth pour admin — garder |
-| `frontend/src/components/layout/MainLayout.tsx` | Layout principal — garder, adapter |
-| `frontend/src/components/layout/Header.tsx` | Header — adapter (retirer login client) |
-| `frontend/src/components/layout/Footer.tsx` | Footer — garder |
-| `frontend/src/components/common/LoadingSpinner.tsx` | Utilitaire — garder |
-| `frontend/package.json` | Dépendances — ok |
-| `frontend/tailwind.config.js` | Config Tailwind — ok |
-| `frontend/tsconfig.json` | Config TS — ok |
+### 🟠 Majeur — Pas d'arrêt gracieux
+**Symptôme** : `process.exit(0)` direct sur SIGTERM sans fermer HTTP ni Mongo → requêtes en cours perdues, connexions Mongo mal fermées.
 
-### À MODIFIER en profondeur
+**Correctif** : fermeture séquentielle du serveur HTTP puis de Mongo, avec timeout de sécurité de 10 s.
 
-| Fichier | Changements |
-|---------|-------------|
-| **`frontend/src/App.tsx`** | Refaire le routing : pages publiques (/, /recipes, /recipes/:id) + pages admin (/admin/*) + login (/auth/login). Supprimer /auth/register, /profile, /cart. |
-| **`frontend/src/pages/RecipesPage.tsx`** | Adapter à la nouvelle API (variants au lieu de sizes fixes) |
-| **`frontend/src/pages/RecipeDetailPage.tsx`** | Afficher variants (tailles), prix par variant, formulaire de commande (nom + tél), pas de panier complexe |
-| **`frontend/src/components/recipes/RecipeCard.tsx`** | Adapter à la nouvelle structure |
-| **`frontend/src/store/slices/recipeSlice.ts`** | Adapter aux nouveaux types |
-| **`frontend/src/services/recipeService.ts`** | Adapter aux nouveaux endpoints |
+### 🟠 Majeur — `PUT /api/settings` sans whitelist
+**Symptôme** : accepter n'importe quelle clé permettait de polluer la collection avec des entrées bidon.
 
-### À CRÉER
+**Correctif** : whitelist explicite des 4 clés autorisées + validation des valeurs (nombre fini, ≥ 0).
 
-| Fichier | Description |
-|---------|-------------|
-| Pages admin (`/admin/*`) | Dashboard, gestion recettes, ingrédients, machines, commandes, paramètres |
-| `frontend/src/pages/admin/RecipeFormPage.tsx` | Formulaire création/édition recette (étape par étape : infos → ingrédients → machines → tailles) |
-| `frontend/src/pages/admin/OrderDetailPage.tsx` | Détail commande avec checkbox ingrédients |
-| `frontend/src/pages/admin/SettingsPage.tsx` | Paramètres (tarif STEG, forfait eau, marge) |
-| `frontend/src/components/OrderForm.tsx` | Formulaire commande public (nom + téléphone + notes) |
+### 🟡 Mineur — `totalPrice` sans arrondi final
+**Symptôme** : les prix par item étaient arrondis au millime, mais leur somme pouvait dériver (flottants JS).
 
-### À SUPPRIMER
+**Correctif** : arrondi `Math.round(raw * 1000) / 1000` après la somme dans le pre-save hook de `Order`.
 
-| Fichier | Raison |
-|---------|--------|
-| `frontend/src/pages/RegisterPage.tsx` | Plus d'inscription client |
-| `frontend/src/pages/ProfilePage.tsx` | Plus de profil client |
-| `frontend/src/pages/CartPage.tsx` | Plus de panier complexe — commande directe depuis la recette |
-| `frontend/src/pages/LoginPage.tsx` | Garder mais déplacer vers /auth/login (admin uniquement) |
-| `frontend/src/components/cart/CartDrawer.tsx` | Plus de panier |
-| `frontend/src/store/slices/cartSlice.ts` | Plus de panier client côté frontend |
-| `frontend/src/components/layout/AuthLayout.tsx` | Simplifier — un seul layout pour le login admin |
-| `frontend/src/components/home/Testimonials.tsx` | Pas prioritaire |
-| `frontend/src/shared/types/index.ts` | Doublon de `shared/types/index.ts` à la racine |
+### 🟡 Mineur — Seed avec mot de passe en dur
+**Symptôme** : `admin123` directement dans le script de seed. Risque de reprise en prod si oubli.
 
----
+**Correctif** : le seed refuse de tourner si `ADMIN_PASSWORD` n'est pas défini ou < 8 caractères.
 
-## Shared
+### 🟡 Mineur — `env.example` exposait des secrets d'exemple
+**Symptôme** : valeurs par défaut pour `JWT_SECRET` et `ADMIN_PASSWORD` qui pouvaient être commitées en prod si oubli.
 
-### À MODIFIER
+**Correctif** : valeurs vidées, commentaires explicites sur comment générer des valeurs fortes. Suppression de la dead config (email, WhatsApp, backup) non implémentée.
 
-| Fichier | Changements |
-|---------|-------------|
-| `shared/types/index.ts` | Réécrire complètement selon les nouveaux modèles (Recipe avec variants, Order avec clientName/Phone/clientProvidedIngredients, Settings, etc.). Supprimer les types obsolètes (CartItem, RegisterForm, OrderForm avec modes, etc.) |
+## Points de vigilance non corrigés (délibérément)
 
----
+### Détail de prix exposé sur endpoint public
+`POST /api/prices/calculate` retourne `ingredientsDetail` avec le prix unitaire de chaque ingrédient. C'est **délibéré** — la transparence est l'essence du concept produit. Les étapes de préparation (recette) ne sont jamais stockées, donc jamais exposées.
 
-## Docker
+### Devise en `number` (flottant)
+Les prix sont en `number` plutôt qu'en entiers (millimes). Théoriquement exposé aux imprécisions flottantes, mais atténué par l'arrondi systématique à 3 décimales et la nature des valeurs (ingrédients en DT avec 3 décimales max). Refonte en entiers possible si volume justifie.
 
-### À MODIFIER
+### Pas de refresh token
+JWT à 7 jours sans rotation. Si compromis, on repose sur l'expiration. Acceptable pour V1, à revoir en V2.
 
-| Fichier | Changements |
-|---------|-------------|
-| `docker-compose.yml` | Retirer le service `admin` séparé (intégré dans frontend). Adapter pour AWS. Variable d'env Telegram. |
-| `docker/mongo-init.js` | Vérifier qu'il correspond aux nouvelles collections |
+### Pas de tests automatisés
+Jest configuré, dossier `__tests__` vide. Plan : écrire des tests sur `priceCalculationService` avant toute refonte de la logique prix. Voir [testing-strategy.md](./testing-strategy.md).
 
----
+## Décisions d'architecture prises pendant l'audit
 
-## Racine
+### Ajout du rôle `client` (hybride Glovo-like)
+**Avant** : un seul rôle `admin`, pas de comptes clients.
+**Après** : `admin` + `client`. Le modèle reste guest-first (commande sans compte possible), mais un compte optionnel déverrouille l'historique, le suivi temps réel et la re-commande.
 
-### À MODIFIER
+**Raison** : conserve la friction minimale du guest checkout tout en apportant de la valeur aux clients récurrents, sans coût de développement prohibitif.
 
-| Fichier | Changements |
-|---------|-------------|
-| `package.json` | Retirer le workspace `admin` (n'existe pas). Retirer scripts `dev:admin`. |
-| `env.example` | Ajouter `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`. Retirer `WHATSAPP_*`, `ADMIN_PASSWORD`. Changer `REACT_APP_*` en `VITE_*`. |
-| `test-system.sh` | Adapter aux nouveaux endpoints |
+### Pas de model `Client` séparé
+Extension de `User` avec `role: 'admin' | 'client'` plutôt qu'un model distinct. Simple, réutilise l'infra JWT. Séparation possible plus tard si la logique diverge vraiment.
 
----
+### Commande liée au compte par `clientId` optionnel
+Le champ `clientName` + `clientPhone` reste requis même pour un client connecté (traçabilité + cohérence avec les commandes guest). L'ajout de `clientId` optionnel permet le lien avec l'historique sans casser le flux guest.
 
-## Résumé quantitatif
+## Arborescence de référence
 
-| Action | Backend | Frontend | Shared | Config |
-|--------|---------|----------|--------|--------|
-| **Garder** | 8 fichiers | 10 fichiers | 0 | 4 fichiers |
-| **Modifier** | 8 fichiers | 6 fichiers | 1 fichier | 3 fichiers |
-| **Créer** | 3 fichiers | ~10 fichiers | 0 | 0 |
-| **Supprimer** | 2 fichiers/code | 7 fichiers | 1 doublon | 0 |
+```
+mariem-sweet-kitchen/
+├── backend/
+│   ├── src/
+│   │   ├── config/database.ts
+│   │   ├── middleware/
+│   │   │   ├── auth.ts          (authenticate, authorize, optionalAuth)
+│   │   │   └── errorHandler.ts  (createError, asyncHandler)
+│   │   ├── models/
+│   │   │   ├── User.ts          (rôle admin|client)
+│   │   │   ├── Recipe.ts        (variants flexibles)
+│   │   │   ├── Ingredient.ts
+│   │   │   ├── Appliance.ts
+│   │   │   ├── Order.ts         (clientId optionnel)
+│   │   │   └── Settings.ts
+│   │   ├── routes/
+│   │   │   ├── auth.ts          (login, register client, me, profile, password)
+│   │   │   ├── recipes.ts       (+ /duplicate)
+│   │   │   ├── ingredients.ts   (+ /bulk-update-prices)
+│   │   │   ├── appliances.ts
+│   │   │   ├── orders.ts        (+ /my, /status)
+│   │   │   ├── prices.ts        (/calculate public)
+│   │   │   ├── settings.ts      (whitelist clés)
+│   │   │   └── upload.ts
+│   │   ├── services/
+│   │   │   └── priceCalculationService.ts
+│   │   ├── scripts/seed.ts      (requiert ADMIN_PASSWORD env)
+│   │   ├── utils/logger.ts
+│   │   └── index.ts             (fail-fast JWT, graceful shutdown)
+├── frontend/  (React 18 + Vite + Material-UI + Tailwind)
+├── shared/types/
+├── docs/
+└── docker-compose.yml
+```
 
-## Ordre d'implémentation recommandé
+## Prochaines priorités
 
-1. **Modèles** — Recipe, Order, Settings (le reste dépend d'eux)
-2. **PriceCalculationService** — cœur métier
-3. **Routes backend** — recipes, orders, settings, prices
-4. **Shared types** — refléter les nouveaux modèles
-5. **Frontend public** — recettes, détail, commande
-6. **Frontend admin** — gestion recettes (formulaire étape par étape), commandes, paramètres
-7. **Telegram bot** — notifications
-8. **Seed** — données de test
-9. **Docker** — adapter pour AWS
+1. **Tests** sur `priceCalculationService` (cœur métier — à sécuriser avant toute refonte).
+2. **V1 comptes clients** : route `/orders/my`, page `/mes-commandes`, lien `clientId` à la commande.
+3. **Frontend suivi commande** pour guest (par téléphone + ID).
+4. **Bot Telegram** : notifications nouvelle commande et changement de statut.
+5. **CI/CD** : GitHub Actions pour lint + build + tests.
+
+Voir [roadmap.md](./roadmap.md) pour le plan de développement complet.

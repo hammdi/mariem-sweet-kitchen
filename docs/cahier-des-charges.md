@@ -1,130 +1,142 @@
-# Cahier des charges - Mariem's Sweet Kitchen
+# Cahier des charges — Mariem's Sweet Kitchen
 
 ## Résumé
 
-Plateforme web pour une pâtissière artisanale en Tunisie. Le site sert deux objectifs :
-1. **Pour Mariem** : outil de gestion (recettes, commandes, prix) — ne plus oublier d'ingrédients ni de commandes
-2. **Pour les clients** : voir les recettes, les ingrédients utilisés et le détail des prix en toute transparence, puis commander
+Plateforme web pour une pâtissière artisanale en Tunisie. Le site sert deux publics :
+1. **Mariem (admin)** : outil de gestion (recettes, commandes, prix) — ne plus oublier d'ingrédients ni de commandes.
+2. **Clients (visiteurs et comptes optionnels)** : voir les recettes, les ingrédients utilisés et le détail des prix en toute transparence, commander, suivre leurs commandes.
 
 **Concept clé** : le client voit QUOI (ingrédients + machines + prix) mais jamais COMMENT (étapes de préparation). Les recettes restent secrètes.
 
 ## Utilisateurs
 
 ### Mariem (Admin)
-- Pâtissière expérimentée, à l'aise en français
-- Gère ses recettes, ingrédients, machines et commandes via une interface simple
-- Reçoit les commandes par Telegram
-- Contacte les clients par téléphone / WhatsApp
+- Pâtissière expérimentée, à l'aise en français.
+- Gère ses recettes, ingrédients, machines et commandes via une interface simple.
+- Reçoit les commandes par Telegram.
+- Contacte les clients par téléphone / WhatsApp.
 
-### Client (Visiteur)
-- Pas de compte nécessaire — commande avec nom + numéro de téléphone
-- Consulte les recettes et prix
-- Commande en ligne, paye en cash à la récupération
+### Client invité
+- Pas de compte requis — commande avec nom + numéro de téléphone.
+- Consulte les recettes et prix.
+- Commande en ligne, paie en cash à la récupération.
+- Peut retrouver sa commande par son numéro de téléphone (sans login).
 
-### Hamdi (Technique)
-- Gère le déploiement, la maintenance et les évolutions
+### Client avec compte (optionnel)
+- Création proposée **au moment du checkout** (case à cocher), jamais obligatoire.
+- Déverrouille : historique de commandes, suivi temps réel du statut, pré-remplissage nom + téléphone, re-commande en 1 clic.
+- Inspiré du modèle Glovo (guest checkout + compte optionnel pour le confort).
 
-## Fonctionnalités
+### Hamdi (technique)
+- Développement, déploiement, maintenance et évolutions.
 
-### 1. Gestion des recettes
+## Fonctionnalités V1 — MVP
 
-Mariem crée une recette étape par étape :
-1. Nommer la recette, ajouter description + photos
-2. Sélectionner les ingrédients un par un avec quantités
-3. Sélectionner les machines utilisées avec durée d'utilisation
-4. Le prix se calcule automatiquement
+### 1. Gestion des recettes (admin)
+Mariem crée une recette en 4 étapes :
+1. Nom, description, photos.
+2. Ingrédients (via bibliothèque partagée) avec quantités.
+3. Machines utilisées avec durée.
+4. Le prix se calcule automatiquement par variant (taille).
 
-**Tailles flexibles** :
-- Chaque recette peut avoir ses propres tailles (petit, moyen, grand, 2 étages, par lot de 6/12, etc.)
-- Chaque taille a ses propres quantités d'ingrédients et durées de machines
-- Ajout d'une taille = copie automatique de la taille précédente, Mariem ajuste seulement les quantités/temps
+**Tailles flexibles** : chaque recette a ses propres tailles (petit, moyen, grand, 2 étages, lot de 12…). Chaque taille a ses propres ingrédients et durées. L'ajout d'une taille copie la précédente pour accélérer la saisie.
 
-**Duplication** :
-- Mariem peut dupliquer une recette existante et modifier (ex: gâteau chocolat → gâteau vanille)
-- Pas de système d'options/variantes complexe
+**Duplication** : Mariem duplique une recette pour en créer une variante (gâteau chocolat → gâteau vanille).
 
-**Secret** :
-- Aucune étape de préparation n'est stockée ni affichée — par design
-- Le client voit les ingrédients et machines, jamais le processus
+**Secret** : aucune étape de préparation n'est stockée — par design.
 
-### 2. Système de tarification transparent
+### 2. Tarification transparente
 
-**Formule** :
 ```
-Prix = Ingrédients + Électricité + Eau + Marge effort (15%)
+total = ingrédients + électricité + eau + marge effort (15 %)
 ```
 
-**Ingrédients** :
-- Prix unitaire mis à jour manuellement par Mariem (quand elle fait ses courses)
-- Prix en DT (Dinar Tunisien)
-- Catégories : base, sucrant, produit laitier, arôme, levant, autre
+- **Ingrédients** : prix unitaire en DT, mis à jour par Mariem quand elle fait ses courses. Catégories : base, sucrant, produit laitier, arôme, levant, autre.
+- **Électricité** : `Puissance (W) × Temps (h) × Tarif STEG`. Tarif STEG configurable (~0,235 DT/kWh).
+- **Eau** : forfait configurable (petit / grand).
+- **Marge effort** : 15 % du sous-total, **configurable**.
 
-**Électricité** :
-- Calculée par machine : Puissance (W) × Temps d'utilisation (h) × Tarif STEG (DT/kWh)
-- Tarif STEG configurable dans l'admin (valeur moyenne, ~0.235 DT/kWh)
-- Mariem ajoute ses machines une fois (four, batteur, robot, etc.) avec leur puissance
-
-**Eau** :
-- Forfait configurable dans l'admin (ex: 0.3 DT petit, 0.5 DT grand)
-- L'eau de lavage ne varie pas significativement entre recettes
-
-**Marge effort** :
-- 15% du sous-total (ingrédients + électricité + eau)
-- Pourcentage configurable dans l'admin
-
-### 3. Système de commande
+### 3. Commande
 
 **Flux** :
-1. Client visite le site, choisit une recette et une taille
-2. Client commande (nom + téléphone)
-3. Mariem reçoit notification Telegram
-4. Mariem contacte le client pour discuter les détails
-5. Mariem coche les ingrédients que le client ramène → le prix se recalcule
-6. Mariem confirme la commande avec le prix final
-7. Client ramène ses ingrédients (si applicable)
-8. Mariem prépare
-9. Mariem marque "Prêt"
-10. Client récupère et paye en cash
-11. Mariem marque "Payé"
+1. Client choisit recette + taille.
+2. Commande avec nom + téléphone (+ création de compte facultative).
+3. Mariem reçoit notification Telegram.
+4. Mariem appelle le client → discussion des ingrédients.
+5. Mariem coche les ingrédients que le client ramène → prix recalculé.
+6. Mariem confirme, prépare, marque "prêt".
+7. Client récupère, paie cash, Mariem marque "payé".
 
-**Ingrédients mixtes** :
-- Pas de 2 modes figés (tout ou rien)
-- Mariem coche individuellement chaque ingrédient que le client fournit
-- Les ingrédients cochés sont retirés du calcul de prix
-- Cas typique : le client ramène œufs, farine, chocolat (facile à acheter) mais Mariem fournit le sirop, le glucose, etc. (petites quantités coûteuses à l'unité)
+**Ingrédients mixtes** : Mariem coche individuellement les ingrédients apportés par le client. Pas de mode figé.
 
-**Statuts** : commandé → confirmé → en préparation → prêt → payé
+**Statuts** : `pending` → `confirmed` → `preparing` → `ready` → `paid` / `cancelled`.
 
-**Paiement** : cash uniquement, à la récupération
+**Paiement** : cash uniquement à la récupération.
 
-### 4. Notifications
+### 4. Compte client (optionnel)
 
-- **Bot Telegram** pour Mariem : nouvelle commande, rappels
-- **Lien wa.me/** sur le site pour que le client contacte Mariem directement
+- Inscription en 1 clic depuis le checkout (nom, téléphone, email, mot de passe).
+- Connexion sur `/auth/login`.
+- Page `Mes commandes` : historique, statut temps réel, re-commander.
+- Lien entre commande guest et compte *a posteriori* par numéro de téléphone.
+- Rôle `client` distinct du rôle `admin` — isolation des permissions.
 
-### 5. Interface admin (Mariem)
+### 5. Notifications
 
-Interface simple en français, pensée pour être utilisée sans aide technique :
-- Ajouter/modifier/dupliquer des recettes
-- Gérer les ingrédients et leurs prix
-- Gérer les machines
-- Voir et gérer les commandes (accepter, refuser, cocher ingrédients, changer statut)
-- Configurer les paramètres (tarif STEG, forfait eau, marge)
+- **Bot Telegram** pour Mariem : nouvelle commande, changement de statut.
+- **Lien wa.me/** sur le site pour contact direct Mariem ↔ client.
+
+### 6. Interface admin (Mariem)
+
+Interface en français, pensée pour utilisation sans aide technique :
+- Dashboard commandes (filtres par statut).
+- CRUD recettes avec duplication.
+- CRUD ingrédients (et mise à jour prix en masse).
+- CRUD machines.
+- Configuration paramètres (tarif STEG, forfait eau, marge).
+- Upload d'images pour les recettes.
 
 ## Contraintes
 
-- **Budget** : limité (VPS)
-- **Équipe** : 1 développeur (Hamdi)
-- **Langue** : français d'abord, arabe prévu plus tard
-- **Paiement** : cash uniquement (pas de paiement en ligne)
-- **Simplicité** : toute fonctionnalité doit passer le test "est-ce que Mariem peut l'utiliser seule ?"
+- **Budget** : limité — VPS unique (AWS EC2 t3.small ou équivalent).
+- **Équipe** : 1 développeur (Hamdi) + 1 utilisatrice (Mariem).
+- **Langue** : français d'abord, arabe en V3.
+- **Paiement** : cash uniquement en V1 (pas de paiement en ligne).
+- **Critère de simplicité** : toute fonctionnalité doit passer le test *"Mariem peut l'utiliser seule après 5 min de démo"*.
 
-## Hors périmètre (pour l'instant)
+## Exigences non-fonctionnelles
 
-- Comptes clients
-- Paiement en ligne
-- Système d'options/variantes sur les recettes
-- Traduction arabe
-- Autres chefs / multi-vendeur
-- Suivi de commande côté client
-- Application mobile native
+| Domaine | Exigence |
+|---------|----------|
+| Performance | Page recette < 1,5 s sur 4G tunisienne |
+| Disponibilité | ≥ 99 % — le site ne doit pas tomber les samedis (gros volume) |
+| Sécurité | HTTPS obligatoire, JWT fort, rate-limit, logs d'accès |
+| RGPD | Données clients minimales (nom, tél, email facultatif), suppression sur demande |
+| Accessibilité | Respect WCAG 2.1 niveau AA (contrastes, navigation clavier) |
+| SEO | Recettes indexables Google, meta tags, sitemap |
+| Responsive | Mobile first (80 % du trafic attendu sur mobile) |
+
+## Phases
+
+### V1 — MVP (en cours)
+Cahier ci-dessus. Objectif : premier client réel servi end-to-end via la plateforme.
+
+### V2 — Fidélisation
+Favoris, programme fidélité (5ᵉ commande offerte), notifications email/SMS au changement de statut, tableau de bord analytics pour Mariem (revenu mensuel, recettes les plus commandées).
+
+### V3 — Scale
+Paiement en ligne (Konnect / Paymee), version arabe, Progressive Web App (installable), intégration livraison (contact Glovo), gestion de stock, facturation PDF.
+
+### V4 — Pivot marketplace (vision)
+Ouvrir la plateforme à d'autres artisans, application mobile native, suggestions IA (personnalisation, reconnaissance photo gâteau → recette similaire).
+
+Voir [roadmap.md](./roadmap.md) pour le détail des phases.
+
+## Hors périmètre V1
+
+- Paiement en ligne (→ V3).
+- Application mobile native (→ V4).
+- Traduction arabe (→ V3).
+- Multi-vendeur (→ V4).
+- Notifications SMS/push (→ V2, pour l'instant Telegram côté admin uniquement).
+- Programme fidélité et favoris (→ V2).

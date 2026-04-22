@@ -8,8 +8,11 @@ title Diagramme de Cas d'Utilisation
 
 left to right direction
 
-actor "Client\n(Visiteur)" as client
+actor "Client invité" as guest
+actor "Client connecté" as client
 actor "Mariem\n(Admin)" as mariem
+
+client --|> guest : hérite de
 
 rectangle "Site Public" {
   usecase "Consulter les recettes" as UC1
@@ -17,6 +20,14 @@ rectangle "Site Public" {
   usecase "Choisir une taille" as UC3
   usecase "Commander\n(nom + téléphone)" as UC4
   usecase "Contacter Mariem\n(WhatsApp)" as UC5
+  usecase "Suivre commande\n(tél + id)" as UC6
+}
+
+rectangle "Compte client (optionnel)" {
+  usecase "Créer un compte\nau checkout" as UC7
+  usecase "Se connecter" as UC8
+  usecase "Voir mes commandes\n(historique + statut)" as UC9
+  usecase "Re-commander en 1 clic" as UC9b
 }
 
 rectangle "Admin" {
@@ -53,11 +64,17 @@ rectangle "Admin" {
   }
 }
 
-client --> UC1
-client --> UC2
-client --> UC3
-client --> UC4
-client --> UC5
+guest --> UC1
+guest --> UC2
+guest --> UC3
+guest --> UC4
+guest --> UC5
+guest --> UC6
+guest --> UC7
+guest --> UC8
+
+client --> UC9
+client --> UC9b
 
 mariem --> UC10
 mariem --> UC11

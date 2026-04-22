@@ -117,3 +117,5 @@ Thumbs.db
 # Database
 *.db
 *.sqlite
+backend/.env.production
+backend/.env

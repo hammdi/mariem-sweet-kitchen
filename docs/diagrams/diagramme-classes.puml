@@ -9,13 +9,22 @@ title Diagramme de Classes - Modèle de Données
 class User {
   _id : ObjectId
   email : String <<unique>>
-  password : String <<bcrypt>>
+  password : String <<bcrypt 12>>
   firstName : String
   lastName : String
-  role : "admin"
+  phone : String
+  role : UserRole
   isActive : Boolean
+  lastLogin : Date
   createdAt : Date
   updatedAt : Date
+  --
+  +comparePassword() : Boolean
+}
+
+enum UserRole {
+  admin
+  client
 }
 
 class Ingredient {
@@ -89,10 +98,11 @@ class VariantAppliance {
 
 class Order {
   _id : ObjectId
+  clientId : ObjectId <<ref User, optionnel>>
   clientName : String
   clientPhone : String
   items : OrderItem[]
-  totalPrice : Number <<DT>>
+  totalPrice : Number <<DT, arrondi millime>>
   status : OrderStatus
   notes : String
   createdAt : Date
@@ -138,6 +148,7 @@ note right of Settings
   - marginPercent (%)
 end note
 
+User --> UserRole
 Ingredient --> IngredientCategory
 Appliance --> ApplianceCategory
 Recipe *-- "1..*" RecipeVariant : variants
@@ -147,6 +158,7 @@ VariantIngredient --> Ingredient : ingredientId
 VariantAppliance --> Appliance : applianceId
 Order *-- "1..*" OrderItem : items
 Order --> OrderStatus
+Order --> "0..1" User : clientId
 OrderItem --> Recipe : recipeId
 OrderItem *-- PriceBreakdown : calculatedPrice
 OrderItem --> "0..*" Ingredient : clientProvidedIngredients
