@@ -20,6 +20,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      // Images uploadees (recettes) servies en static par le backend
+      '/uploads': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
   build: {
