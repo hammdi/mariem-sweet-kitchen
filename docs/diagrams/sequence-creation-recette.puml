@@ -1,0 +1,65 @@
+@startuml sequence-creation-recette
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontSize 11
+
+title Création d'une Recette par Mariem
+
+actor "Mariem" as M
+participant "Admin UI\n(React)" as F
+participant "Backend\n(Express)" as B
+database "MongoDB" as DB
+
+== Étape 1 : Infos générales ==
+M -> F : Nom : "Gâteau au chocolat"\nDescription + Photo\nCatégorie : "gâteau"
+
+== Étape 2 : Première taille (Petit) ==
+M -> F : Taille : "Petit" (6 portions)
+
+M -> F : + Ingrédient
+F -> B : GET /api/ingredients
+B --> F : liste ingrédients
+M -> F : Sucre → 200g
+M -> F : Œufs → 3 pièces
+M -> F : Farine → 300g
+M -> F : Chocolat → 200g
+M -> F : ...
+
+M -> F : + Machine
+F -> B : GET /api/appliances
+B --> F : liste machines
+M -> F : Four → 45 min
+M -> F : Batteur → 10 min
+
+F -> F : Calcul prix en temps réel\ningredients: 4.50 DT\nélectricité: 0.35 DT\neau: 0.30 DT\nmarge: 0.77 DT\n────────────\ntotal: 5.92 DT
+
+== Étape 3 : Ajouter taille (Moyen) ==
+M -> F : [+ Ajouter taille "Moyen"]
+F -> F : Copie auto depuis "Petit"\nIngrédients : Sucre 200g, Œufs 3...\nMachines : Four 45min, Batteur 10min
+
+M -> F : Ajuste quantités :\nSucre → 350g ✏️\nŒufs → 5 ✏️\nFarine → 500g ✏️\nFour → 1h ✏️
+
+F -> F : Recalcul prix "Moyen"\ntotal: 9.80 DT
+
+== Étape 4 : Ajouter taille (Grand) ==
+M -> F : [+ Ajouter taille "Grand"]
+F -> F : Copie auto depuis "Moyen"
+M -> F : Ajuste quantités ✏️
+
+== Enregistrer ==
+M -> F : [Enregistrer]
+F -> B : POST /api/recipes\n{name, description, category,\nvariants: [petit, moyen, grand]}
+B -> DB : Valide ingredientIds\n+ applianceIds existent
+B -> DB : Insert recipe
+B --> F : recipe créée
+F --> M : ✅ "Gâteau au chocolat"\ncréé avec 3 tailles
+
+== Duplication ==
+M -> F : [Dupliquer "Gâteau chocolat"]
+F -> B : POST /api/recipes/:id/duplicate
+B -> DB : Copie la recette
+B -> DB : Insert avec nom\n"Gâteau au chocolat (copie)"
+B --> F : nouvelle recette
+M -> F : Renomme → "Gâteau vanille"\nModifie ingrédients différents
+
+@enduml

@@ -1,0 +1,73 @@
+@startuml sequence-commande
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontSize 11
+
+title Flux de Commande Complet
+
+actor "Client" as C
+participant "Frontend\n(React)" as F
+participant "Backend\n(Express)" as B
+database "MongoDB" as DB
+participant "Telegram\nBot" as T
+actor "Mariem" as M
+
+== Consultation ==
+C -> F : Visite le site
+F -> B : GET /api/recipes
+B -> DB : find recipes (isActive: true)
+DB --> B : recipes[]
+B --> F : recettes + prix calculés
+F --> C : Affiche catalogue
+
+C -> F : Clique sur une recette
+F -> B : GET /api/recipes/:id
+B -> DB : findById + populate\n(ingredients, appliances)
+B -> B : Calcule prix par variant\n(STEG tariff, forfait eau, marge)
+B --> F : recette + variants + prix
+F --> C : Affiche détail\n(ingrédients, machines, prix)\n**PAS d'étapes**
+
+== Commande ==
+C -> F : Choisit taille + quantité
+C -> F : Remplit nom + téléphone
+F -> B : POST /api/orders\n{clientName, clientPhone,\nitems: [{recipeId, variantIndex, qty}]}
+B -> DB : Crée order (status: "pending")
+B -> T : sendMessage("Nouvelle commande\nde Ahmed: Gâteau chocolat x1")
+T -> M : 📱 Notification Telegram
+B --> F : order créée
+F --> C : "Commande envoyée !\nMariem vous contactera"
+
+== Discussion & Ajustement ==
+M -> C : 📞 Appel / WhatsApp\n"Tu ramènes quoi ?"
+note over M,C : Le client dit :\n"J'ai les œufs, la farine\net le chocolat"
+
+M -> F : Ouvre la commande (admin)
+F -> B : GET /api/orders/:id
+B --> F : détail commande + ingrédients
+
+M -> F : Coche : œufs ✅ farine ✅ chocolat ✅
+F -> B : PUT /api/orders/:id\n{items[0].clientProvidedIngredients:\n[id_oeufs, id_farine, id_chocolat]}
+B -> B : Recalcule le prix\n(retire ingrédients cochés)
+B -> DB : Update order + nouveau prix
+B --> F : prix mis à jour
+
+M -> F : Confirme la commande
+F -> B : PUT /api/orders/:id/status\n{status: "confirmed"}
+B -> DB : Update status
+
+== Préparation ==
+M -> F : Commence la préparation
+F -> B : PUT /api/orders/:id/status\n{status: "preparing"}
+
+note over M : Mariem prépare le gâteau\n(étapes secrètes 🤫)
+
+M -> F : Marque "Prêt"
+F -> B : PUT /api/orders/:id/status\n{status: "ready"}
+
+== Récupération ==
+C -> M : Vient récupérer + paye cash 💵
+M -> F : Marque "Payé"
+F -> B : PUT /api/orders/:id/status\n{status: "paid"}
+B -> DB : Update status final
+
+@enduml

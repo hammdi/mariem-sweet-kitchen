@@ -1,0 +1,79 @@
+@startuml deploiement
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontSize 11
+
+title Diagramme de Déploiement - AWS + Docker
+
+node "Client / Mariem" as user {
+  [Navigateur Web]
+}
+
+cloud "Internet" {
+  [DNS\n(nom de domaine)]
+}
+
+node "AWS EC2 Instance" as aws {
+
+  node "Docker Compose" as docker {
+
+    node "Nginx Container" as nginx_c {
+      [Nginx\nReverse Proxy\nSSL (Let's Encrypt)\nPort 80/443] as nginx
+    }
+
+    node "Frontend Container" as front_c {
+      [React App\n(Vite build → serve)\nPort 3000] as front
+    }
+
+    node "Backend Container" as back_c {
+      [Express API\nNode.js\nPort 3001] as back
+    }
+
+    node "MongoDB Container" as mongo_c {
+      database "mariem_kitchen\nPort 27017" as mongo
+      [Volume:\nmongodb_data] as vol
+    }
+  }
+
+  node "Host" as host {
+    [Certbot\n(renouvellement SSL)] as certbot
+    [Backup Script\n(cron quotidien)] as backup
+    [Docker Volumes\n/data/mongodb\n/data/uploads] as volumes
+  }
+}
+
+cloud "Services Externes" as ext {
+  [Telegram Bot API\napi.telegram.org] as telegram
+}
+
+user --> [DNS]
+[DNS] --> nginx
+
+nginx --> front : "/* → :3000"
+nginx --> back : "/api/* → :3001"
+
+back --> mongo
+back --> telegram
+
+mongo --> vol
+vol --> volumes
+
+certbot --> nginx : "SSL certs"
+backup --> mongo : "mongodump"
+backup --> volumes : "tar + stockage"
+
+note right of aws
+  Instance recommandée :
+  t3.small (2 vCPU, 2GB RAM)
+  ou t3.medium (2 vCPU, 4GB)
+  Ubuntu 22.04 LTS
+  20GB+ SSD (gp3)
+end note
+
+note bottom of docker
+  docker-compose.yml orchestre
+  tous les containers
+  Réseau interne : mariem-network
+end note
+
+@enduml

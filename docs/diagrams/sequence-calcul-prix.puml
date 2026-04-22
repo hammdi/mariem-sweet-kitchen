@@ -1,0 +1,54 @@
+@startuml sequence-calcul-prix
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontSize 11
+
+title Calcul de Prix - PriceCalculationService
+
+participant "Route API" as R
+participant "PriceCalculation\nService" as PCS
+database "MongoDB" as DB
+
+R -> PCS : calculateVariantPrice(\nrecipeId, variantIndex,\nclientProvidedIngredients[])
+
+PCS -> DB : Recipe.findById(recipeId)\n.populate(ingredients, appliances)
+DB --> PCS : recipe
+
+PCS -> DB : Settings.find()
+DB --> PCS : stegTariff, waterForfait, marginPercent
+
+PCS -> PCS : variant = recipe.variants[variantIndex]
+
+== Coût des ingrédients ==
+loop Pour chaque ingrédient du variant
+  alt Ingrédient PAS dans clientProvidedIngredients
+    PCS -> PCS : cost += quantity × ingredient.pricePerUnit
+    note right : Ex: Sucre 200g × 1.2 DT/kg\n= 0.24 DT
+  else Ingrédient fourni par le client
+    PCS -> PCS : cost += 0 (coché ✅)
+  end
+end
+PCS -> PCS : ingredientsCost = Σ costs
+
+== Coût électricité ==
+loop Pour chaque machine du variant
+  PCS -> PCS : kW = powerConsumption / 1000
+  PCS -> PCS : hours = duration / 60
+  PCS -> PCS : cost += kW × hours × stegTariff
+  note right : Ex: Four 2000W × 45min\n= 2kW × 0.75h × 0.235\n= 0.35 DT
+end
+PCS -> PCS : electricityCost = Σ costs
+
+== Coût eau ==
+PCS -> PCS : waterCost = waterForfait\n(selon taille du variant)
+
+== Marge ==
+PCS -> PCS : subtotal = ingredientsCost\n+ electricityCost + waterCost
+PCS -> PCS : margin = subtotal × marginPercent / 100
+
+== Total ==
+PCS -> PCS : total = subtotal + margin
+
+PCS --> R : {\n  ingredientsCost: 4.50,\n  electricityCost: 0.35,\n  waterCost: 0.30,\n  margin: 0.77,\n  total: 5.92,\n  breakdown: [...]\n}
+
+@enduml

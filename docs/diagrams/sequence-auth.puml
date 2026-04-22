@@ -1,0 +1,48 @@
+@startuml sequence-auth
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontSize 11
+
+title Authentification Admin (Mariem)
+
+actor "Mariem" as M
+participant "Frontend\n(React)" as F
+participant "Backend\n(Express)" as B
+database "MongoDB" as DB
+
+== Connexion ==
+M -> F : /auth/login\nemail + mot de passe
+F -> B : POST /api/auth/login\n{email, password}
+B -> DB : findOne({email})
+DB --> B : user (avec hash bcrypt)
+B -> B : bcrypt.compare(password, hash)
+
+alt Mot de passe correct
+  B -> B : jwt.sign({userId}, JWT_SECRET)
+  B --> F : {token, user}
+  F -> F : localStorage.setItem("token", jwt)
+  F --> M : Redirige vers /admin
+else Mot de passe incorrect
+  B --> F : 401 "Identifiants invalides"
+  F --> M : Message d'erreur
+end
+
+== Accès pages admin ==
+M -> F : /admin/recipes
+F -> F : Vérifie token dans localStorage
+F -> B : GET /api/recipes\nHeader: Authorization: Bearer <jwt>
+B -> B : middleware authenticate()\njwt.verify(token)
+B -> DB : findById(userId)
+
+alt Token valide + rôle admin
+  B -> B : middleware authorize("admin")
+  B -> DB : find recipes
+  B --> F : recipes[]
+  F --> M : Affiche gestion recettes
+else Token invalide/expiré
+  B --> F : 401
+  F -> F : Supprime token
+  F --> M : Redirige vers /auth/login
+end
+
+@enduml

@@ -1,0 +1,82 @@
+@startuml architecture-globale
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam componentStyle rectangle
+skinparam defaultFontSize 12
+
+title Architecture Globale - Mariem's Sweet Kitchen
+
+actor "Client\n(Visiteur)" as client
+actor "Mariem\n(Admin)" as mariem
+
+cloud "Internet" as internet
+
+package "Navigateur" {
+  [Pages Publiques\n/ /recipes /recipes/:id] as public_pages
+  [Pages Admin\n/admin/*] as admin_pages
+}
+
+package "Docker - AWS" {
+  package "Nginx (Reverse Proxy)" as nginx {
+    [SSL Termination\n+ Routing]
+  }
+
+  package "Frontend Container" {
+    [React 18 + Vite\nMaterial-UI + Tailwind\nRedux Toolkit\nPort 3000] as frontend
+  }
+
+  package "Backend Container" {
+    [Express + TypeScript\nAPI REST /api/*\nJWT Auth\nPort 3001] as backend
+    [PriceCalculationService] as price_service
+    [Telegram Bot Service] as telegram_service
+  }
+
+  package "MongoDB Container" {
+    database "mariem_kitchen" as db {
+      [recipes]
+      [ingredients]
+      [appliances]
+      [orders]
+      [users]
+      [settings]
+    }
+  }
+}
+
+cloud "Services Externes" {
+  [Telegram Bot API] as telegram_api
+  [WhatsApp\n(lien wa.me/)] as whatsapp
+}
+
+client --> internet
+mariem --> internet
+internet --> nginx
+
+nginx --> frontend : "/*"
+nginx --> backend : "/api/*"
+
+frontend --> backend : "Axios HTTP"
+
+backend --> db
+backend --> price_service
+backend --> telegram_service
+telegram_service --> telegram_api
+telegram_api --> mariem : "Notifications\ncommandes"
+
+client --> whatsapp : "Contact direct"
+whatsapp --> mariem
+
+note right of price_service
+  ingredientsCost
+  + electricityCost (STEG)
+  + waterCost (forfait)
+  + margin (15%)
+end note
+
+note bottom of db
+  MongoDB 6+
+  Pas de schéma rigide
+  Soft deletes (isActive)
+end note
+
+@enduml

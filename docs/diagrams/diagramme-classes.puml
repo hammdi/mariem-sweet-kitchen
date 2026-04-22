@@ -1,0 +1,154 @@
+@startuml diagramme-classes
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam classAttributeIconSize 0
+skinparam defaultFontSize 11
+
+title Diagramme de Classes - Modèle de Données
+
+class User {
+  _id : ObjectId
+  email : String <<unique>>
+  password : String <<bcrypt>>
+  firstName : String
+  lastName : String
+  role : "admin"
+  isActive : Boolean
+  createdAt : Date
+  updatedAt : Date
+}
+
+class Ingredient {
+  _id : ObjectId
+  name : String
+  pricePerUnit : Number <<DT>>
+  unit : String
+  category : IngredientCategory
+  isActive : Boolean
+  createdAt : Date
+  updatedAt : Date
+}
+
+enum IngredientCategory {
+  base
+  sweetener
+  dairy
+  flavoring
+  leavening
+  other
+}
+
+class Appliance {
+  _id : ObjectId
+  name : String
+  powerConsumption : Number <<Watts>>
+  category : ApplianceCategory
+  isActive : Boolean
+  createdAt : Date
+  updatedAt : Date
+}
+
+enum ApplianceCategory {
+  cooking
+  mixing
+  cooling
+  other
+}
+
+class Recipe {
+  _id : ObjectId
+  name : String
+  description : String
+  images : String[]
+  category : String
+  isActive : Boolean
+  variants : RecipeVariant[]
+  createdAt : Date
+  updatedAt : Date
+  --
+  +duplicate() : Recipe
+}
+
+class RecipeVariant {
+  sizeName : String
+  portions : Number
+  ingredients : VariantIngredient[]
+  appliances : VariantAppliance[]
+}
+
+class VariantIngredient {
+  ingredientId : ObjectId <<ref>>
+  quantity : Number
+  unit : String
+}
+
+class VariantAppliance {
+  applianceId : ObjectId <<ref>>
+  duration : Number <<minutes>>
+}
+
+class Order {
+  _id : ObjectId
+  clientName : String
+  clientPhone : String
+  items : OrderItem[]
+  totalPrice : Number <<DT>>
+  status : OrderStatus
+  notes : String
+  createdAt : Date
+  updatedAt : Date
+}
+
+class OrderItem {
+  recipeId : ObjectId <<ref>>
+  variantIndex : Number
+  quantity : Number
+  clientProvidedIngredients : ObjectId[]
+  calculatedPrice : PriceBreakdown
+}
+
+class PriceBreakdown {
+  ingredientsCost : Number
+  electricityCost : Number
+  waterCost : Number
+  margin : Number
+  total : Number
+}
+
+enum OrderStatus {
+  pending
+  confirmed
+  preparing
+  ready
+  paid
+  cancelled
+}
+
+class Settings {
+  _id : ObjectId
+  key : String
+  value : Number
+}
+
+note right of Settings
+  Clés :
+  - stegTariff (DT/kWh)
+  - waterForfaitSmall (DT)
+  - waterForfaitLarge (DT)
+  - marginPercent (%)
+end note
+
+Ingredient --> IngredientCategory
+Appliance --> ApplianceCategory
+Recipe *-- "1..*" RecipeVariant : variants
+RecipeVariant *-- "1..*" VariantIngredient
+RecipeVariant *-- "0..*" VariantAppliance
+VariantIngredient --> Ingredient : ingredientId
+VariantAppliance --> Appliance : applianceId
+Order *-- "1..*" OrderItem : items
+Order --> OrderStatus
+OrderItem --> Recipe : recipeId
+OrderItem *-- PriceBreakdown : calculatedPrice
+OrderItem --> "0..*" Ingredient : clientProvidedIngredients
+
+@enduml

@@ -1,0 +1,88 @@
+@startuml cas-utilisation
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontSize 11
+skinparam actorStyle awesome
+
+title Diagramme de Cas d'Utilisation
+
+left to right direction
+
+actor "Client\n(Visiteur)" as client
+actor "Mariem\n(Admin)" as mariem
+
+rectangle "Site Public" {
+  usecase "Consulter les recettes" as UC1
+  usecase "Voir le détail d'une recette\n(ingrédients + prix)" as UC2
+  usecase "Choisir une taille" as UC3
+  usecase "Commander\n(nom + téléphone)" as UC4
+  usecase "Contacter Mariem\n(WhatsApp)" as UC5
+}
+
+rectangle "Admin" {
+  usecase "Se connecter (JWT)" as UC10
+
+  rectangle "Gestion Recettes" {
+    usecase "Créer une recette\n(ingrédients + machines\npar taille)" as UC11
+    usecase "Modifier une recette" as UC12
+    usecase "Dupliquer une recette" as UC13
+    usecase "Désactiver une recette" as UC14
+  }
+
+  rectangle "Gestion Ingrédients" {
+    usecase "Ajouter un ingrédient" as UC20
+    usecase "Modifier le prix\nd'un ingrédient" as UC21
+  }
+
+  rectangle "Gestion Machines" {
+    usecase "Ajouter une machine\n(puissance en W)" as UC25
+    usecase "Modifier une machine" as UC26
+  }
+
+  rectangle "Gestion Commandes" {
+    usecase "Voir les commandes" as UC30
+    usecase "Cocher les ingrédients\nfournis par le client" as UC31
+    usecase "Changer le statut\nd'une commande" as UC32
+    usecase "Annuler une commande" as UC33
+  }
+
+  rectangle "Paramètres" {
+    usecase "Configurer tarif STEG\n(DT/kWh)" as UC40
+    usecase "Configurer forfait eau" as UC41
+    usecase "Configurer marge (%)" as UC42
+  }
+}
+
+client --> UC1
+client --> UC2
+client --> UC3
+client --> UC4
+client --> UC5
+
+mariem --> UC10
+mariem --> UC11
+mariem --> UC12
+mariem --> UC13
+mariem --> UC14
+mariem --> UC20
+mariem --> UC21
+mariem --> UC25
+mariem --> UC26
+mariem --> UC30
+mariem --> UC31
+mariem --> UC32
+mariem --> UC33
+mariem --> UC40
+mariem --> UC41
+mariem --> UC42
+
+UC4 ..> UC31 : <<déclenche>>
+UC31 ..> UC32 : <<précède>>
+
+note bottom of UC31
+  Le prix est recalculé
+  automatiquement quand
+  Mariem coche des ingrédients
+end note
+
+@enduml

@@ -1,0 +1,43 @@
+@startuml etats-commande
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontSize 11
+
+title Diagramme d'États - Cycle de vie d'une Commande
+
+[*] --> pending : Client commande\n(nom + téléphone)
+
+pending --> confirmed : Mariem confirme\n(après discussion\ntéléphone/WhatsApp)
+pending --> cancelled : Mariem annule\nou client annule
+
+confirmed --> preparing : Mariem commence\nla préparation
+confirmed --> cancelled : Annulation
+
+preparing --> ready : Préparation\nterminée
+
+ready --> paid : Client récupère\n+ paye cash 💵
+
+paid --> [*]
+cancelled --> [*]
+
+state pending {
+  note "Mariem reçoit une\nnotification Telegram\n\nElle contacte le client\npour discuter les détails\n\nElle coche les ingrédients\nque le client ramène\n→ prix se recalcule" as N1
+}
+
+state confirmed {
+  note "Prix final validé\nLe client sait combien\nil doit payer\n\nMariem attend les\ningrédients du client\n(si applicable)" as N2
+}
+
+state preparing {
+  note "Mariem prépare\nle gâteau\n\n(étapes secrètes 🤫)" as N3
+}
+
+state ready {
+  note "Le client est\nnotifié que c'est prêt\n(Telegram/WhatsApp)" as N4
+}
+
+state paid {
+  note "Commande terminée\nArchivée pour\nhistorique" as N5
+}
+
+@enduml
