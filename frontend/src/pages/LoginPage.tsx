@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
 import api from '../services/api';
+import { setAuth } from '../store/slices/authSlice';
 import {
   Container,
   Paper,
@@ -17,6 +19,7 @@ import { motion } from 'framer-motion';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -32,8 +35,10 @@ const LoginPage = () => {
 
     try {
       const res = await api.post('/auth/login', formData);
-      const { token } = res.data.data;
+      const { token, user } = res.data.data;
       localStorage.setItem('token', token);
+      // Synchronise Redux pour que ProtectedRoute voit isAuthenticated = true
+      dispatch(setAuth({ user, token }));
       toast.success('Connexion reussie');
       navigate('/admin');
     } catch (err: any) {
