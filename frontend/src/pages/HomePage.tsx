@@ -1,5 +1,5 @@
-import HeroSection from '../components/home/HeroSection'
-import WhyChooseUs from '../components/home/WhyChooseUs'
+import HeroSection from '../components/home/HeroSection';
+import WhyChooseUs from '../components/home/WhyChooseUs';
 
 const HomePage = () => {
   return (
@@ -7,7 +7,7 @@ const HomePage = () => {
       <HeroSection />
       <WhyChooseUs />
     </div>
-  )
-}
+  );
+};
 
-export default HomePage
+export default HomePage;

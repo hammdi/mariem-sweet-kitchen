@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   AppBar,
   Toolbar,
@@ -13,29 +13,28 @@ import {
   List,
   ListItem,
   ListItemText,
-} from '@mui/material'
-import {
-  Menu as MenuIcon,
-  Home,
-  Cake,
-} from '@mui/icons-material'
+} from '@mui/material';
+import { Menu as MenuIcon, Home, Cake } from '@mui/icons-material';
 
 const Header = () => {
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navigationItems = [
     { label: 'Accueil', path: '/', icon: <Home /> },
     { label: 'Recettes', path: '/recipes', icon: <Cake /> },
-  ]
+  ];
 
   return (
     <>
       <AppBar position="sticky" elevation={0} sx={{ bgcolor: 'white', color: 'text.primary' }}>
         <Toolbar>
           {/* Logo */}
-          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+          <Link
+            to="/"
+            style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}
+          >
             <Cake sx={{ color: 'primary.main', fontSize: 32 }} />
             <Typography
               variant="h6"
@@ -44,7 +43,7 @@ const Header = () => {
                 fontFamily: 'Playfair Display',
                 fontWeight: 600,
                 color: 'primary.main',
-                display: { xs: 'none', sm: 'block' }
+                display: { xs: 'none', sm: 'block' },
               }}
             >
               Mariem's Sweet Kitchen
@@ -85,11 +84,7 @@ const Header = () => {
 
           {/* Mobile Menu */}
           {isMobile && (
-            <IconButton
-              color="inherit"
-              onClick={() => setMobileMenuOpen(true)}
-              sx={{ ml: 1 }}
-            >
+            <IconButton color="inherit" onClick={() => setMobileMenuOpen(true)} sx={{ ml: 1 }}>
               <MenuIcon />
             </IconButton>
           )}
@@ -97,11 +92,7 @@ const Header = () => {
       </AppBar>
 
       {/* Mobile Drawer */}
-      <Drawer
-        anchor="right"
-        open={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-      >
+      <Drawer anchor="right" open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)}>
         <Box sx={{ width: 250, pt: 2 }}>
           <List>
             {navigationItems.map((item) => (
@@ -119,7 +110,7 @@ const Header = () => {
         </Box>
       </Drawer>
     </>
-  )
-}
+  );
+};
 
-export default Header
+export default Header;

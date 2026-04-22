@@ -4,9 +4,9 @@ import { logger } from '../utils/logger';
 export const connectDatabase = async (): Promise<void> => {
   try {
     const mongoUri = process.env.MONGODB_URI;
-    
+
     if (!mongoUri) {
-      throw new Error('MONGODB_URI n\'est pas définie dans les variables d\'environnement');
+      throw new Error("MONGODB_URI n'est pas définie dans les variables d'environnement");
     }
 
     // Options de connexion MongoDB
@@ -14,7 +14,7 @@ export const connectDatabase = async (): Promise<void> => {
       maxPoolSize: 10, // Maintenir jusqu'à 10 connexions socket
       serverSelectionTimeoutMS: 5000, // Garder les connexions ouvertes pendant 5 secondes
       socketTimeoutMS: 45000, // Fermer les sockets après 45 secondes d'inactivité
-      bufferCommands: false // Désactiver le buffering mongoose
+      bufferCommands: false, // Désactiver le buffering mongoose
     };
 
     await mongoose.connect(mongoUri, options);
@@ -38,7 +38,6 @@ export const connectDatabase = async (): Promise<void> => {
       logger.info('🔌 Connexion MongoDB fermée proprement');
       process.exit(0);
     });
-
   } catch (error) {
     logger.error('❌ Erreur lors de la connexion à MongoDB:', error);
     throw error;

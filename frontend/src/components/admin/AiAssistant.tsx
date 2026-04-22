@@ -1,68 +1,73 @@
-import { useState, useRef, useEffect } from 'react'
-import { toast } from 'react-toastify'
-import api from '../../services/api'
-import {
-  Box, Typography, TextField, IconButton, Paper, Fab, Fade, Avatar,
-} from '@mui/material'
-import { Close, Send, AutoAwesome } from '@mui/icons-material'
+import { useState, useRef, useEffect } from 'react';
+import { toast } from 'react-toastify';
+import api from '../../services/api';
+import { Box, Typography, TextField, IconButton, Paper, Fab, Fade, Avatar } from '@mui/material';
+import { Close, Send, AutoAwesome } from '@mui/icons-material';
 
 interface Message {
-  role: 'user' | 'assistant'
-  text: string
-  timestamp: Date
+  role: 'user' | 'assistant';
+  text: string;
+  timestamp: Date;
 }
 
 const AiAssistant = ({ page }: { page?: string }) => {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', text: 'Bonjour Mariem ! Je suis ton assistant. Pose-moi une question ou demande de l\'aide.', timestamp: new Date() }
-  ])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [pulse, setPulse] = useState(true)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+    {
+      role: 'assistant',
+      text: "Bonjour Mariem ! Je suis ton assistant. Pose-moi une question ou demande de l'aide.",
+      timestamp: new Date(),
+    },
+  ]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [pulse, setPulse] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   // Stop pulsing after first open
   useEffect(() => {
-    if (open) setPulse(false)
-  }, [open])
+    if (open) setPulse(false);
+  }, [open]);
 
   const sendMessage = async () => {
-    if (!input.trim() || loading) return
+    if (!input.trim() || loading) return;
 
-    const userMsg: Message = { role: 'user', text: input.trim(), timestamp: new Date() }
-    setMessages(prev => [...prev, userMsg])
-    setInput('')
-    setLoading(true)
+    const userMsg: Message = { role: 'user', text: input.trim(), timestamp: new Date() };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput('');
+    setLoading(true);
 
     try {
       const res = await api.post('/ai/chat', {
         message: userMsg.text,
         context: { page },
-      })
-      const reply = res.data.data?.reply || 'Desolee, je n\'ai pas pu repondre.'
-      setMessages(prev => [...prev, { role: 'assistant', text: reply, timestamp: new Date() }])
+      });
+      const reply = res.data.data?.reply || "Desolee, je n'ai pas pu repondre.";
+      setMessages((prev) => [...prev, { role: 'assistant', text: reply, timestamp: new Date() }]);
     } catch {
-      toast.error('L\'assistant IA est indisponible')
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        text: 'Oups, je suis temporairement indisponible. Reessaye dans un moment.',
-        timestamp: new Date()
-      }])
+      toast.error("L'assistant IA est indisponible");
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          text: 'Oups, je suis temporairement indisponible. Reessaye dans un moment.',
+          timestamp: new Date(),
+        },
+      ]);
     }
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
+      e.preventDefault();
+      sendMessage();
     }
-  }
+  };
 
   return (
     <>
@@ -105,10 +110,17 @@ const AiAssistant = ({ page }: { page?: string }) => {
           }}
         >
           {/* Header */}
-          <Box sx={{
-            bgcolor: '#f1770a', color: 'white', px: 2, py: 1.5,
-            display: 'flex', alignItems: 'center', gap: 1.5,
-          }}>
+          <Box
+            sx={{
+              bgcolor: '#f1770a',
+              color: 'white',
+              px: 2,
+              py: 1.5,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+            }}
+          >
             <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 36, height: 36 }}>
               <AutoAwesome sx={{ fontSize: 20 }} />
             </Avatar>
@@ -123,21 +135,32 @@ const AiAssistant = ({ page }: { page?: string }) => {
           </Box>
 
           {/* Messages */}
-          <Box sx={{
-            flex: 1, overflowY: 'auto', px: 2, py: 1.5,
-            display: 'flex', flexDirection: 'column', gap: 1,
-            bgcolor: '#fafafa',
-            maxHeight: { xs: '50vh', sm: 340 },
-          }}>
+          <Box
+            sx={{
+              flex: 1,
+              overflowY: 'auto',
+              px: 2,
+              py: 1.5,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1,
+              bgcolor: '#fafafa',
+              maxHeight: { xs: '50vh', sm: 340 },
+            }}
+          >
             {messages.map((msg, i) => (
-              <Box key={i} sx={{
-                alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                maxWidth: '85%',
-              }}>
+              <Box
+                key={i}
+                sx={{
+                  alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                  maxWidth: '85%',
+                }}
+              >
                 <Paper
                   elevation={0}
                   sx={{
-                    px: 1.5, py: 1,
+                    px: 1.5,
+                    py: 1,
                     borderRadius: 2,
                     bgcolor: msg.role === 'user' ? '#f1770a' : 'white',
                     color: msg.role === 'user' ? 'white' : 'text.primary',
@@ -148,25 +171,44 @@ const AiAssistant = ({ page }: { page?: string }) => {
                     {msg.text}
                   </Typography>
                 </Paper>
-                <Typography variant="caption" color="text.secondary" sx={{ px: 0.5, fontSize: '0.6rem' }}>
-                  {msg.timestamp.toLocaleTimeString('fr-TN', { hour: '2-digit', minute: '2-digit' })}
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ px: 0.5, fontSize: '0.6rem' }}
+                >
+                  {msg.timestamp.toLocaleTimeString('fr-TN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
                 </Typography>
               </Box>
             ))}
             {loading && (
               <Box sx={{ alignSelf: 'flex-start', maxWidth: '85%' }}>
-                <Paper elevation={0} sx={{ px: 2, py: 1, borderRadius: 2, bgcolor: 'white', border: '1px solid #e0e0e0' }}>
-                  <Typography variant="body2" sx={{
-                    '@keyframes dots': {
-                      '0%': { content: '"."' },
-                      '33%': { content: '".."' },
-                      '66%': { content: '"..."' },
-                    },
-                    '&::after': {
-                      content: '"..."',
-                      animation: 'dots 1.5s steps(3, end) infinite',
-                    }
-                  }}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    px: 2,
+                    py: 1,
+                    borderRadius: 2,
+                    bgcolor: 'white',
+                    border: '1px solid #e0e0e0',
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      '@keyframes dots': {
+                        '0%': { content: '"."' },
+                        '33%': { content: '".."' },
+                        '66%': { content: '"..."' },
+                      },
+                      '&::after': {
+                        content: '"..."',
+                        animation: 'dots 1.5s steps(3, end) infinite',
+                      },
+                    }}
+                  >
                     En train de reflechir
                   </Typography>
                 </Paper>
@@ -176,16 +218,27 @@ const AiAssistant = ({ page }: { page?: string }) => {
           </Box>
 
           {/* Input */}
-          <Box sx={{
-            px: 1.5, py: 1, borderTop: '1px solid #e0e0e0', bgcolor: 'white',
-            display: 'flex', gap: 1, alignItems: 'center',
-          }}>
+          <Box
+            sx={{
+              px: 1.5,
+              py: 1,
+              borderTop: '1px solid #e0e0e0',
+              bgcolor: 'white',
+              display: 'flex',
+              gap: 1,
+              alignItems: 'center',
+            }}
+          >
             <TextField
-              fullWidth size="small" placeholder="Posez une question..."
-              value={input} onChange={e => setInput(e.target.value)}
+              fullWidth
+              size="small"
+              placeholder="Posez une question..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={loading}
-              multiline maxRows={3}
+              multiline
+              maxRows={3}
               sx={{
                 '& .MuiOutlinedInput-root': { borderRadius: 2, fontSize: '0.9rem' },
               }}
@@ -201,7 +254,7 @@ const AiAssistant = ({ page }: { page?: string }) => {
         </Paper>
       </Fade>
     </>
-  )
-}
+  );
+};
 
-export default AiAssistant
+export default AiAssistant;

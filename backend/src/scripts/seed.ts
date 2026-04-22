@@ -57,30 +57,78 @@ const seedData = async () => {
     // Ingredients
     const ings = await Ingredient.insertMany([
       { name: 'Farine', pricePerUnit: 0.8, unit: 'kg', category: 'base', stockQuantity: 2.0 },
-      { name: 'Sucre blanc', pricePerUnit: 1.2, unit: 'kg', category: 'sweetener', stockQuantity: 1.5 },
+      {
+        name: 'Sucre blanc',
+        pricePerUnit: 1.2,
+        unit: 'kg',
+        category: 'sweetener',
+        stockQuantity: 1.5,
+      },
       { name: 'Oeufs', pricePerUnit: 0.17, unit: 'piece', category: 'dairy', stockQuantity: 12 },
       { name: 'Beurre', pricePerUnit: 12.0, unit: 'kg', category: 'dairy', stockQuantity: 0.5 },
       { name: 'Lait', pricePerUnit: 1.4, unit: 'l', category: 'dairy', stockQuantity: 1.0 },
-      { name: 'Cacao en poudre', pricePerUnit: 8.0, unit: 'kg', category: 'flavoring', stockQuantity: 0.2 },
-      { name: 'Chocolat noir', pricePerUnit: 20.0, unit: 'kg', category: 'flavoring', stockQuantity: 0.3 },
-      { name: 'Vanille', pricePerUnit: 0.5, unit: 'cuillere', category: 'flavoring', stockQuantity: 5 },
-      { name: 'Levure chimique', pricePerUnit: 5.0, unit: 'kg', category: 'leavening', stockQuantity: 0.1 },
+      {
+        name: 'Cacao en poudre',
+        pricePerUnit: 8.0,
+        unit: 'kg',
+        category: 'flavoring',
+        stockQuantity: 0.2,
+      },
+      {
+        name: 'Chocolat noir',
+        pricePerUnit: 20.0,
+        unit: 'kg',
+        category: 'flavoring',
+        stockQuantity: 0.3,
+      },
+      {
+        name: 'Vanille',
+        pricePerUnit: 0.5,
+        unit: 'cuillere',
+        category: 'flavoring',
+        stockQuantity: 5,
+      },
+      {
+        name: 'Levure chimique',
+        pricePerUnit: 5.0,
+        unit: 'kg',
+        category: 'leavening',
+        stockQuantity: 0.1,
+      },
       { name: 'Sel', pricePerUnit: 0.5, unit: 'kg', category: 'other', stockQuantity: 0.5 },
       { name: 'Amandes', pricePerUnit: 25.0, unit: 'kg', category: 'flavoring', stockQuantity: 0 },
       { name: 'Miel', pricePerUnit: 15.0, unit: 'kg', category: 'sweetener', stockQuantity: 0.3 },
       { name: 'Creme fraiche', pricePerUnit: 3.5, unit: 'l', category: 'dairy', stockQuantity: 0 },
       { name: 'Pistache', pricePerUnit: 45.0, unit: 'kg', category: 'flavoring', stockQuantity: 0 },
-      { name: 'Eau de fleur d\'oranger', pricePerUnit: 8.0, unit: 'l', category: 'flavoring', stockQuantity: 0.1 },
-      { name: 'Huile vegetale', pricePerUnit: 2.8, unit: 'l', category: 'other', stockQuantity: 0.5 },
+      {
+        name: "Eau de fleur d'oranger",
+        pricePerUnit: 8.0,
+        unit: 'l',
+        category: 'flavoring',
+        stockQuantity: 0.1,
+      },
+      {
+        name: 'Huile vegetale',
+        pricePerUnit: 2.8,
+        unit: 'l',
+        category: 'other',
+        stockQuantity: 0.5,
+      },
       { name: 'Pate filo', pricePerUnit: 3.5, unit: 'piece', category: 'base', stockQuantity: 3 },
       { name: 'Noix', pricePerUnit: 30.0, unit: 'kg', category: 'flavoring', stockQuantity: 0.1 },
-      { name: 'Sucre glace', pricePerUnit: 2.0, unit: 'kg', category: 'sweetener', stockQuantity: 0.2 },
+      {
+        name: 'Sucre glace',
+        pricePerUnit: 2.0,
+        unit: 'kg',
+        category: 'sweetener',
+        stockQuantity: 0.2,
+      },
       { name: 'Fraises', pricePerUnit: 6.0, unit: 'kg', category: 'flavoring', stockQuantity: 0 },
     ]);
     logger.info(`${ings.length} ingredients crees`);
 
     // Map par nom
-    const i = (name: string) => ings.find(x => x.name === name)!._id;
+    const i = (name: string) => ings.find((x) => x.name === name)!._id;
 
     // Machines
     const apps = await Appliance.insertMany([
@@ -92,13 +140,14 @@ const seedData = async () => {
     ]);
     logger.info(`${apps.length} machines creees`);
 
-    const a = (name: string) => apps.find(x => x.name === name)!._id;
+    const a = (name: string) => apps.find((x) => x.name === name)!._id;
 
     // Recettes
     await Recipe.insertMany([
       {
         name: 'Gateau au chocolat',
-        description: 'Un gateau moelleux et fondant au chocolat noir, parfait pour les amateurs de cacao. Recette traditionnelle de Mariem.',
+        description:
+          'Un gateau moelleux et fondant au chocolat noir, parfait pour les amateurs de cacao. Recette traditionnelle de Mariem.',
         images: ['/images/recipes/gateau-chocolat.svg'],
         categories: ['gateau', 'chocolat'],
         variants: [
@@ -142,7 +191,8 @@ const seedData = async () => {
       },
       {
         name: 'Tarte aux pommes',
-        description: 'Une tarte croustillante avec une garniture fondante aux pommes caramelisees et une touche de cannelle.',
+        description:
+          'Une tarte croustillante avec une garniture fondante aux pommes caramelisees et une touche de cannelle.',
         images: ['/images/recipes/tarte-pommes.svg'],
         categories: ['tarte'],
         variants: [
@@ -167,7 +217,8 @@ const seedData = async () => {
       },
       {
         name: 'Cookies pepites de chocolat',
-        description: 'Des cookies croustillants a l\'exterieur, moelleux a l\'interieur, avec de genereux morceaux de chocolat.',
+        description:
+          "Des cookies croustillants a l'exterieur, moelleux a l'interieur, avec de genereux morceaux de chocolat.",
         images: ['/images/recipes/cookies.svg'],
         categories: ['biscuit'],
         variants: [
@@ -209,7 +260,8 @@ const seedData = async () => {
       },
       {
         name: 'Muffins vanille',
-        description: 'Des muffins legers et parfumes a la vanille, parfaits pour le gouter ou le petit dejeuner.',
+        description:
+          'Des muffins legers et parfumes a la vanille, parfaits pour le gouter ou le petit dejeuner.',
         images: ['/images/recipes/muffins.svg'],
         categories: ['muffin'],
         variants: [
@@ -225,9 +277,7 @@ const seedData = async () => {
               { ingredientId: i('Vanille'), quantity: 2, unit: 'cuillere' },
               { ingredientId: i('Levure chimique'), quantity: 0.008, unit: 'kg' },
             ],
-            appliances: [
-              { applianceId: a('Four electrique'), duration: 25 },
-            ],
+            appliances: [{ applianceId: a('Four electrique'), duration: 25 }],
           },
           {
             sizeName: '12 pieces',
@@ -241,15 +291,14 @@ const seedData = async () => {
               { ingredientId: i('Vanille'), quantity: 3, unit: 'cuillere' },
               { ingredientId: i('Levure chimique'), quantity: 0.015, unit: 'kg' },
             ],
-            appliances: [
-              { applianceId: a('Four electrique'), duration: 30 },
-            ],
+            appliances: [{ applianceId: a('Four electrique'), duration: 30 }],
           },
         ],
       },
       {
         name: 'Baklawa tunisienne',
-        description: 'La baklawa traditionnelle tunisienne aux amandes et pistaches, imbibee de sirop de miel et d\'eau de fleur d\'oranger.',
+        description:
+          "La baklawa traditionnelle tunisienne aux amandes et pistaches, imbibee de sirop de miel et d'eau de fleur d'oranger.",
         images: ['/images/recipes/baklawa.svg'],
         categories: ['patisserie', 'traditionnel'],
         variants: [
@@ -263,17 +312,16 @@ const seedData = async () => {
               { ingredientId: i('Sucre blanc'), quantity: 0.3, unit: 'kg' },
               { ingredientId: i('Beurre'), quantity: 0.2, unit: 'kg' },
               { ingredientId: i('Miel'), quantity: 0.15, unit: 'kg' },
-              { ingredientId: i('Eau de fleur d\'oranger'), quantity: 0.05, unit: 'l' },
+              { ingredientId: i("Eau de fleur d'oranger"), quantity: 0.05, unit: 'l' },
             ],
-            appliances: [
-              { applianceId: a('Four electrique'), duration: 40 },
-            ],
+            appliances: [{ applianceId: a('Four electrique'), duration: 40 }],
           },
         ],
       },
       {
         name: 'Gateau aux fraises',
-        description: 'Un gateau leger garni de fraises fraiches et de creme, ideal pour les fetes et les anniversaires.',
+        description:
+          'Un gateau leger garni de fraises fraiches et de creme, ideal pour les fetes et les anniversaires.',
         images: ['/images/recipes/gateau-fraise.svg'],
         categories: ['gateau', 'fruits', 'anniversaire'],
         variants: [
@@ -301,7 +349,8 @@ const seedData = async () => {
       },
       {
         name: 'Brownies chocolat',
-        description: 'Des brownies denses et fondants au chocolat noir intense, avec une croute croustillante.',
+        description:
+          'Des brownies denses et fondants au chocolat noir intense, avec une croute croustillante.',
         images: ['/images/recipes/brownie.svg'],
         categories: ['biscuit', 'chocolat'],
         variants: [
@@ -327,7 +376,8 @@ const seedData = async () => {
       },
       {
         name: 'Madeleines au miel',
-        description: 'Les classiques madeleines bien bombees, parfumees au miel et a la fleur d\'oranger.',
+        description:
+          "Les classiques madeleines bien bombees, parfumees au miel et a la fleur d'oranger.",
         images: ['/images/recipes/madeleines.svg'],
         categories: ['patisserie', 'traditionnel'],
         variants: [
@@ -341,11 +391,9 @@ const seedData = async () => {
               { ingredientId: i('Beurre'), quantity: 0.1, unit: 'kg' },
               { ingredientId: i('Miel'), quantity: 0.03, unit: 'kg' },
               { ingredientId: i('Levure chimique'), quantity: 0.005, unit: 'kg' },
-              { ingredientId: i('Eau de fleur d\'oranger'), quantity: 0.01, unit: 'l' },
+              { ingredientId: i("Eau de fleur d'oranger"), quantity: 0.01, unit: 'l' },
             ],
-            appliances: [
-              { applianceId: a('Four electrique'), duration: 12 },
-            ],
+            appliances: [{ applianceId: a('Four electrique'), duration: 12 }],
           },
           {
             sizeName: '24 pieces',
@@ -357,11 +405,9 @@ const seedData = async () => {
               { ingredientId: i('Beurre'), quantity: 0.2, unit: 'kg' },
               { ingredientId: i('Miel'), quantity: 0.06, unit: 'kg' },
               { ingredientId: i('Levure chimique'), quantity: 0.01, unit: 'kg' },
-              { ingredientId: i('Eau de fleur d\'oranger'), quantity: 0.02, unit: 'l' },
+              { ingredientId: i("Eau de fleur d'oranger"), quantity: 0.02, unit: 'l' },
             ],
-            appliances: [
-              { applianceId: a('Four electrique'), duration: 15 },
-            ],
+            appliances: [{ applianceId: a('Four electrique'), duration: 15 }],
           },
         ],
       },
@@ -370,7 +416,6 @@ const seedData = async () => {
 
     logger.info('Seed termine avec succes');
     logger.info(`Admin: ${ADMIN_EMAIL} (mot de passe defini via ADMIN_PASSWORD)`);
-
   } catch (error) {
     logger.error('Erreur seed:', error);
     throw error;

@@ -1,5 +1,5 @@
-import { Box, Container, Typography, Link, Grid, IconButton } from '@mui/material'
-import { Facebook, Instagram, Twitter, Email, Phone, LocationOn } from '@mui/icons-material'
+import { Box, Container, Typography, Link, Grid, IconButton } from '@mui/material';
+import { Facebook, Instagram, Twitter, Email, Phone, LocationOn } from '@mui/icons-material';
 
 const Footer = () => {
   return (
@@ -28,8 +28,8 @@ const Footer = () => {
               Mariem's Sweet Kitchen
             </Typography>
             <Typography variant="body2" sx={{ mb: 2, opacity: 0.9 }}>
-              Pâtisserie artisanale avec calcul de coûts transparent. 
-              Découvrez nos délicieuses recettes et leurs prix détaillés.
+              Pâtisserie artisanale avec calcul de coûts transparent. Découvrez nos délicieuses
+              recettes et leurs prix détaillés.
             </Typography>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <IconButton color="inherit" size="small">
@@ -94,21 +94,15 @@ const Footer = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Email fontSize="small" />
-                <Typography variant="body2">
-                  contact@mariemkitchen.com
-                </Typography>
+                <Typography variant="body2">contact@mariemkitchen.com</Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Phone fontSize="small" />
-                <Typography variant="body2">
-                  +216 12 345 678
-                </Typography>
+                <Typography variant="body2">+216 12 345 678</Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <LocationOn fontSize="small" />
-                <Typography variant="body2">
-                  Tunis, Tunisie
-                </Typography>
+                <Typography variant="body2">Tunis, Tunisie</Typography>
               </Box>
             </Box>
           </Grid>
@@ -129,7 +123,7 @@ const Footer = () => {
         </Box>
       </Container>
     </Box>
-  )
-}
+  );
+};
 
-export default Footer
+export default Footer;

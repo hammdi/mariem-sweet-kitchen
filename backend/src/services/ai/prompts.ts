@@ -10,7 +10,7 @@ export function buildDescriptionPrompt(params: {
   ingredients: Array<{ name: string; quantity: number; unit: string }>;
 }): string {
   const ingredientsList = params.ingredients
-    .map(i => `- ${i.name} (${i.quantity} ${i.unit})`)
+    .map((i) => `- ${i.name} (${i.quantity} ${i.unit})`)
     .join('\n');
 
   return `Tu es l'assistant marketing d'une patisserie artisanale tunisienne nommee Mariem's Sweet Kitchen.
@@ -39,7 +39,7 @@ export function buildAssistantPrompt(params: {
   const formJson = JSON.stringify(formState, null, 2);
   const catalogIngredients = context.catalog.ingredients.join(', ');
   const catalogAppliances = context.catalog.appliances
-    .map(a => `${a.name} (${a.powerW}W)`)
+    .map((a) => `${a.name} (${a.powerW}W)`)
     .join(', ');
 
   const similarSummary = context.similarRecipes.length

@@ -38,11 +38,13 @@ function isBreakerOpen(name: string): boolean {
 function recordFailure(name: string) {
   const b = getBreaker(name);
   const now = Date.now();
-  b.failures = b.failures.filter(t => now - t < FAILURE_WINDOW_MS);
+  b.failures = b.failures.filter((t) => now - t < FAILURE_WINDOW_MS);
   b.failures.push(now);
   if (b.failures.length >= FAILURE_THRESHOLD) {
     b.openUntil = now + OPEN_DURATION_MS;
-    logger.warn(`AI circuit breaker OPEN sur ${name} jusqu'a ${new Date(b.openUntil).toISOString()}`);
+    logger.warn(
+      `AI circuit breaker OPEN sur ${name} jusqu'a ${new Date(b.openUntil).toISOString()}`
+    );
     b.failures = [];
   }
 }
@@ -54,7 +56,7 @@ function recordSuccess(name: string) {
 }
 
 export function getProvidersStatus() {
-  return PROVIDERS.map(p => ({
+  return PROVIDERS.map((p) => ({
     name: p.name,
     enabled: p.isEnabled(),
     healthy: !isBreakerOpen(p.name),
@@ -62,7 +64,7 @@ export function getProvidersStatus() {
 }
 
 export function isAnyProviderEnabled(): boolean {
-  return PROVIDERS.some(p => p.isEnabled());
+  return PROVIDERS.some((p) => p.isEnabled());
 }
 
 /**
@@ -73,7 +75,9 @@ export async function generateWithFallback(opts: GenerateOptions): Promise<Gener
   const errors: string[] = [];
 
   for (const provider of PROVIDERS) {
-    if (!provider.isEnabled()) {continue;}
+    if (!provider.isEnabled()) {
+      continue;
+    }
     if (isBreakerOpen(provider.name)) {
       logger.info(`AI: skip ${provider.name} (circuit breaker ouvert)`);
       continue;

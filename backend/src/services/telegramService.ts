@@ -56,7 +56,10 @@ export class TelegramService {
     }[];
   }): Promise<void> {
     const itemsText = order.items
-      .map(i => `  • ${i.quantity}x ${i.recipeName} (${i.sizeName}) — ${(i.unitPrice * i.quantity).toFixed(2)} DT`)
+      .map(
+        (i) =>
+          `  • ${i.quantity}x ${i.recipeName} (${i.sizeName}) — ${(i.unitPrice * i.quantity).toFixed(2)} DT`
+      )
       .join('\n');
 
     let dateText = '';
@@ -78,7 +81,9 @@ export class TelegramService {
       `💰 <b>Total : ${order.totalPrice.toFixed(2)} DT</b>`,
       dateText,
       notesText,
-    ].filter(Boolean).join('\n');
+    ]
+      .filter(Boolean)
+      .join('\n');
 
     await this.send(text);
   }
@@ -86,7 +91,12 @@ export class TelegramService {
   /**
    * Notification de changement de statut
    */
-  static async notifyStatusChange(orderName: string, clientPhone: string, oldStatus: string, newStatus: string): Promise<void> {
+  static async notifyStatusChange(
+    orderName: string,
+    clientPhone: string,
+    oldStatus: string,
+    newStatus: string
+  ): Promise<void> {
     const statusEmoji: Record<string, string> = {
       confirmed: '✅',
       preparing: '👩‍🍳',

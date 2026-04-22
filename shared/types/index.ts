@@ -3,22 +3,41 @@
 // ============ Enums & constantes ============
 
 export const INGREDIENT_UNITS = ['kg', 'g', 'l', 'ml', 'piece', 'cuillere', 'tasse'] as const;
-export type IngredientUnit = typeof INGREDIENT_UNITS[number];
+export type IngredientUnit = (typeof INGREDIENT_UNITS)[number];
 
-export const INGREDIENT_CATEGORIES = ['base', 'sweetener', 'dairy', 'flavoring', 'leavening', 'other'] as const;
-export type IngredientCategory = typeof INGREDIENT_CATEGORIES[number];
+export const INGREDIENT_CATEGORIES = [
+  'base',
+  'sweetener',
+  'dairy',
+  'flavoring',
+  'leavening',
+  'other',
+] as const;
+export type IngredientCategory = (typeof INGREDIENT_CATEGORIES)[number];
 
 export const APPLIANCE_UNITS = ['W', 'kW'] as const;
-export type ApplianceUnit = typeof APPLIANCE_UNITS[number];
+export type ApplianceUnit = (typeof APPLIANCE_UNITS)[number];
 
 export const APPLIANCE_CATEGORIES = ['cooking', 'mixing', 'cooling', 'other'] as const;
-export type ApplianceCategory = typeof APPLIANCE_CATEGORIES[number];
+export type ApplianceCategory = (typeof APPLIANCE_CATEGORIES)[number];
 
-export const ORDER_STATUSES = ['pending', 'confirmed', 'preparing', 'ready', 'paid', 'cancelled'] as const;
-export type OrderStatus = typeof ORDER_STATUSES[number];
+export const ORDER_STATUSES = [
+  'pending',
+  'confirmed',
+  'preparing',
+  'ready',
+  'paid',
+  'cancelled',
+] as const;
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
-export const SETTINGS_KEYS = ['stegTariff', 'waterForfaitSmall', 'waterForfaitLarge', 'marginPercent'] as const;
-export type SettingKey = typeof SETTINGS_KEYS[number];
+export const SETTINGS_KEYS = [
+  'stegTariff',
+  'waterForfaitSmall',
+  'waterForfaitLarge',
+  'marginPercent',
+] as const;
+export type SettingKey = (typeof SETTINGS_KEYS)[number];
 
 // ============ User ============
 
@@ -127,8 +146,8 @@ export interface Order {
   totalPrice: number;
   status: OrderStatus;
   ingredientsReady: boolean;
-  requestedDate: string | null;   // date/heure souhaitée par le client
-  confirmedDate: string | null;   // date/heure confirmée par Mariem
+  requestedDate: string | null; // date/heure souhaitée par le client
+  confirmedDate: string | null; // date/heure confirmée par Mariem
   notes: string;
   createdAt: string;
   updatedAt: string;
@@ -211,7 +230,7 @@ export interface LoginForm {
 export interface OrderForm {
   clientName: string;
   clientPhone: string;
-  requestedDate?: string;  // ISO date string — quand le client veut son produit
+  requestedDate?: string; // ISO date string — quand le client veut son produit
   items: {
     recipeId: string;
     variantIndex: number;

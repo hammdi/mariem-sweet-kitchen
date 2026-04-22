@@ -50,6 +50,7 @@ cp env.example .env
 ```
 
 Éditer `.env` :
+
 ```env
 NODE_ENV=production
 PORT=3001
@@ -101,7 +102,7 @@ services:
     container_name: mariem-backend
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      - '3001:3001'
     env_file:
       - .env
     depends_on:
@@ -116,7 +117,7 @@ services:
     container_name: mariem-frontend
     restart: unless-stopped
     ports:
-      - "3000:80"
+      - '3000:80'
     depends_on:
       - backend
     networks:
@@ -242,13 +243,15 @@ chmod +x ~/backup-mariem.sh
 ## 8. Sécurité AWS
 
 ### Security Group EC2
-| Type | Port | Source |
-|------|------|--------|
-| SSH | 22 | Votre IP uniquement |
-| HTTP | 80 | 0.0.0.0/0 |
-| HTTPS | 443 | 0.0.0.0/0 |
+
+| Type  | Port | Source              |
+| ----- | ---- | ------------------- |
+| SSH   | 22   | Votre IP uniquement |
+| HTTP  | 80   | 0.0.0.0/0           |
+| HTTPS | 443  | 0.0.0.0/0           |
 
 ### Firewall serveur
+
 ```bash
 sudo ufw default deny incoming
 sudo ufw default allow outgoing

@@ -21,7 +21,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
     if (!token) {
-      throw createError('Token d\'authentification manquant', 401);
+      throw createError("Token d'authentification manquant", 401);
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };

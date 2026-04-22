@@ -23,11 +23,15 @@ const storage = multer.diskStorage({
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     const ext = path.extname(file.originalname).toLowerCase();
     cb(null, `recipe-${uniqueSuffix}${ext}`);
-  }
+  },
 });
 
 // File filter: only accept jpeg, png, webp
-const fileFilter = (_req: express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (
+  _req: express.Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+) => {
   const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
   if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
@@ -41,7 +45,7 @@ const upload = multer({
   fileFilter,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB
-  }
+  },
 });
 
 // @desc    Upload recipe images (admin)
@@ -80,7 +84,7 @@ router.post(
 
     res.status(201).json({
       success: true,
-      data: { urls }
+      data: { urls },
     });
   })
 );

@@ -1,6 +1,7 @@
 # Guide de démarrage rapide
 
 ## Prérequis
+
 - Node.js 18+
 - MongoDB 6+ (local, Docker ou Atlas)
 - Git
@@ -54,6 +55,7 @@ cd backend && npx ts-node src/scripts/seed.ts
 ```
 
 Crée :
+
 - Admin (email `admin@mariemkitchen.com`, mot de passe = `$ADMIN_PASSWORD`).
 - Ingrédients de base (farine, sucre, œufs, beurre, etc.).
 - Machines (four, batteur, robot, micro-ondes, réfrigérateur).
@@ -71,12 +73,12 @@ docker compose down          # Arrête tout
 
 ## Accès
 
-| Service | URL |
-|---------|-----|
-| Frontend client | http://localhost:3000 |
-| Admin | http://localhost:3000/admin |
-| API | http://localhost:3001/api |
-| Health check | http://localhost:3001/api/health |
+| Service         | URL                              |
+| --------------- | -------------------------------- |
+| Frontend client | http://localhost:3000            |
+| Admin           | http://localhost:3000/admin      |
+| API             | http://localhost:3001/api        |
+| Health check    | http://localhost:3001/api/health |
 
 ## Tests
 

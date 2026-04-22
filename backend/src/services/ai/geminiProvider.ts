@@ -14,7 +14,9 @@ export const geminiProvider: AIProvider = {
   },
 
   async generate(opts: GenerateOptions): Promise<GenerateResult> {
-    if (!client) {throw new Error('Gemini non configure');}
+    if (!client) {
+      throw new Error('Gemini non configure');
+    }
 
     const generationConfig: Record<string, unknown> = {
       temperature: opts.temperature ?? 0.7,

@@ -26,34 +26,26 @@ winston.addColors(colors);
 const format = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
   winston.format.colorize({ all: true }),
-  winston.format.printf(
-    (info) => `${info.timestamp} ${info.level}: ${info.message}`
-  )
+  winston.format.printf((info) => `${info.timestamp} ${info.level}: ${info.message}`)
 );
 
 // Transports pour les logs
 const transports = [
   // Console transport
   new winston.transports.Console(),
-  
+
   // File transport pour les erreurs
   new winston.transports.File({
     filename: path.join('logs', 'error.log'),
     level: 'error',
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.json()
-    )
+    format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   }),
-  
+
   // File transport pour tous les logs
   new winston.transports.File({
     filename: path.join('logs', 'combined.log'),
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.json()
-    )
-  })
+    format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
+  }),
 ];
 
 // Créer le logger
@@ -62,19 +54,16 @@ export const logger = winston.createLogger({
   levels,
   format,
   transports,
-  exitOnError: false
+  exitOnError: false,
 });
 
 // Logger pour les requêtes HTTP
 export const httpLogger = winston.createLogger({
   level: 'http',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.File({
-      filename: path.join('logs', 'http.log')
-    })
-  ]
+      filename: path.join('logs', 'http.log'),
+    }),
+  ],
 });

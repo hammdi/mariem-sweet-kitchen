@@ -1,46 +1,40 @@
-import { Container, Typography, Box, Grid, Card, CardContent } from '@mui/material'
-import { motion } from 'framer-motion'
-import { 
-  Visibility, 
-  Calculate, 
-  Security, 
-  Support, 
-  LocalShipping 
-} from '@mui/icons-material'
+import { Container, Typography, Box, Grid, Card, CardContent } from '@mui/material';
+import { motion } from 'framer-motion';
+import { Visibility, Calculate, Security, Support, LocalShipping } from '@mui/icons-material';
 
 const WhyChooseUs = () => {
   const features = [
     {
       icon: <Visibility sx={{ fontSize: 50, color: 'primary.main' }} />,
       title: 'Transparence Totale',
-      description: 'Chaque coût est détaillé : ingrédients, eau, électricité, et marge de 15%'
+      description: 'Chaque coût est détaillé : ingrédients, eau, électricité, et marge de 15%',
     },
     {
       icon: <Calculate sx={{ fontSize: 50, color: 'primary.main' }} />,
       title: 'Calcul Automatique',
-      description: 'Les prix se calculent automatiquement selon les prix du marché actuels'
+      description: 'Les prix se calculent automatiquement selon les prix du marché actuels',
     },
     {
       icon: <Calculate sx={{ fontSize: 50, color: 'primary.main' }} />,
       title: 'Écologique',
-      description: 'Consommation d\'eau et d\'électricité optimisée et facturée au juste prix'
+      description: "Consommation d'eau et d'électricité optimisée et facturée au juste prix",
     },
     {
       icon: <Security sx={{ fontSize: 50, color: 'primary.main' }} />,
       title: 'Qualité Garantie',
-      description: 'Recettes artisanales transmises de génération en génération'
+      description: 'Recettes artisanales transmises de génération en génération',
     },
     {
       icon: <Support sx={{ fontSize: 50, color: 'primary.main' }} />,
       title: 'Support Client',
-      description: 'Accompagnement personnalisé pour vos commandes'
+      description: 'Accompagnement personnalisé pour vos commandes',
     },
     {
       icon: <LocalShipping sx={{ fontSize: 50, color: 'primary.main' }} />,
       title: 'Flexibilité',
-      description: 'Choisissez entre livraison ou retrait, avec ou sans ingrédients'
-    }
-  ]
+      description: 'Choisissez entre livraison ou retrait, avec ou sans ingrédients',
+    },
+  ];
 
   return (
     <Box sx={{ py: 8, bgcolor: 'primary.50' }}>
@@ -99,9 +93,7 @@ const WhyChooseUs = () => {
                   }}
                 >
                   <CardContent>
-                    <Box sx={{ mb: 2 }}>
-                      {feature.icon}
-                    </Box>
+                    <Box sx={{ mb: 2 }}>{feature.icon}</Box>
                     <Typography
                       variant="h6"
                       component="h3"
@@ -130,7 +122,7 @@ const WhyChooseUs = () => {
         </Grid>
       </Container>
     </Box>
-  )
-}
+  );
+};
 
-export default WhyChooseUs
+export default WhyChooseUs;

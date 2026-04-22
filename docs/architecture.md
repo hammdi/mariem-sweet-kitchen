@@ -46,25 +46,26 @@ L'admin est intégré au même frontend (routes `/admin/*` protégées par JWT),
 
 ## Stack technique
 
-| Couche | Techno | Rôle |
-|--------|--------|------|
-| Frontend | React 18 + TypeScript + Vite | Interface client + admin |
-| UI | Material-UI v5 + Tailwind CSS | Composants + utilitaires |
-| État | Redux Toolkit | Auth, panier, recettes |
-| Routing | React Router v6 | Navigation |
-| Backend | Node.js 18 + Express + TypeScript | API REST |
-| BDD | MongoDB 6 + Mongoose | Persistance |
-| Auth | JWT + bcrypt (12 rounds) | Admin et client |
-| Sécurité | helmet, cors, express-rate-limit | Hardening |
-| Logging | Winston + morgan | Logs applicatifs et HTTP |
-| Notifications | Telegram Bot API | Alertes commandes |
-| Upload | Multer | Images recettes |
-| Déploiement | Docker + Nginx + Let's Encrypt | Production |
-| CI/CD (prévu) | GitHub Actions | Tests + build + déploiement |
+| Couche        | Techno                            | Rôle                        |
+| ------------- | --------------------------------- | --------------------------- |
+| Frontend      | React 18 + TypeScript + Vite      | Interface client + admin    |
+| UI            | Material-UI v5 + Tailwind CSS     | Composants + utilitaires    |
+| État          | Redux Toolkit                     | Auth, panier, recettes      |
+| Routing       | React Router v6                   | Navigation                  |
+| Backend       | Node.js 18 + Express + TypeScript | API REST                    |
+| BDD           | MongoDB 6 + Mongoose              | Persistance                 |
+| Auth          | JWT + bcrypt (12 rounds)          | Admin et client             |
+| Sécurité      | helmet, cors, express-rate-limit  | Hardening                   |
+| Logging       | Winston + morgan                  | Logs applicatifs et HTTP    |
+| Notifications | Telegram Bot API                  | Alertes commandes           |
+| Upload        | Multer                            | Images recettes             |
+| Déploiement   | Docker + Nginx + Let's Encrypt    | Production                  |
+| CI/CD (prévu) | GitHub Actions                    | Tests + build + déploiement |
 
 ## Modèle de données
 
 ### Collection `users`
+
 ```ts
 {
   _id: ObjectId,
@@ -84,6 +85,7 @@ L'admin est intégré au même frontend (routes `/admin/*` protégées par JWT),
 Les clients avec compte ont `role = 'client'`. Mariem a `role = 'admin'`. L'endpoint `/api/auth/register` crée **toujours** un rôle `client` — impossible de s'auto-promouvoir admin.
 
 ### Collection `ingredients`
+
 ```ts
 {
   _id: ObjectId,
@@ -99,6 +101,7 @@ Les clients avec compte ont `role = 'client'`. Mariem a `role = 'admin'`. L'endp
 ```
 
 ### Collection `appliances`
+
 ```ts
 {
   _id: ObjectId,
@@ -113,6 +116,7 @@ Les clients avec compte ont `role = 'client'`. Mariem a `role = 'admin'`. L'endp
 ```
 
 ### Collection `recipes`
+
 Chaque recette a plusieurs `variants` (tailles), chacun avec ses propres ingrédients et machines.
 
 ```ts
@@ -141,6 +145,7 @@ Chaque recette a plusieurs `variants` (tailles), chacun avec ses propres ingréd
 ```
 
 ### Collection `orders`
+
 ```ts
 {
   _id: ObjectId,
@@ -171,6 +176,7 @@ Chaque recette a plusieurs `variants` (tailles), chacun avec ses propres ingréd
 ```
 
 ### Collection `settings`
+
 ```ts
 {
   _id: ObjectId,
@@ -228,6 +234,7 @@ sequenceDiagram
 ## Sécurité (V1)
 
 Mesures en place :
+
 - **JWT** avec secret fort (fail-fast au démarrage si `JWT_SECRET` < 32 caractères).
 - **Hash bcrypt** 12 rounds pour les mots de passe.
 - **Rate-limit** global `/api/*` (100 req/15 min) + strict `/api/auth/*` (5 tentatives/15 min anti brute-force).
@@ -244,41 +251,44 @@ Voir [security.md](./security.md) pour le détail et les évolutions prévues.
 ## Routes frontend
 
 ### Publiques
-| Route | Page | Accès |
-|-------|------|-------|
-| `/` | Accueil — recettes populaires | Public |
-| `/recipes` | Catalogue | Public |
+
+| Route          | Page                             | Accès  |
+| -------------- | -------------------------------- | ------ |
+| `/`            | Accueil — recettes populaires    | Public |
+| `/recipes`     | Catalogue                        | Public |
 | `/recipes/:id` | Détail + prix + bouton commander | Public |
-| `/order/:id` | Suivi de commande (avec tél) | Public |
+| `/order/:id`   | Suivi de commande (avec tél)     | Public |
 
 ### Compte client (V1, optionnel)
-| Route | Page | Accès |
-|-------|------|-------|
-| `/auth/login` | Connexion (admin ou client) | Public |
-| `/auth/register` | Création compte client | Public |
-| `/mes-commandes` | Historique commandes | Client connecté |
+
+| Route            | Page                        | Accès           |
+| ---------------- | --------------------------- | --------------- |
+| `/auth/login`    | Connexion (admin ou client) | Public          |
+| `/auth/register` | Création compte client      | Public          |
+| `/mes-commandes` | Historique commandes        | Client connecté |
 
 ### Admin
-| Route | Page | Accès |
-|-------|------|-------|
-| `/admin` | Dashboard commandes | Admin |
-| `/admin/recipes` | Gestion recettes | Admin |
-| `/admin/recipes/new` | Créer recette (wizard 4 étapes) | Admin |
-| `/admin/recipes/:id/edit` | Modifier recette | Admin |
-| `/admin/ingredients` | Gestion ingrédients + mise à jour prix en masse | Admin |
-| `/admin/appliances` | Gestion machines | Admin |
-| `/admin/orders` | Liste commandes (filtres statut) | Admin |
-| `/admin/orders/:id` | Détail commande + cocher ingrédients | Admin |
-| `/admin/settings` | Paramètres (STEG, eau, marge) | Admin |
+
+| Route                     | Page                                            | Accès |
+| ------------------------- | ----------------------------------------------- | ----- |
+| `/admin`                  | Dashboard commandes                             | Admin |
+| `/admin/recipes`          | Gestion recettes                                | Admin |
+| `/admin/recipes/new`      | Créer recette (wizard 4 étapes)                 | Admin |
+| `/admin/recipes/:id/edit` | Modifier recette                                | Admin |
+| `/admin/ingredients`      | Gestion ingrédients + mise à jour prix en masse | Admin |
+| `/admin/appliances`       | Gestion machines                                | Admin |
+| `/admin/orders`           | Liste commandes (filtres statut)                | Admin |
+| `/admin/orders/:id`       | Détail commande + cocher ingrédients            | Admin |
+| `/admin/settings`         | Paramètres (STEG, eau, marge)                   | Admin |
 
 ## Dépendances externes
 
-| Service | Usage | Alternative de secours |
-|---------|-------|------------------------|
-| Telegram Bot API | Notifications à Mariem | Email (V2) |
-| WhatsApp (lien wa.me/) | Contact direct Mariem | Appel téléphonique |
-| Let's Encrypt | Certificat SSL | Renouvellement auto certbot |
-| MongoDB Atlas (option) | BDD managée si pas de VPS | MongoDB Docker local |
+| Service                | Usage                     | Alternative de secours      |
+| ---------------------- | ------------------------- | --------------------------- |
+| Telegram Bot API       | Notifications à Mariem    | Email (V2)                  |
+| WhatsApp (lien wa.me/) | Contact direct Mariem     | Appel téléphonique          |
+| Let's Encrypt          | Certificat SSL            | Renouvellement auto certbot |
+| MongoDB Atlas (option) | BDD managée si pas de VPS | MongoDB Docker local        |
 
 ## Arborescence
 

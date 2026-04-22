@@ -1,32 +1,54 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { toast } from 'react-toastify'
-import api from '../../services/api'
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import api from '../../services/api';
 import {
-  Container, Typography, Box, IconButton, Card, CardContent,
-  Chip, Grid, Button, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, List, ListItem, ListItemText, ListItemSecondaryAction,
-} from '@mui/material'
+  Container,
+  Typography,
+  Box,
+  IconButton,
+  Card,
+  CardContent,
+  Chip,
+  Grid,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+} from '@mui/material';
 import {
-  ArrowBack, ChevronLeft, ChevronRight,
-  CalendarToday, Block, Delete as DeleteIcon,
-} from '@mui/icons-material'
+  ArrowBack,
+  ChevronLeft,
+  ChevronRight,
+  CalendarToday,
+  Block,
+  Delete as DeleteIcon,
+} from '@mui/icons-material';
 
 interface AvailabilityBlock {
-  _id: string
-  startDate: string
-  endDate: string
-  reason?: string
+  _id: string;
+  startDate: string;
+  endDate: string;
+  reason?: string;
 }
 
-const statusColors: Record<string, 'warning' | 'info' | 'primary' | 'success' | 'default' | 'error'> = {
+const statusColors: Record<
+  string,
+  'warning' | 'info' | 'primary' | 'success' | 'default' | 'error'
+> = {
   pending: 'warning',
   confirmed: 'info',
   preparing: 'primary',
   ready: 'success',
   paid: 'default',
   cancelled: 'error',
-}
+};
 
 const statusLabels: Record<string, string> = {
   pending: 'En attente',
@@ -35,155 +57,175 @@ const statusLabels: Record<string, string> = {
   ready: 'Prete',
   paid: 'Payee',
   cancelled: 'Annulee',
-}
+};
 
-const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 const MONTHS = [
-  'Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin',
-  'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'
-]
+  'Janvier',
+  'Fevrier',
+  'Mars',
+  'Avril',
+  'Mai',
+  'Juin',
+  'Juillet',
+  'Aout',
+  'Septembre',
+  'Octobre',
+  'Novembre',
+  'Decembre',
+];
 
 interface OrderEvent {
-  _id: string
-  clientName: string
-  clientPhone: string
-  status: string
-  totalPrice: number
-  requestedDate: string | null
-  confirmedDate: string | null
-  items: { recipeId: { name?: string } | string; quantity: number }[]
+  _id: string;
+  clientName: string;
+  clientPhone: string;
+  status: string;
+  totalPrice: number;
+  requestedDate: string | null;
+  confirmedDate: string | null;
+  items: { recipeId: { name?: string } | string; quantity: number }[];
 }
 
 const CalendarPage = () => {
-  const navigate = useNavigate()
-  const [orders, setOrders] = useState<OrderEvent[]>([])
-  const [blocks, setBlocks] = useState<AvailabilityBlock[]>([])
-  const [currentDate, setCurrentDate] = useState(new Date())
-  const [selectedDay, setSelectedDay] = useState<string | null>(null)
+  const navigate = useNavigate();
+  const [orders, setOrders] = useState<OrderEvent[]>([]);
+  const [blocks, setBlocks] = useState<AvailabilityBlock[]>([]);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   // Dialog de blocage
-  const [blockDialogOpen, setBlockDialogOpen] = useState(false)
-  const [blockDay, setBlockDay] = useState<number | null>(null)
-  const [blockReason, setBlockReason] = useState('')
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [blockDay, setBlockDay] = useState<number | null>(null);
+  const [blockReason, setBlockReason] = useState('');
 
-  const year = currentDate.getFullYear()
-  const month = currentDate.getMonth()
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
 
   const loadBlocks = async () => {
     try {
-      const res = await api.get('/availability/blocks/admin')
-      setBlocks(res.data.data?.blocks || [])
-    } catch { /* ignore */ }
-  }
+      const res = await api.get('/availability/blocks/admin');
+      setBlocks(res.data.data?.blocks || []);
+    } catch {
+      /* ignore */
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await api.get('/orders?limit=200')
-        setOrders(res.data.data?.orders || [])
-      } catch { /* ignore */ }
-    }
-    load()
-    loadBlocks()
-  }, [])
+        const res = await api.get('/orders?limit=200');
+        setOrders(res.data.data?.orders || []);
+      } catch {
+        /* ignore */
+      }
+    };
+    load();
+    loadBlocks();
+  }, []);
 
   // Verifie si un jour du mois courant est dans un creneau bloque
   const isDayBlocked = (day: number): AvailabilityBlock | null => {
-    const dayStart = new Date(year, month, day, 0, 0, 0, 0)
-    const dayEnd = new Date(year, month, day, 23, 59, 59, 999)
+    const dayStart = new Date(year, month, day, 0, 0, 0, 0);
+    const dayEnd = new Date(year, month, day, 23, 59, 59, 999);
     for (const b of blocks) {
-      const bStart = new Date(b.startDate)
-      const bEnd = new Date(b.endDate)
+      const bStart = new Date(b.startDate);
+      const bEnd = new Date(b.endDate);
       if (bEnd >= dayStart && bStart <= dayEnd) {
-        return b
+        return b;
       }
     }
-    return null
-  }
+    return null;
+  };
 
   const openBlockDialog = (day: number) => {
-    setBlockDay(day)
-    setBlockReason('')
-    setBlockDialogOpen(true)
-  }
+    setBlockDay(day);
+    setBlockReason('');
+    setBlockDialogOpen(true);
+  };
 
   const confirmBlock = async () => {
-    if (blockDay === null) return
-    const start = new Date(year, month, blockDay, 0, 0, 0, 0)
-    const end = new Date(year, month, blockDay, 23, 59, 59, 999)
+    if (blockDay === null) return;
+    const start = new Date(year, month, blockDay, 0, 0, 0, 0);
+    const end = new Date(year, month, blockDay, 23, 59, 59, 999);
     try {
       await api.post('/availability/blocks', {
         startDate: start.toISOString(),
         endDate: end.toISOString(),
         reason: blockReason.trim() || undefined,
-      })
-      toast.success('Jour bloque')
-      setBlockDialogOpen(false)
-      await loadBlocks()
+      });
+      toast.success('Jour bloque');
+      setBlockDialogOpen(false);
+      await loadBlocks();
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } }
-      toast.error(e.response?.data?.message || 'Erreur')
+      const e = err as { response?: { data?: { message?: string } } };
+      toast.error(e.response?.data?.message || 'Erreur');
     }
-  }
+  };
 
   const unblockDay = async (blockId: string) => {
     try {
-      await api.delete(`/availability/blocks/${blockId}`)
-      toast.success('Jour debloque')
-      await loadBlocks()
+      await api.delete(`/availability/blocks/${blockId}`);
+      toast.success('Jour debloque');
+      await loadBlocks();
     } catch {
-      toast.error('Erreur')
+      toast.error('Erreur');
     }
-  }
+  };
 
   // Blocages a venir, tries par date
   const upcomingBlocks = blocks
-    .filter(b => new Date(b.endDate) >= new Date())
-    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+    .filter((b) => new Date(b.endDate) >= new Date())
+    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
 
   // Navigation mois
-  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1))
-  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1))
-  const goToday = () => { setCurrentDate(new Date()); setSelectedDay(null) }
+  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+  const goToday = () => {
+    setCurrentDate(new Date());
+    setSelectedDay(null);
+  };
 
   // Construire la grille du mois
-  const firstDay = new Date(year, month, 1)
-  const lastDay = new Date(year, month + 1, 0)
-  const startDow = (firstDay.getDay() + 6) % 7 // Lundi = 0
-  const daysInMonth = lastDay.getDate()
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startDow = (firstDay.getDay() + 6) % 7; // Lundi = 0
+  const daysInMonth = lastDay.getDate();
 
   // Obtenir la date d'un événement (confirmedDate prioritaire, sinon requestedDate)
   const getEventDate = (order: OrderEvent): Date | null => {
-    const dateStr = order.confirmedDate || order.requestedDate
-    return dateStr ? new Date(dateStr) : null
-  }
+    const dateStr = order.confirmedDate || order.requestedDate;
+    return dateStr ? new Date(dateStr) : null;
+  };
 
   // Commandes par jour du mois
-  const ordersByDay: Record<number, OrderEvent[]> = {}
+  const ordersByDay: Record<number, OrderEvent[]> = {};
   for (const order of orders) {
-    const d = getEventDate(order)
-    if (!d) continue
+    const d = getEventDate(order);
+    if (!d) continue;
     if (d.getFullYear() === year && d.getMonth() === month) {
-      const day = d.getDate()
-      if (!ordersByDay[day]) ordersByDay[day] = []
-      ordersByDay[day].push(order)
+      const day = d.getDate();
+      if (!ordersByDay[day]) ordersByDay[day] = [];
+      ordersByDay[day].push(order);
     }
   }
 
   // Commandes sans date
-  const ordersWithoutDate = orders.filter(o => !o.confirmedDate && !o.requestedDate && o.status !== 'paid' && o.status !== 'cancelled')
+  const ordersWithoutDate = orders.filter(
+    (o) => !o.confirmedDate && !o.requestedDate && o.status !== 'paid' && o.status !== 'cancelled'
+  );
 
   // Jour selectionne
-  const selectedOrders = selectedDay ? (ordersByDay[parseInt(selectedDay)] || []) : []
+  const selectedOrders = selectedDay ? ordersByDay[parseInt(selectedDay)] || [] : [];
 
-  const today = new Date()
-  const isToday = (day: number) => day === today.getDate() && month === today.getMonth() && year === today.getFullYear()
+  const today = new Date();
+  const isToday = (day: number) =>
+    day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
 
   // Nom de la recette depuis l'item
   const getRecipeName = (item: OrderEvent['items'][0]) => {
-    const r = item.recipeId
-    return r && typeof r === 'object' && r.name ? r.name : 'Recette'
-  }
+    const r = item.recipeId;
+    return r && typeof r === 'object' && r.name ? r.name : 'Recette';
+  };
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#fafafa' }}>
@@ -191,9 +233,14 @@ const CalendarPage = () => {
       <Box sx={{ bgcolor: 'white', borderBottom: '1px solid #eee', py: 2, px: 3 }}>
         <Container maxWidth="lg">
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <IconButton onClick={() => navigate('/admin')}><ArrowBack /></IconButton>
+            <IconButton onClick={() => navigate('/admin')}>
+              <ArrowBack />
+            </IconButton>
             <CalendarToday color="primary" />
-            <Typography variant="h5" sx={{ fontWeight: 600, fontSize: { xs: '1.1rem', md: '1.5rem' } }}>
+            <Typography
+              variant="h5"
+              sx={{ fontWeight: 600, fontSize: { xs: '1.1rem', md: '1.5rem' } }}
+            >
               Calendrier des commandes
             </Typography>
           </Box>
@@ -207,24 +254,50 @@ const CalendarPage = () => {
             <Card>
               <CardContent>
                 {/* Navigation mois */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <IconButton onClick={prevMonth}><ChevronLeft /></IconButton>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 2,
+                  }}
+                >
+                  <IconButton onClick={prevMonth}>
+                    <ChevronLeft />
+                  </IconButton>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '1rem', md: '1.25rem' } }}>
+                    <Typography
+                      variant="h6"
+                      sx={{ fontWeight: 600, fontSize: { xs: '1rem', md: '1.25rem' } }}
+                    >
                       {MONTHS[month]} {year}
                     </Typography>
-                    <Button size="small" onClick={goToday} variant="outlined" sx={{ ml: 1, minWidth: 'auto', px: 1 }}>
+                    <Button
+                      size="small"
+                      onClick={goToday}
+                      variant="outlined"
+                      sx={{ ml: 1, minWidth: 'auto', px: 1 }}
+                    >
                       Aujourd'hui
                     </Button>
                   </Box>
-                  <IconButton onClick={nextMonth}><ChevronRight /></IconButton>
+                  <IconButton onClick={nextMonth}>
+                    <ChevronRight />
+                  </IconButton>
                 </Box>
 
                 {/* Jours de la semaine */}
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 0.5 }}>
-                  {DAYS.map(d => (
+                  {DAYS.map((d) => (
                     <Box key={d} sx={{ textAlign: 'center', py: 0.5 }}>
-                      <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontWeight: 600,
+                          color: 'text.secondary',
+                          fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                        }}
+                      >
                         {d}
                       </Typography>
                     </Box>
@@ -237,27 +310,27 @@ const CalendarPage = () => {
 
                   {/* Jours du mois */}
                   {Array.from({ length: daysInMonth }).map((_, i) => {
-                    const day = i + 1
-                    const dayOrders = ordersByDay[day] || []
-                    const hasOrders = dayOrders.length > 0
-                    const isSelected = selectedDay === String(day)
-                    const confirmedCount = dayOrders.filter(o => o.confirmedDate).length
-                    const pendingCount = dayOrders.filter(o => !o.confirmedDate).length
-                    const block = isDayBlocked(day)
+                    const day = i + 1;
+                    const dayOrders = ordersByDay[day] || [];
+                    const hasOrders = dayOrders.length > 0;
+                    const isSelected = selectedDay === String(day);
+                    const confirmedCount = dayOrders.filter((o) => o.confirmedDate).length;
+                    const pendingCount = dayOrders.filter((o) => !o.confirmedDate).length;
+                    const block = isDayBlocked(day);
 
                     const handleClick = () => {
                       if (block) {
                         // Deja bloque : proposer de debloquer
                         if (window.confirm(`Debloquer le ${day} ${MONTHS[month]} ?`)) {
-                          unblockDay(block._id)
+                          unblockDay(block._id);
                         }
                       } else if (hasOrders) {
-                        setSelectedDay(isSelected ? null : String(day))
+                        setSelectedDay(isSelected ? null : String(day));
                       } else {
                         // Jour libre sans commande : proposer de bloquer
-                        openBlockDialog(day)
+                        openBlockDialog(day);
                       }
-                    }
+                    };
 
                     return (
                       <Box
@@ -271,7 +344,11 @@ const CalendarPage = () => {
                           borderRadius: 1,
                           cursor: 'pointer',
                           border: isSelected ? '2px solid' : '1px solid',
-                          borderColor: isSelected ? 'primary.main' : isToday(day) ? 'primary.light' : 'transparent',
+                          borderColor: isSelected
+                            ? 'primary.main'
+                            : isToday(day)
+                              ? 'primary.light'
+                              : 'transparent',
                           bgcolor: block
                             ? '#ffebee'
                             : isSelected
@@ -296,7 +373,11 @@ const CalendarPage = () => {
                           variant="body2"
                           sx={{
                             fontWeight: isToday(day) ? 700 : hasOrders || block ? 600 : 400,
-                            color: block ? 'error.main' : isToday(day) ? 'primary.main' : 'text.primary',
+                            color: block
+                              ? 'error.main'
+                              : isToday(day)
+                                ? 'primary.main'
+                                : 'text.primary',
                             textDecoration: block ? 'line-through' : 'none',
                             fontSize: { xs: '0.75rem', sm: '0.875rem' },
                           }}
@@ -304,34 +385,77 @@ const CalendarPage = () => {
                           {day}
                         </Typography>
                         {block && (
-                          <Block sx={{ fontSize: { xs: 10, sm: 12 }, color: 'error.main', mt: 0.25 }} />
+                          <Block
+                            sx={{ fontSize: { xs: 10, sm: 12 }, color: 'error.main', mt: 0.25 }}
+                          />
                         )}
                         {hasOrders && !block && (
-                          <Box sx={{ display: 'flex', gap: 0.25, mt: 0.25, flexWrap: 'wrap', justifyContent: 'center' }}>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              gap: 0.25,
+                              mt: 0.25,
+                              flexWrap: 'wrap',
+                              justifyContent: 'center',
+                            }}
+                          >
                             {confirmedCount > 0 && (
-                              <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'success.main' }} />
+                              <Box
+                                sx={{
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: '50%',
+                                  bgcolor: 'success.main',
+                                }}
+                              />
                             )}
                             {pendingCount > 0 && (
-                              <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'warning.main' }} />
+                              <Box
+                                sx={{
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: '50%',
+                                  bgcolor: 'warning.main',
+                                }}
+                              />
                             )}
-                            <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.secondary', display: { xs: 'none', sm: 'block' } }}>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                fontSize: '0.6rem',
+                                color: 'text.secondary',
+                                display: { xs: 'none', sm: 'block' },
+                              }}
+                            >
                               {dayOrders.length}
                             </Typography>
                           </Box>
                         )}
                       </Box>
-                    )
+                    );
                   })}
                 </Box>
 
                 {/* Legende */}
-                <Box sx={{ display: 'flex', gap: 2, mt: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    gap: 2,
+                    mt: 2,
+                    justifyContent: 'center',
+                    flexWrap: 'wrap',
+                  }}
+                >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main' }} />
+                    <Box
+                      sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main' }}
+                    />
                     <Typography variant="caption">Confirme</Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'warning.main' }} />
+                    <Box
+                      sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'warning.main' }}
+                    />
                     <Typography variant="caption">En attente</Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -339,7 +463,11 @@ const CalendarPage = () => {
                     <Typography variant="caption">Indispo</Typography>
                   </Box>
                 </Box>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: 'block', textAlign: 'center', mt: 1 }}
+                >
                   Clic sur un jour libre = bloquer · clic sur un jour bloque = debloquer
                 </Typography>
               </CardContent>
@@ -349,14 +477,21 @@ const CalendarPage = () => {
             {upcomingBlocks.length > 0 && (
               <Card sx={{ mt: 2 }}>
                 <CardContent>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}
+                  >
                     <Block fontSize="small" color="error" />
                     Indisponibilites ({upcomingBlocks.length})
                   </Typography>
                   <List dense>
-                    {upcomingBlocks.slice(0, 10).map(b => {
-                      const start = new Date(b.startDate)
-                      const label = start.toLocaleDateString('fr-TN', { weekday: 'short', day: '2-digit', month: 'short' })
+                    {upcomingBlocks.slice(0, 10).map((b) => {
+                      const start = new Date(b.startDate);
+                      const label = start.toLocaleDateString('fr-TN', {
+                        weekday: 'short',
+                        day: '2-digit',
+                        month: 'short',
+                      });
                       return (
                         <ListItem key={b._id} disableGutters>
                           <ListItemText
@@ -366,12 +501,16 @@ const CalendarPage = () => {
                             secondaryTypographyProps={{ variant: 'caption' }}
                           />
                           <ListItemSecondaryAction>
-                            <IconButton size="small" onClick={() => unblockDay(b._id)} title="Debloquer">
+                            <IconButton
+                              size="small"
+                              onClick={() => unblockDay(b._id)}
+                              title="Debloquer"
+                            >
                               <DeleteIcon fontSize="small" />
                             </IconButton>
                           </ListItemSecondaryAction>
                         </ListItem>
-                      )
+                      );
                     })}
                   </List>
                 </CardContent>
@@ -383,23 +522,37 @@ const CalendarPage = () => {
               <Card sx={{ mt: 2, border: '1px solid #ff9800' }}>
                 <CardContent>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#e65100', mb: 1 }}>
-                    {ordersWithoutDate.length} commande{ordersWithoutDate.length > 1 ? 's' : ''} sans date de RDV
+                    {ordersWithoutDate.length} commande{ordersWithoutDate.length > 1 ? 's' : ''}{' '}
+                    sans date de RDV
                   </Typography>
-                  {ordersWithoutDate.map(order => (
-                    <Box key={order._id}
+                  {ordersWithoutDate.map((order) => (
+                    <Box
+                      key={order._id}
                       onClick={() => navigate(`/admin/orders/${order._id}`)}
                       sx={{
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        py: 0.75, cursor: 'pointer', '&:hover': { bgcolor: '#fff3e0' }, borderRadius: 1, px: 1,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        py: 0.75,
+                        cursor: 'pointer',
+                        '&:hover': { bgcolor: '#fff3e0' },
+                        borderRadius: 1,
+                        px: 1,
                       }}
                     >
                       <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{order.clientName}</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {order.clientName}
+                        </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {order.items.map(i => `${i.quantity}x ${getRecipeName(i)}`).join(', ')}
+                          {order.items.map((i) => `${i.quantity}x ${getRecipeName(i)}`).join(', ')}
                         </Typography>
                       </Box>
-                      <Chip size="small" label={statusLabels[order.status] || order.status} color={statusColors[order.status] || 'default'} />
+                      <Chip
+                        size="small"
+                        label={statusLabels[order.status] || order.status}
+                        color={statusColors[order.status] || 'default'}
+                      />
                     </Box>
                   ))}
                 </CardContent>
@@ -412,17 +565,23 @@ const CalendarPage = () => {
             <Grid item xs={12} md={5}>
               <Card sx={{ position: { md: 'sticky' }, top: { md: 80 } }}>
                 <CardContent>
-                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, fontSize: { xs: '1rem', md: '1.25rem' } }}>
-                    {parseInt(selectedDay)} {MONTHS[month]} — {selectedOrders.length} commande{selectedOrders.length > 1 ? 's' : ''}
+                  <Typography
+                    variant="h6"
+                    sx={{ fontWeight: 600, mb: 2, fontSize: { xs: '1rem', md: '1.25rem' } }}
+                  >
+                    {parseInt(selectedDay)} {MONTHS[month]} — {selectedOrders.length} commande
+                    {selectedOrders.length > 1 ? 's' : ''}
                   </Typography>
 
                   {selectedOrders.length === 0 ? (
                     <Typography color="text.secondary">Aucune commande ce jour</Typography>
                   ) : (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                      {selectedOrders.map(order => {
-                        const d = getEventDate(order)
-                        const time = d ? d.toLocaleTimeString('fr-TN', { hour: '2-digit', minute: '2-digit' }) : ''
+                      {selectedOrders.map((order) => {
+                        const d = getEventDate(order);
+                        const time = d
+                          ? d.toLocaleTimeString('fr-TN', { hour: '2-digit', minute: '2-digit' })
+                          : '';
 
                         return (
                           <Card
@@ -436,9 +595,17 @@ const CalendarPage = () => {
                             onClick={() => navigate(`/admin/orders/${order._id}`)}
                           >
                             <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  mb: 0.5,
+                                }}
+                              >
                                 <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                  {time && `${time} — `}{order.clientName}
+                                  {time && `${time} — `}
+                                  {order.clientName}
                                 </Typography>
                                 <Chip
                                   size="small"
@@ -450,21 +617,45 @@ const CalendarPage = () => {
                                 {order.clientPhone}
                               </Typography>
                               <Typography variant="body2" sx={{ mt: 0.5 }}>
-                                {order.items.map(i => `${i.quantity}x ${getRecipeName(i)}`).join(', ')}
+                                {order.items
+                                  .map((i) => `${i.quantity}x ${getRecipeName(i)}`)
+                                  .join(', ')}
                               </Typography>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  mt: 1,
+                                }}
+                              >
+                                <Typography
+                                  variant="body2"
+                                  sx={{ fontWeight: 600, color: 'primary.main' }}
+                                >
                                   {order.totalPrice?.toFixed(2)} DT
                                 </Typography>
                                 {order.confirmedDate ? (
-                                  <Chip size="small" label="Date confirmee" color="success" variant="outlined" sx={{ height: 20, fontSize: '0.65rem' }} />
+                                  <Chip
+                                    size="small"
+                                    label="Date confirmee"
+                                    color="success"
+                                    variant="outlined"
+                                    sx={{ height: 20, fontSize: '0.65rem' }}
+                                  />
                                 ) : (
-                                  <Chip size="small" label="A confirmer" color="warning" variant="outlined" sx={{ height: 20, fontSize: '0.65rem' }} />
+                                  <Chip
+                                    size="small"
+                                    label="A confirmer"
+                                    color="warning"
+                                    variant="outlined"
+                                    sx={{ height: 20, fontSize: '0.65rem' }}
+                                  />
                                 )}
                               </Box>
                             </CardContent>
                           </Card>
-                        )
+                        );
                       })}
                     </Box>
                   )}
@@ -476,7 +667,12 @@ const CalendarPage = () => {
       </Container>
 
       {/* Dialog : bloquer un jour */}
-      <Dialog open={blockDialogOpen} onClose={() => setBlockDialogOpen(false)} maxWidth="xs" fullWidth>
+      <Dialog
+        open={blockDialogOpen}
+        onClose={() => setBlockDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
         <DialogTitle>
           Bloquer le {blockDay} {MONTHS[month]} {year}
         </DialogTitle>
@@ -490,7 +686,7 @@ const CalendarPage = () => {
             label="Raison (optionnel)"
             placeholder="ex: conges, journee pleine, indisponible..."
             value={blockReason}
-            onChange={e => setBlockReason(e.target.value)}
+            onChange={(e) => setBlockReason(e.target.value)}
             inputProps={{ maxLength: 200 }}
           />
         </DialogContent>
@@ -502,7 +698,7 @@ const CalendarPage = () => {
         </DialogActions>
       </Dialog>
     </Box>
-  )
-}
+  );
+};
 
-export default CalendarPage
+export default CalendarPage;

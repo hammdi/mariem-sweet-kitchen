@@ -24,7 +24,6 @@ export interface PriceBreakdown {
 }
 
 export class PriceCalculationService {
-
   /**
    * Récupère les paramètres depuis la collection Settings
    */
@@ -36,7 +35,7 @@ export class PriceCalculationService {
       waterForfaitLarge: 0.5,
       marginPercent: 15,
     };
-    settings.forEach(s => {
+    settings.forEach((s) => {
       result[s.key] = s.value;
     });
     return result;
@@ -71,7 +70,9 @@ export class PriceCalculationService {
 
     for (const vi of variant.ingredients) {
       const ingredient = vi.ingredientId as any;
-      if (!ingredient) {continue;}
+      if (!ingredient) {
+        continue;
+      }
 
       const providedByClient = clientProvidedIngredients.includes(ingredient._id.toString());
       const cost = providedByClient ? 0 : ingredient.pricePerUnit * vi.quantity;
@@ -93,10 +94,13 @@ export class PriceCalculationService {
 
     for (const va of variant.appliances) {
       const appliance = va.applianceId as any;
-      if (!appliance) {continue;}
+      if (!appliance) {
+        continue;
+      }
 
       // Convertir en kW puis multiplier par heures et tarif STEG
-      const powerKw = appliance.unit === 'kW' ? appliance.powerConsumption : appliance.powerConsumption / 1000;
+      const powerKw =
+        appliance.unit === 'kW' ? appliance.powerConsumption : appliance.powerConsumption / 1000;
       const hours = va.duration / 60;
       const cost = powerKw * hours * settings.stegTariff;
 
@@ -110,13 +114,12 @@ export class PriceCalculationService {
     }
 
     // Coût eau (forfait selon taille)
-    const waterCost = variant.portions <= 8
-      ? settings.waterForfaitSmall
-      : settings.waterForfaitLarge;
+    const waterCost =
+      variant.portions <= 8 ? settings.waterForfaitSmall : settings.waterForfaitLarge;
 
     // Marge
     const subtotal = ingredientsCost + electricityCost + waterCost;
-    const margin = subtotal * settings.marginPercent / 100;
+    const margin = (subtotal * settings.marginPercent) / 100;
 
     const total = subtotal + margin;
 

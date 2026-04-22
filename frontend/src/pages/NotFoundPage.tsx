@@ -1,10 +1,10 @@
-import { Button, Container, Typography, Box } from '@mui/material'
-import { useNavigate } from 'react-router-dom'
-import { Home, ArrowBack } from '@mui/icons-material'
-import { motion } from 'framer-motion'
+import { Button, Container, Typography, Box } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { Home, ArrowBack } from '@mui/icons-material';
+import { motion } from 'framer-motion';
 
 const NotFoundPage = () => {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>
@@ -27,7 +27,7 @@ const NotFoundPage = () => {
           >
             404
           </Typography>
-          
+
           <Typography
             variant="h4"
             component="h2"
@@ -40,7 +40,7 @@ const NotFoundPage = () => {
           >
             Page non trouvée
           </Typography>
-          
+
           <Typography
             variant="body1"
             sx={{
@@ -51,7 +51,7 @@ const NotFoundPage = () => {
           >
             Désolé, la page que vous recherchez n'existe pas ou a été déplacée.
           </Typography>
-          
+
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Button
               variant="contained"
@@ -61,7 +61,7 @@ const NotFoundPage = () => {
             >
               Retour à l'accueil
             </Button>
-            
+
             <Button
               variant="outlined"
               size="large"
@@ -74,7 +74,7 @@ const NotFoundPage = () => {
         </Box>
       </motion.div>
     </Container>
-  )
-}
+  );
+};
 
-export default NotFoundPage
+export default NotFoundPage;

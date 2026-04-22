@@ -1,17 +1,7 @@
 import { logger } from '../utils/logger';
-import {
-  generateWithFallback,
-  isAnyProviderEnabled,
-  getProvidersStatus,
-} from './ai/aiGateway';
-import {
-  buildDescriptionPrompt,
-  buildAssistantPrompt,
-} from './ai/prompts';
-import {
-  buildRecipeContext,
-  RecipeFormInput,
-} from './ai/contextBuilder';
+import { generateWithFallback, isAnyProviderEnabled, getProvidersStatus } from './ai/aiGateway';
+import { buildDescriptionPrompt, buildAssistantPrompt } from './ai/prompts';
+import { buildRecipeContext, RecipeFormInput } from './ai/contextBuilder';
 import { AssistantSuggestion } from './ai/types';
 
 export const isAiEnabled = isAnyProviderEnabled;
@@ -72,7 +62,9 @@ function parseAssistantResponse(raw: string): AssistantSuggestion {
 
   // Cas avec fence markdown
   const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenceMatch) {candidates.push(fenceMatch[1].trim());}
+  if (fenceMatch) {
+    candidates.push(fenceMatch[1].trim());
+  }
 
   // Cas avec prefixe/suffixe textuel
   const firstBrace = trimmed.indexOf('{');

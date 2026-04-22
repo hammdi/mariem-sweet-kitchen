@@ -1,30 +1,30 @@
-import { Routes, Route } from 'react-router-dom'
-import { ThemeProvider, createTheme } from '@mui/material/styles'
-import CssBaseline from '@mui/material/CssBaseline'
+import { Routes, Route } from 'react-router-dom';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
 
 // Layout
-import MainLayout from './components/layout/MainLayout'
+import MainLayout from './components/layout/MainLayout';
 
 // Pages
-import HomePage from './pages/HomePage'
-import RecipesPage from './pages/RecipesPage'
-import RecipeDetailPage from './pages/RecipeDetailPage'
-import LoginPage from './pages/LoginPage'
-import DashboardPage from './pages/admin/DashboardPage'
-import AdminRecipesPage from './pages/admin/RecipesPage'
-import RecipeFormPage from './pages/admin/RecipeFormPage'
-import IngredientsPage from './pages/admin/IngredientsPage'
-import AppliancesPage from './pages/admin/AppliancesPage'
-import OrdersPage from './pages/admin/OrdersPage'
-import OrderDetailPage from './pages/admin/OrderDetailPage'
-import StockPage from './pages/admin/StockPage'
-import CategoriesPage from './pages/admin/CategoriesPage'
-import SettingsPage from './pages/admin/SettingsPage'
-import CalendarPage from './pages/admin/CalendarPage'
-import ManualOrderPage from './pages/admin/ManualOrderPage'
-import ShoppingListPage from './pages/admin/ShoppingListPage'
-import NotFoundPage from './pages/NotFoundPage'
-import ProtectedRoute from './components/common/ProtectedRoute'
+import HomePage from './pages/HomePage';
+import RecipesPage from './pages/RecipesPage';
+import RecipeDetailPage from './pages/RecipeDetailPage';
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/admin/DashboardPage';
+import AdminRecipesPage from './pages/admin/RecipesPage';
+import RecipeFormPage from './pages/admin/RecipeFormPage';
+import IngredientsPage from './pages/admin/IngredientsPage';
+import AppliancesPage from './pages/admin/AppliancesPage';
+import OrdersPage from './pages/admin/OrdersPage';
+import OrderDetailPage from './pages/admin/OrderDetailPage';
+import StockPage from './pages/admin/StockPage';
+import CategoriesPage from './pages/admin/CategoriesPage';
+import SettingsPage from './pages/admin/SettingsPage';
+import CalendarPage from './pages/admin/CalendarPage';
+import ManualOrderPage from './pages/admin/ManualOrderPage';
+import ShoppingListPage from './pages/admin/ShoppingListPage';
+import NotFoundPage from './pages/NotFoundPage';
+import ProtectedRoute from './components/common/ProtectedRoute';
 
 // Theme
 const theme = createTheme({
@@ -81,7 +81,7 @@ const theme = createTheme({
       },
     },
   },
-})
+});
 
 function App() {
   return (
@@ -120,7 +120,7 @@ function App() {
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </ThemeProvider>
-  )
+  );
 }
 
-export default App
+export default App;

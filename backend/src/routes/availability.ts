@@ -49,9 +49,7 @@ router.get(
   authenticate,
   authorize('admin'),
   asyncHandler(async (_req: Request, res: Response) => {
-    const blocks = await AvailabilityBlock.find()
-      .sort({ startDate: -1 })
-      .limit(200);
+    const blocks = await AvailabilityBlock.find().sort({ startDate: -1 }).limit(200);
     res.json({ success: true, data: { blocks } });
   })
 );

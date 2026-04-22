@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import api from '../../services/api'
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../../services/api';
 import {
   Container,
   Typography,
@@ -11,7 +11,7 @@ import {
   Button,
   IconButton,
   Badge,
-} from '@mui/material'
+} from '@mui/material';
 import {
   Cake,
   ShoppingBag,
@@ -23,29 +23,29 @@ import {
   Inventory,
   CalendarMonth,
   ShoppingCart,
-} from '@mui/icons-material'
+} from '@mui/icons-material';
 
 const DashboardPage = () => {
-  const navigate = useNavigate()
-  const [pendingCount, setPendingCount] = useState(0)
+  const navigate = useNavigate();
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     const fetchPendingOrders = async () => {
       try {
-        const res = await api.get('/orders?status=pending')
-        const orders = res.data.data?.orders || []
-        setPendingCount(orders.length)
+        const res = await api.get('/orders?status=pending');
+        const orders = res.data.data?.orders || [];
+        setPendingCount(orders.length);
       } catch {
         /* ignore */
       }
-    }
-    fetchPendingOrders()
-  }, [])
+    };
+    fetchPendingOrders();
+  }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    navigate('/')
-  }
+    localStorage.removeItem('token');
+    navigate('/');
+  };
 
   const menuItems = [
     {
@@ -88,17 +88,30 @@ const DashboardPage = () => {
       icon: <Category sx={{ fontSize: 48, color: '#9C27B0' }} />,
       path: '/admin/categories',
     },
-  ]
+  ];
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#fafafa' }}>
       {/* Header */}
       <Box sx={{ bgcolor: 'white', borderBottom: '1px solid #eee', py: 2, px: 3 }}>
         <Container maxWidth="lg">
-          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 1 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              justifyContent: 'space-between',
+              alignItems: { xs: 'flex-start', sm: 'center' },
+              gap: 1,
+            }}
+          >
             <Typography
               variant="h5"
-              sx={{ fontFamily: 'Playfair Display', fontWeight: 600, color: 'primary.main', fontSize: { xs: '1.1rem', md: '1.5rem' } }}
+              sx={{
+                fontFamily: 'Playfair Display',
+                fontWeight: 600,
+                color: 'primary.main',
+                fontSize: { xs: '1.1rem', md: '1.5rem' },
+              }}
             >
               Mariem's Sweet Kitchen — Admin
             </Typography>
@@ -131,11 +144,7 @@ const DashboardPage = () => {
               >
                 <CalendarMonth />
               </IconButton>
-              <Button
-                startIcon={<Logout />}
-                onClick={handleLogout}
-                color="inherit"
-              >
+              <Button startIcon={<Logout />} onClick={handleLogout} color="inherit">
                 Deconnexion
               </Button>
             </Box>
@@ -181,7 +190,7 @@ const DashboardPage = () => {
         </Grid>
       </Container>
     </Box>
-  )
-}
+  );
+};
 
-export default DashboardPage
+export default DashboardPage;

@@ -21,8 +21,8 @@ const aiLimiter = rateLimit({
   max: 30,
   message: {
     success: false,
-    message: 'Trop de requetes IA, reessayez dans une heure'
-  }
+    message: 'Trop de requetes IA, reessayez dans une heure',
+  },
 });
 
 // @desc    Indique quels providers IA sont disponibles
@@ -34,7 +34,7 @@ router.get('/status', authenticate, authorize('admin'), (_req: Request, res: Res
     data: {
       enabled: isAiEnabled(),
       providers: getAiStatus(),
-    }
+    },
   });
 });
 
@@ -85,7 +85,7 @@ router.post(
 
     res.json({
       success: true,
-      data: { description }
+      data: { description },
     });
   })
 );
@@ -184,14 +184,16 @@ ${context?.todayOrders ? `${context.todayOrders} commandes prevues aujourd'hui.`
       temperature: 0.7,
     });
 
-    logger.info(`ai.chat: "${message.slice(0, 50)}..." par ${req.user!.email} via ${result.provider}`);
+    logger.info(
+      `ai.chat: "${message.slice(0, 50)}..." par ${req.user!.email} via ${result.provider}`
+    );
 
     res.json({
       success: true,
       data: {
         reply: result.text,
         provider: result.provider,
-      }
+      },
     });
   })
 );

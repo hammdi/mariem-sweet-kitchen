@@ -1,25 +1,32 @@
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  Button, Typography,
-} from '@mui/material'
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Typography,
+} from '@mui/material';
 
 interface ConfirmDialogProps {
-  open: boolean
-  title: string
-  message: string
-  confirmLabel?: string
-  cancelLabel?: string
-  confirmColor?: 'error' | 'primary' | 'warning'
-  onConfirm: () => void
-  onCancel: () => void
+  open: boolean;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  confirmColor?: 'error' | 'primary' | 'warning';
+  onConfirm: () => void;
+  onCancel: () => void;
 }
 
 const ConfirmDialog = ({
-  open, title, message,
+  open,
+  title,
+  message,
   confirmLabel = 'Confirmer',
   cancelLabel = 'Annuler',
   confirmColor = 'error',
-  onConfirm, onCancel,
+  onConfirm,
+  onCancel,
 }: ConfirmDialogProps) => {
   return (
     <Dialog open={open} onClose={onCancel} maxWidth="xs" fullWidth>
@@ -34,7 +41,7 @@ const ConfirmDialog = ({
         </Button>
       </DialogActions>
     </Dialog>
-  )
-}
+  );
+};
 
-export default ConfirmDialog
+export default ConfirmDialog;

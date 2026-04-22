@@ -7,6 +7,7 @@ Vision phasée pour Mariem's Sweet Kitchen. Chaque phase est livrable indépenda
 **Objectif** : premier client réel servi end-to-end via la plateforme.
 
 ### Backend
+
 - [x] CRUD recettes avec variants flexibles.
 - [x] CRUD ingrédients, machines, paramètres.
 - [x] Service de calcul de prix transparent (ingrédients + électricité + eau + marge).
@@ -19,6 +20,7 @@ Vision phasée pour Mariem's Sweet Kitchen. Chaque phase est livrable indépenda
 - [ ] Route `/orders/my` pour client connecté.
 
 ### Frontend
+
 - [x] Pages publiques (accueil, catalogue, détail recette).
 - [x] Interface admin (dashboard, recettes, ingrédients, machines, commandes, paramètres).
 - [ ] Formulaire recette multi-étapes (wizard 4 pages).
@@ -27,12 +29,14 @@ Vision phasée pour Mariem's Sweet Kitchen. Chaque phase est livrable indépenda
 - [ ] Adaptation mobile (80 % du trafic attendu).
 
 ### Qualité
+
 - [ ] Tests unitaires `priceCalculationService`.
 - [ ] Tests d'intégration sur les flux de commande.
 - [ ] CI GitHub Actions (lint + build + tests).
 - [ ] Lighthouse score > 90 sur les pages publiques.
 
 ### Déploiement
+
 - [ ] VPS configuré (Nginx + SSL + Docker).
 - [ ] Backups MongoDB quotidiens automatisés.
 - [ ] Monitoring basique (logs Winston → fichier + retention).
@@ -46,6 +50,7 @@ Vision phasée pour Mariem's Sweet Kitchen. Chaque phase est livrable indépenda
 **Objectif** : transformer les acheteurs ponctuels en clients récurrents.
 
 ### Features client
+
 - [ ] Favoris sur les recettes (ajout/retrait).
 - [ ] Page "recommander" (re-commande en 1 clic à partir de l'historique).
 - [ ] Programme fidélité simple (5ᵉ commande = -10 % automatique).
@@ -53,6 +58,7 @@ Vision phasée pour Mariem's Sweet Kitchen. Chaque phase est livrable indépenda
 - [ ] Profil : allergies, préférences (sans sucre, sans gluten) — Mariem les voit quand elle prépare.
 
 ### Features admin
+
 - [ ] Dashboard analytics :
   - Revenu quotidien / hebdomadaire / mensuel.
   - Top 5 recettes les plus commandées.
@@ -63,12 +69,14 @@ Vision phasée pour Mariem's Sweet Kitchen. Chaque phase est livrable indépenda
 - [ ] Mise à jour prix en masse depuis Excel/CSV.
 
 ### Features IA V2 (voir [ai-features.md](./ai-features.md))
+
 - [ ] **AI-1** Assistant création de recette (Gemini free tier) — détection oublis, suggestions quantités, génération description.
 - [ ] **AI-4** Résumé quotidien Telegram pour Mariem (briefing du matin).
 - [ ] **AI-13** Analyse de sentiment des notes clients.
 - [ ] **AI-14** Détection de commandes frauduleuses (no-show).
 
 ### Qualité
+
 - [ ] Tests E2E avec Playwright (parcours commande complet).
 - [ ] Sentry pour monitoring d'erreurs.
 - [ ] Couverture tests ≥ 70 %.
@@ -80,36 +88,43 @@ Vision phasée pour Mariem's Sweet Kitchen. Chaque phase est livrable indépenda
 **Objectif** : préparer la croissance.
 
 ### Paiement
+
 - [ ] Intégration **Konnect** ou **Paymee** (passerelles tunisiennes).
 - [ ] Paiement en ligne optionnel — le cash reste disponible.
 - [ ] Gestion acompte (ex: 30 % en ligne, solde en cash).
 
 ### Logistique
+
 - [ ] Intégration **Glovo** ou équivalent (API partenaire) pour la livraison.
 - [ ] Calcul frais de livraison selon zone.
 - [ ] Option click-and-collect vs livraison.
 
 ### Stock et approvisionnement
+
 - [ ] Suivi du stock des ingrédients (décrément à la confirmation de commande).
 - [ ] Alertes rupture (Telegram à Mariem).
 - [ ] Suggestions d'achat hebdomadaires basées sur les commandes de la semaine.
 
 ### Internationalisation
+
 - [ ] Traduction arabe complète (i18n avec `react-i18next`).
 - [ ] Arabisation de la DB (noms recettes, ingrédients en AR et FR).
 
 ### Progressive Web App (reporté si priorité faible)
+
 - [ ] Service worker + manifest.
 - [ ] Installation sur écran d'accueil mobile (Android + iOS 16.4+).
 - [ ] Mode hors ligne pour le catalogue.
 - [ ] Push notifications web (alternative gratuite à l'app native).
 
 ### Mobile natif — hors scope V3, à revisiter en V4
+
 - Décision 2026-04-22 : pas d'app mobile tant qu'il n'y a pas de pivot marketplace.
 - Raisons : Hamdi sans expérience mobile, pas d'abo App Store (99 $/an), scope web encore à finir.
 - Piste si nécessaire : **Capacitor** (wrap le web, ~3-5 jours) avant **React Native** (~3-4 semaines).
 
 ### Features IA V3 (voir [ai-features.md](./ai-features.md))
+
 - [ ] **AI-2** Voice-to-recipe (Mariem dicte une recette, IA la structure).
 - [ ] **AI-3** OCR factures fournisseurs (photo → mise à jour auto des prix).
 - [ ] **AI-5** Prédiction de demande hebdomadaire.
@@ -121,6 +136,7 @@ Vision phasée pour Mariem's Sweet Kitchen. Chaque phase est livrable indépenda
 - [ ] **AI-16** Génération automatique des posts réseaux sociaux.
 
 ### Infrastructure IA
+
 - [ ] Service unifié `AIGateway` (abstraction providers).
 - [ ] Rate-limiter IA dédié par feature et par utilisateur.
 - [ ] Budget tracker avec alertes Telegram + coupure auto.
@@ -128,6 +144,7 @@ Vision phasée pour Mariem's Sweet Kitchen. Chaque phase est livrable indépenda
 - [ ] Cache Redis pour prompts récurrents.
 
 ### Qualité
+
 - [ ] Documentation OpenAPI/Swagger auto-générée.
 - [ ] Tests de charge (Artillery ou k6) avant scaling.
 - [ ] Observabilité complète : OpenTelemetry, Grafana, Prometheus.
@@ -146,9 +163,11 @@ Vision phasée pour Mariem's Sweet Kitchen. Chaque phase est livrable indépenda
 - [ ] API publique pour intégrations tierces.
 
 ### Features IA (différenciation)
+
 Catalogue complet des idées IA avec priorités, coûts estimés et providers gratuits dans [ai-features.md](./ai-features.md). Les features IA sont réparties sur V2, V3 et V4 selon le rapport valeur/complexité.
 
 Highlights V4 :
+
 - **Reconnaissance photo → recette** (Claude vision / CLIP).
 - **Chatbot WhatsApp Business** piloté par LLM (création de commande depuis WhatsApp).
 - **Analyse de la concurrence** (crawler + synthèse LLM).
@@ -165,12 +184,12 @@ Highlights V4 :
 
 ## Indicateurs de succès par phase
 
-| Phase | KPI principal | Objectif |
-|-------|---------------|----------|
-| V1 | Commandes servies/mois via le site | ≥ 20 |
-| V2 | Taux de clients récurrents | ≥ 30 % |
-| V3 | Revenu mensuel Mariem | x2 vs pré-site |
-| V4 | Nombre d'artisans inscrits | ≥ 10 |
+| Phase | KPI principal                      | Objectif       |
+| ----- | ---------------------------------- | -------------- |
+| V1    | Commandes servies/mois via le site | ≥ 20           |
+| V2    | Taux de clients récurrents         | ≥ 30 %         |
+| V3    | Revenu mensuel Mariem              | x2 vs pré-site |
+| V4    | Nombre d'artisans inscrits         | ≥ 10           |
 
 ---
 

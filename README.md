@@ -21,14 +21,14 @@ Le site sert aussi d'**outil de gestion** pour Mariem : ne plus oublier de recet
 
 ## Stack technique
 
-| | Technologie |
-|--|-------------|
-| Frontend | React 18, TypeScript, Vite, Material-UI, Tailwind CSS, Redux Toolkit |
-| Backend | Node.js, Express, TypeScript, Mongoose |
-| Base de données | MongoDB |
-| Auth | JWT (admin uniquement) |
-| Notifications | Telegram Bot API |
-| Déploiement | Docker, Nginx |
+|                 | Technologie                                                          |
+| --------------- | -------------------------------------------------------------------- |
+| Frontend        | React 18, TypeScript, Vite, Material-UI, Tailwind CSS, Redux Toolkit |
+| Backend         | Node.js, Express, TypeScript, Mongoose                               |
+| Base de données | MongoDB                                                              |
+| Auth            | JWT (admin uniquement)                                               |
+| Notifications   | Telegram Bot API                                                     |
+| Déploiement     | Docker, Nginx                                                        |
 
 ## Démarrage rapide
 
@@ -39,11 +39,13 @@ npm run dev                # Démarrer (backend :3001 + frontend :3000)
 ```
 
 Seed la base de données :
+
 ```bash
 cd backend && npx ts-node src/scripts/seed.ts
 ```
 
 Avec Docker :
+
 ```bash
 docker-compose up --build
 ```

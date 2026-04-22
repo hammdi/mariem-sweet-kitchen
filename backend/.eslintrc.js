@@ -1,9 +1,6 @@
 module.exports = {
   parser: '@typescript-eslint/parser',
-  extends: [
-    'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
-  ],
+  extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended'],
   plugins: ['@typescript-eslint'],
   parserOptions: {
     ecmaVersion: 2020,
@@ -18,8 +15,8 @@ module.exports = {
     'prefer-const': 'error',
     'no-var': 'error',
     'no-console': 'warn',
-    'eqeqeq': ['error', 'always'],
-    'curly': ['error', 'all'],
+    eqeqeq: ['error', 'always'],
+    curly: ['error', 'all'],
   },
   env: {
     node: true,

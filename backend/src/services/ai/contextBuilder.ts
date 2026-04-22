@@ -69,14 +69,18 @@ export async function buildRecipeContext(formState: RecipeFormInput): Promise<Bu
     .limit(5)
     .lean();
 
-  const similarRecipes = similarDocs.map(r => {
+  const similarRecipes = similarDocs.map((r) => {
     const ingredientNames = new Set<string>();
     const variantSizes: string[] = [];
     for (const v of r.variants || []) {
-      if (v.sizeName) {variantSizes.push(v.sizeName);}
+      if (v.sizeName) {
+        variantSizes.push(v.sizeName);
+      }
       for (const vi of v.ingredients || []) {
         const ing = vi.ingredientId as unknown as { name?: string } | null;
-        if (ing?.name) {ingredientNames.add(ing.name);}
+        if (ing?.name) {
+          ingredientNames.add(ing.name);
+        }
       }
     }
     return {
@@ -102,8 +106,8 @@ export async function buildRecipeContext(formState: RecipeFormInput): Promise<Bu
 
   return {
     catalog: {
-      ingredients: allIngredients.map(i => i.name),
-      appliances: allAppliances.map(a => ({
+      ingredients: allIngredients.map((i) => i.name),
+      appliances: allAppliances.map((a) => ({
         name: a.name,
         powerW: a.powerConsumption,
       })),

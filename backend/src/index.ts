@@ -38,8 +38,8 @@ if (!JWT_SECRET || JWT_SECRET.length < 32) {
   // eslint-disable-next-line no-console
   console.error(
     'JWT_SECRET manquant ou trop court (min 32 caracteres). ' +
-    'Definissez-le dans backend/.env. ' +
-    'Genere une valeur forte: node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'hex\'))"'
+      'Definissez-le dans backend/.env. ' +
+      "Genere une valeur forte: node -e \"console.log(require('crypto').randomBytes(48).toString('hex'))\""
   );
   process.exit(1);
 }
@@ -49,18 +49,22 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware de sécurité
 app.use(helmet());
-app.use(cors({
-  origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
+    credentials: true,
+  })
+);
 
 // Middleware de compression
 app.use(compression());
 
 // Middleware de logging
-app.use(morgan('combined', {
-  stream: { write: (message: string) => logger.info(message.trim()) }
-}));
+app.use(
+  morgan('combined', {
+    stream: { write: (message: string) => logger.info(message.trim()) },
+  })
+);
 
 // Rate limiting global
 const limiter = rateLimit({
@@ -68,8 +72,8 @@ const limiter = rateLimit({
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '1000'),
   message: {
     success: false,
-    message: 'Trop de requêtes, veuillez réessayer plus tard'
-  }
+    message: 'Trop de requêtes, veuillez réessayer plus tard',
+  },
 });
 app.use('/api/', limiter);
 
@@ -80,8 +84,8 @@ const authLimiter = rateLimit({
   skipSuccessfulRequests: true,
   message: {
     success: false,
-    message: 'Trop de tentatives de connexion, réessayez dans 15 minutes'
-  }
+    message: 'Trop de tentatives de connexion, réessayez dans 15 minutes',
+  },
 });
 
 // Middleware pour parser le JSON
@@ -107,9 +111,9 @@ app.use('/api/availability', availabilityRoutes);
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
-    message: 'API Mariem\'s Sweet Kitchen est opérationnelle',
+    message: "API Mariem's Sweet Kitchen est opérationnelle",
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
   });
 });
 
@@ -117,7 +121,7 @@ app.get('/api/health', (req, res) => {
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
-    message: 'Route non trouvée'
+    message: 'Route non trouvée',
   });
 });
 
@@ -157,7 +161,7 @@ async function gracefulShutdown(signal: string) {
   try {
     if (server) {
       await new Promise<void>((resolve, reject) => {
-        server!.close(err => (err ? reject(err) : resolve()));
+        server!.close((err) => (err ? reject(err) : resolve()));
       });
       logger.info('Serveur HTTP fermé');
     }

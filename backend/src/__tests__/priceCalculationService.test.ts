@@ -10,14 +10,16 @@ const mockedRecipe = Recipe as jest.Mocked<typeof Recipe>;
 const mockedSettings = Settings as jest.Mocked<typeof Settings>;
 
 // Helper : crée un faux recipe populé
-function makePopulatedRecipe(overrides: Partial<{
-  portions: number;
-  ingredients: { _id: string; name: string; pricePerUnit: number }[];
-  quantities: number[];
-  units: string[];
-  appliances: { _id: string; name: string; powerConsumption: number; unit: string }[];
-  durations: number[];
-}> = {}) {
+function makePopulatedRecipe(
+  overrides: Partial<{
+    portions: number;
+    ingredients: { _id: string; name: string; pricePerUnit: number }[];
+    quantities: number[];
+    units: string[];
+    appliances: { _id: string; name: string; powerConsumption: number; unit: string }[];
+    durations: number[];
+  }> = {}
+) {
   const {
     portions = 6,
     ingredients = [
@@ -27,9 +29,7 @@ function makePopulatedRecipe(overrides: Partial<{
     ],
     quantities = [0.5, 0.3, 0.25],
     units = ['kg', 'kg', 'kg'],
-    appliances = [
-      { _id: 'app1', name: 'Four', powerConsumption: 2000, unit: 'W' },
-    ],
+    appliances = [{ _id: 'app1', name: 'Four', powerConsumption: 2000, unit: 'W' }],
     durations = [45], // 45 minutes
   } = overrides;
 
@@ -55,7 +55,10 @@ function makePopulatedRecipe(overrides: Partial<{
 }
 
 // Helper : setup les mocks
-function setupMocks(recipe: ReturnType<typeof makePopulatedRecipe> | null, settingsOverrides: Record<string, number> = {}) {
+function setupMocks(
+  recipe: ReturnType<typeof makePopulatedRecipe> | null,
+  settingsOverrides: Record<string, number> = {}
+) {
   const populateChain = {
     populate: jest.fn().mockReturnValue(recipe),
   };
@@ -71,7 +74,7 @@ function setupMocks(recipe: ReturnType<typeof makePopulatedRecipe> | null, setti
   ];
 
   // Appliquer les overrides
-  const settings = defaultSettings.map(s => ({
+  const settings = defaultSettings.map((s) => ({
     ...s,
     value: settingsOverrides[s.key] !== undefined ? settingsOverrides[s.key] : s.value,
   }));
@@ -103,7 +106,7 @@ describe('PriceCalculationService', () => {
       // Marge : (3.35 + 0.3525 + 0.3) * 0.15 = 4.0025 * 0.15 = 0.600375
       // Subtotal arrondi : 3.35 + 0.353 + 0.3 = 4.003
       const subtotal = 3.35 + 0.3525 + 0.3;
-      const expectedMargin = Math.round(subtotal * 15 / 100 * 1000) / 1000;
+      const expectedMargin = Math.round(((subtotal * 15) / 100) * 1000) / 1000;
       expect(result.margin).toBe(expectedMargin);
 
       // Total > 0
@@ -122,11 +125,11 @@ describe('PriceCalculationService', () => {
       expect(result.ingredientsCost).toBe(1.35);
 
       // Vérifier le détail
-      const beurreDetail = result.ingredientsDetail.find(d => d.name === 'Beurre');
+      const beurreDetail = result.ingredientsDetail.find((d) => d.name === 'Beurre');
       expect(beurreDetail?.providedByClient).toBe(true);
       expect(beurreDetail?.cost).toBe(0);
 
-      const farineDetail = result.ingredientsDetail.find(d => d.name === 'Farine');
+      const farineDetail = result.ingredientsDetail.find((d) => d.name === 'Farine');
       expect(farineDetail?.providedByClient).toBe(false);
       expect(farineDetail?.cost).toBe(0.75);
     });
@@ -244,15 +247,15 @@ describe('PriceCalculationService', () => {
       expect(decimals(result.total)).toBeLessThanOrEqual(3);
     });
 
-    it('lance une erreur si la recette n\'existe pas', async () => {
+    it("lance une erreur si la recette n'existe pas", async () => {
       setupMocks(null);
 
-      await expect(
-        PriceCalculationService.calculateVariantPrice('fake', 0, [])
-      ).rejects.toThrow('Recette non trouvee');
+      await expect(PriceCalculationService.calculateVariantPrice('fake', 0, [])).rejects.toThrow(
+        'Recette non trouvee'
+      );
     });
 
-    it('lance une erreur si le variant n\'existe pas', async () => {
+    it("lance une erreur si le variant n'existe pas", async () => {
       const recipe = makePopulatedRecipe();
       setupMocks(recipe);
 
@@ -286,15 +289,17 @@ describe('PriceCalculationService', () => {
       const recipe = makePopulatedRecipe();
       setupMocks(recipe);
 
-      const result = await PriceCalculationService.calculateVariantPrice(
-        'recipe1', 0, ['ing1', 'ing2', 'ing3']
-      );
+      const result = await PriceCalculationService.calculateVariantPrice('recipe1', 0, [
+        'ing1',
+        'ing2',
+        'ing3',
+      ]);
 
       expect(result.ingredientsCost).toBe(0);
       // Le total ne contient que électricité + eau + marge
       expect(result.total).toBeGreaterThan(0);
       // Tous marqués providedByClient
-      result.ingredientsDetail.forEach(d => {
+      result.ingredientsDetail.forEach((d) => {
         expect(d.providedByClient).toBe(true);
         expect(d.cost).toBe(0);
       });

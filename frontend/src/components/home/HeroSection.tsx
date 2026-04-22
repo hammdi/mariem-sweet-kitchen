@@ -1,28 +1,28 @@
-import { Button, Container, Typography, Box, Grid } from '@mui/material'
-import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { Cake, TrendingUp, LocalShipping } from '@mui/icons-material'
+import { Button, Container, Typography, Box, Grid } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Cake, TrendingUp, LocalShipping } from '@mui/icons-material';
 
 const HeroSection = () => {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const features = [
     {
       icon: <Cake sx={{ fontSize: 40, color: 'primary.main' }} />,
       title: 'Recettes Artisanales',
-      description: 'Des recettes traditionnelles transmises de génération en génération'
+      description: 'Des recettes traditionnelles transmises de génération en génération',
     },
     {
       icon: <TrendingUp sx={{ fontSize: 40, color: 'primary.main' }} />,
       title: 'Prix Transparent',
-      description: 'Voir le détail de chaque coût : ingrédients, eau, électricité'
+      description: 'Voir le détail de chaque coût : ingrédients, eau, électricité',
     },
     {
       icon: <LocalShipping sx={{ fontSize: 40, color: 'primary.main' }} />,
       title: 'Livraison Flexible',
-      description: 'Choisissez entre livraison ou retrait, avec ou sans ingrédients'
-    }
-  ]
+      description: 'Choisissez entre livraison ou retrait, avec ou sans ingrédients',
+    },
+  ];
 
   return (
     <Box
@@ -63,7 +63,7 @@ const HeroSection = () => {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
             >
               <Typography
                 variant="h1"
@@ -79,7 +79,7 @@ const HeroSection = () => {
               >
                 Mariem's Sweet Kitchen
               </Typography>
-              
+
               <Typography
                 variant="h5"
                 component="h2"
@@ -90,10 +90,10 @@ const HeroSection = () => {
                   lineHeight: 1.4,
                 }}
               >
-                Découvrez nos délicieuses pâtisseries avec un calcul de coûts 
+                Découvrez nos délicieuses pâtisseries avec un calcul de coûts
                 <strong> 100% transparent</strong>
               </Typography>
-              
+
               <Typography
                 variant="body1"
                 sx={{
@@ -103,8 +103,8 @@ const HeroSection = () => {
                   lineHeight: 1.6,
                 }}
               >
-                Chaque recette affiche le détail de ses coûts : ingrédients, eau, électricité, 
-                et marge de 15%. Commandez en toute transparence !
+                Chaque recette affiche le détail de ses coûts : ingrédients, eau, électricité, et
+                marge de 15%. Commandez en toute transparence !
               </Typography>
 
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -148,7 +148,7 @@ const HeroSection = () => {
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
+              transition={{ duration: 0.5, delay: 0.1, ease: 'easeOut' }}
             >
               <Box
                 sx={{
@@ -204,9 +204,7 @@ const HeroSection = () => {
                       alignItems: 'center',
                     }}
                   >
-                    <Box sx={{ mb: 2 }}>
-                      {feature.icon}
-                    </Box>
+                    <Box sx={{ mb: 2 }}>{feature.icon}</Box>
                     <Typography
                       variant="h6"
                       component="h3"
@@ -235,7 +233,7 @@ const HeroSection = () => {
         </motion.div>
       </Container>
     </Box>
-  )
-}
+  );
+};
 
-export default HeroSection
+export default HeroSection;

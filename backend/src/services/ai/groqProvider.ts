@@ -13,7 +13,9 @@ export const groqProvider: AIProvider = {
   },
 
   async generate(opts: GenerateOptions): Promise<GenerateResult> {
-    if (!apiKey) {throw new Error('Groq non configure');}
+    if (!apiKey) {
+      throw new Error('Groq non configure');
+    }
 
     const body: Record<string, unknown> = {
       model: MODEL,

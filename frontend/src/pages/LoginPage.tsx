@@ -1,7 +1,7 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { toast } from 'react-toastify'
-import api from '../services/api'
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import api from '../services/api';
 import {
   Container,
   Paper,
@@ -11,43 +11,37 @@ import {
   Box,
   InputAdornment,
   IconButton,
-} from '@mui/material'
-import {
-  Visibility,
-  VisibilityOff,
-  Email,
-  Lock,
-  Cake,
-} from '@mui/icons-material'
-import { motion } from 'framer-motion'
+} from '@mui/material';
+import { Visibility, VisibilityOff, Email, Lock, Cake } from '@mui/icons-material';
+import { motion } from 'framer-motion';
 
 const LoginPage = () => {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({ email: '', password: '' })
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
-  }
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
 
     try {
-      const res = await api.post('/auth/login', formData)
-      const { token } = res.data.data
-      localStorage.setItem('token', token)
-      toast.success('Connexion reussie')
-      navigate('/admin')
+      const res = await api.post('/auth/login', formData);
+      const { token } = res.data.data;
+      localStorage.setItem('token', token);
+      toast.success('Connexion reussie');
+      navigate('/admin');
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Erreur de connexion')
+      toast.error(err.response?.data?.message || 'Erreur de connexion');
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <Box
@@ -131,10 +125,7 @@ const LoginPage = () => {
                   ),
                   endAdornment: (
                     <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                      >
+                      <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
                         {showPassword ? <VisibilityOff /> : <Visibility />}
                       </IconButton>
                     </InputAdornment>
@@ -172,7 +163,7 @@ const LoginPage = () => {
         </motion.div>
       </Container>
     </Box>
-  )
-}
+  );
+};
 
-export default LoginPage
+export default LoginPage;
