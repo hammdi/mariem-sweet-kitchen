@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -8,8 +8,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@shared': path.resolve(__dirname, '../shared')
-    }
+      '@shared': path.resolve(__dirname, '../shared'),
+    },
   },
   server: {
     port: 3000,
@@ -18,9 +18,9 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
-        secure: false
-      }
-    }
+        secure: false,
+      },
+    },
   },
   build: {
     outDir: 'dist',
@@ -29,8 +29,8 @@ export default defineConfig({
     terserOptions: {
       compress: {
         drop_console: true,
-        drop_debugger: true
-      }
+        drop_debugger: true,
+      },
     },
     rollupOptions: {
       output: {
@@ -39,13 +39,12 @@ export default defineConfig({
           mui: ['@mui/material', '@mui/icons-material'],
           router: ['react-router-dom'],
           state: ['@reduxjs/toolkit', 'react-redux'],
-          query: ['react-query'],
-          forms: ['formik', 'yup'],
-          animations: ['framer-motion']
-        }
-      }
+          animations: ['framer-motion'],
+          toast: ['react-toastify'],
+        },
+      },
     },
-    chunkSizeWarningLimit: 1000
+    chunkSizeWarningLimit: 1000,
   },
   optimizeDeps: {
     include: [
@@ -55,7 +54,7 @@ export default defineConfig({
       '@mui/icons-material',
       'react-router-dom',
       '@reduxjs/toolkit',
-      'react-redux'
-    ]
-  }
-})
+      'react-redux',
+    ],
+  },
+});
