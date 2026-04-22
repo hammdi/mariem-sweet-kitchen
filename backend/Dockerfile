@@ -24,5 +24,10 @@ EXPOSE 3001
 ENV NODE_ENV=production
 ENV PORT=3001
 
-# Lancer le seed puis demarrer
-CMD sh -c "node dist/scripts/seed.js 2>/dev/null; node dist/index.js"
+# Demarrer le serveur uniquement.
+# Le seed N'EST PLUS execute automatiquement : il deletMany() toutes les
+# collections avant d'inserer, il ferait perdre les commandes reelles a chaque
+# redemarrage du container.
+# Lancer manuellement apres le premier deploiement uniquement :
+#   docker compose -f docker-compose.prod.yml exec backend node dist/scripts/seed.js
+CMD ["node", "dist/index.js"]
