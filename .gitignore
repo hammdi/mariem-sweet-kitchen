@@ -86,7 +86,7 @@ jspm_packages/
 
 # Gatsby files
 .cache/
-public
+# NOTE: "public" retire car frontend/public contient les assets statiques Vite (favicon, images)
 
 # Storybook build outputs
 .out

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">
+  <rect width="600" height="400" fill="#3E2723"/>
+  <ellipse cx="300" cy="280" rx="200" ry="30" fill="#2C1810"/>
+  <rect x="120" y="180" width="360" height="100" rx="20" fill="#5D4037"/>
+  <rect x="120" y="160" width="360" height="30" rx="5" fill="#6D4C41"/>
+  <rect x="140" y="140" width="320" height="30" rx="5" fill="#4E342E"/>
+  <rect x="140" y="120" width="320" height="25" rx="5" fill="#795548"/>
+  <circle cx="200" cy="130" r="8" fill="#D32F2F"/>
+  <circle cx="300" cy="125" r="8" fill="#D32F2F"/>
+  <circle cx="400" cy="130" r="8" fill="#D32F2F"/>
+  <circle cx="250" cy="115" r="6" fill="#F44336"/>
+  <circle cx="350" cy="115" r="6" fill="#F44336"/>
+  <text x="300" y="50" text-anchor="middle" font-family="Georgia" font-size="28" fill="#FFCC80">Gateau au Chocolat</text>
+</svg>

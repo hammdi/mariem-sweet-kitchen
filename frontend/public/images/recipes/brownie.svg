@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">
+  <rect width="600" height="400" fill="#3E2723"/>
+  <rect x="130" y="180" width="340" height="100" rx="8" fill="#4E342E"/>
+  <rect x="130" y="180" width="85" height="100" rx="0" fill="#5D4037"/>
+  <rect x="215" y="180" width="85" height="100" fill="#4E342E"/>
+  <rect x="300" y="180" width="85" height="100" fill="#5D4037"/>
+  <rect x="385" y="180" width="85" height="100" rx="0" fill="#4E342E"/>
+  <line x1="215" y1="180" x2="215" y2="280" stroke="#3E2723" stroke-width="2"/>
+  <line x1="300" y1="180" x2="300" y2="280" stroke="#3E2723" stroke-width="2"/>
+  <line x1="385" y1="180" x2="385" y2="280" stroke="#3E2723" stroke-width="2"/>
+  <rect x="130" y="175" width="340" height="10" rx="3" fill="#6D4C41"/>
+  <circle cx="170" cy="220" r="5" fill="#3E2723"/>
+  <circle cx="250" cy="230" r="4" fill="#3E2723"/>
+  <circle cx="340" cy="215" r="5" fill="#3E2723"/>
+  <circle cx="420" cy="240" r="4" fill="#3E2723"/>
+  <text x="300" y="50" text-anchor="middle" font-family="Georgia" font-size="28" fill="#FFCC80">Brownies</text>
+</svg>

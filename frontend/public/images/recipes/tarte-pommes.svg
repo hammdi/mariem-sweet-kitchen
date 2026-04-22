@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">
+  <rect width="600" height="400" fill="#FFF8E1"/>
+  <ellipse cx="300" cy="280" rx="200" ry="30" fill="#E8D5B7"/>
+  <ellipse cx="300" cy="250" rx="180" ry="60" fill="#D4A054"/>
+  <ellipse cx="300" cy="240" rx="160" ry="50" fill="#FFB74D"/>
+  <path d="M180 230 Q240 200 300 230 Q360 200 420 230" stroke="#E65100" fill="none" stroke-width="3"/>
+  <path d="M200 240 Q260 210 320 240 Q380 210 400 240" stroke="#E65100" fill="none" stroke-width="3"/>
+  <circle cx="250" cy="220" r="15" fill="#8BC34A" opacity="0.6"/>
+  <circle cx="350" cy="225" r="12" fill="#8BC34A" opacity="0.6"/>
+  <text x="300" y="50" text-anchor="middle" font-family="Georgia" font-size="28" fill="#5D4037">Tarte aux Pommes</text>
+</svg>

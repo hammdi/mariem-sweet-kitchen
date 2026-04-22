@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">
+  <rect width="600" height="400" fill="#FFF3E0"/>
+  <rect x="155" y="240" width="90" height="60" rx="5" fill="#8D6E63"/>
+  <path d="M150 240 Q200 160 250 240" fill="#FFB74D"/>
+  <circle cx="185" cy="200" r="5" fill="#D32F2F"/>
+  <circle cx="210" cy="190" r="4" fill="#4CAF50"/>
+  <rect x="255" y="240" width="90" height="60" rx="5" fill="#8D6E63"/>
+  <path d="M250 240 Q300 160 350 240" fill="#FF9800"/>
+  <circle cx="290" cy="200" r="5" fill="#3E2723"/>
+  <circle cx="310" cy="195" r="4" fill="#3E2723"/>
+  <rect x="355" y="240" width="90" height="60" rx="5" fill="#8D6E63"/>
+  <path d="M350 240 Q400 160 450 240" fill="#FFCC80"/>
+  <circle cx="390" cy="200" r="5" fill="#E91E63"/>
+  <circle cx="410" cy="195" r="4" fill="#E91E63"/>
+  <text x="300" y="50" text-anchor="middle" font-family="Georgia" font-size="28" fill="#5D4037">Muffins</text>
+</svg>
