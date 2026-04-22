@@ -21,6 +21,10 @@ COPY frontend/index.html ./
 ARG VITE_API_URL=http://localhost:3001/api
 ENV VITE_API_URL=$VITE_API_URL
 
+# Augmente la heap Node pour eviter OOM sur les instances a faible RAM
+# (EC2 t3.small = 2-3 Go). Combiner avec du swap cote hote.
+ENV NODE_OPTIONS=--max-old-space-size=2048
+
 RUN npm run build
 
 # Prod — Nginx

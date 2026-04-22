@@ -15,11 +15,11 @@ services:
       - mariem-network
 
   frontend:
+    # Prebuilt : attend frontend/dist/ genere localement (VITE_API_URL injecte au build).
+    # Pas de build Vite dans ce conteneur -> pas d'OOM sur les petites EC2.
     build:
       context: .
-      dockerfile: ./frontend/Dockerfile
-      args:
-        VITE_API_URL: https://mariem.hamdikbaier.dev/api
+      dockerfile: ./frontend/Dockerfile.prebuilt
     container_name: mariem-frontend
     restart: unless-stopped
     ports:
