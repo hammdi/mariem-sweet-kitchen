@@ -33,7 +33,8 @@
     "tailwindcss": "^3.3.3",
     "terser": "^5.19.2",
     "typescript": "^5.1.6",
-    "vite": "^4.4.9"
+    "vite": "^4.4.9",
+    "vitest": "^0.34.6"
   },
   "scripts": {
     "dev": "vite",
@@ -41,7 +42,8 @@
     "preview": "vite preview",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint src --ext ts,tsx --fix",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "TZ=Africa/Tunis vitest run"
   },
   "browserslist": {
     "production": [

@@ -1,15 +1,13 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
+import { PageHeader } from '../../components/ui';
 import {
-  Container,
   Typography,
   Box,
   Button,
   Card,
   CardContent,
-  IconButton,
   Chip,
   TextField,
   Dialog,
@@ -17,7 +15,7 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { ArrowBack, Add } from '@mui/icons-material';
+import { Add } from '@mui/icons-material';
 
 // Categories par defaut — dans un vrai projet, elles seraient en base
 const defaultRecipeCategories = [
@@ -78,11 +76,11 @@ const CategorySection = ({ title, storageKey, defaults, labels }: CategorySectio
     const name = newName.trim().toLowerCase();
     if (!name) return;
     if (items.includes(name)) {
-      toast.error('Cette categorie existe deja');
+      toast.error('Cette catégorie existe déjà');
       return;
     }
     save([...items, name]);
-    toast.success(`Categorie "${name}" ajoutee`);
+    toast.success(`Catégorie "${name}" ajoutée`);
     setNewName('');
     setAddOpen(false);
   };
@@ -90,7 +88,7 @@ const CategorySection = ({ title, storageKey, defaults, labels }: CategorySectio
   const handleDelete = () => {
     if (!deleteTarget) return;
     save(items.filter((i) => i !== deleteTarget));
-    toast.success(`Categorie "${deleteTarget}" supprimee`);
+    toast.success(`Catégorie "${deleteTarget}" supprimée`);
     setDeleteTarget(null);
   };
 
@@ -126,14 +124,14 @@ const CategorySection = ({ title, storageKey, defaults, labels }: CategorySectio
           ))}
           {items.length === 0 && (
             <Typography variant="body2" color="text.secondary">
-              Aucune categorie
+              Aucune catégorie
             </Typography>
           )}
         </Box>
       </CardContent>
 
       <Dialog open={addOpen} onClose={() => setAddOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>Nouvelle categorie — {title}</DialogTitle>
+        <DialogTitle>Nouvelle catégorie — {title}</DialogTitle>
         <DialogContent>
           <TextField
             fullWidth
@@ -157,8 +155,8 @@ const CategorySection = ({ title, storageKey, defaults, labels }: CategorySectio
 
       <ConfirmDialog
         open={!!deleteTarget}
-        title="Supprimer cette categorie ?"
-        message={`La categorie "${deleteTarget}" sera supprimee de la liste. Les recettes/ingredients existants ne seront pas affectes.`}
+        title="Supprimer cette catégorie ?"
+        message={`La catégorie "${deleteTarget}" sera supprimée de la liste. Les recettes et ingrédients existants ne sont pas modifiés.`}
         confirmLabel="Supprimer"
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
@@ -167,8 +165,8 @@ const CategorySection = ({ title, storageKey, defaults, labels }: CategorySectio
   );
 };
 
-const CategoriesPage = () => {
-  const navigate = useNavigate();
+/** Gestion des catégories (affichée dans Paramètres → Catégories). */
+export const CategoriesContent = () => {
 
   const ingredientLabels: Record<string, string> = {
     base: 'Base',
@@ -187,41 +185,19 @@ const CategoriesPage = () => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#fafafa' }}>
-      <Box sx={{ bgcolor: 'white', borderBottom: '1px solid #eee', py: 2, px: 3 }}>
-        <Container maxWidth="lg">
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <IconButton onClick={() => navigate('/admin')}>
-              <ArrowBack />
-            </IconButton>
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              Categories
-            </Typography>
-          </Box>
-        </Container>
-      </Box>
-
-      <Container maxWidth="md" sx={{ py: 3 }}>
-        <CategorySection
-          title="Categories de recettes"
-          storageKey="recipeCategories"
-          defaults={defaultRecipeCategories}
-        />
-        <CategorySection
-          title="Categories d'ingredients"
-          storageKey="ingredientCategories"
-          defaults={defaultIngredientCategories}
-          labels={ingredientLabels}
-        />
-        <CategorySection
-          title="Categories de machines"
-          storageKey="applianceCategories"
-          defaults={defaultApplianceCategories}
-          labels={applianceLabels}
-        />
-      </Container>
+    <Box>
+      <CategorySection title="Catégories de recettes" storageKey="recipeCategories" defaults={defaultRecipeCategories} />
+      <CategorySection title="Catégories d'ingrédients" storageKey="ingredientCategories" defaults={defaultIngredientCategories} labels={ingredientLabels} />
+      <CategorySection title="Catégories de machines" storageKey="applianceCategories" defaults={defaultApplianceCategories} labels={applianceLabels} />
     </Box>
   );
 };
+
+const CategoriesPage = () => (
+  <Box>
+    <PageHeader title="Catégories" subtitle="Classement des recettes, ingrédients et machines." backTo="/admin/settings" />
+    <CategoriesContent />
+  </Box>
+);
 
 export default CategoriesPage;

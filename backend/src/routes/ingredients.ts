@@ -3,14 +3,20 @@ import { Ingredient } from '../models/Ingredient';
 import { authenticate, authorize } from '../middleware/auth';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
+import { syncPurchaseNeedsSafe } from '../services/purchaseNeedService';
+import { roundQty } from '../services/unitService';
+import { idempotent } from '../middleware/idempotency';
+import { adjustStock } from '../services/stockAdjustmentService';
 
 const router = express.Router();
 
 // @desc    Récupérer tous les ingrédients
 // @route   GET /api/ingredients
-// @access  Public
+// @access  Private (Admin) — contient stock et prix d'achat
 router.get(
   '/',
+  authenticate,
+  authorize('admin'),
   asyncHandler(async (req: Request, res: Response) => {
     const {
       page = 1,
@@ -66,9 +72,11 @@ router.get(
 
 // @desc    Récupérer un ingrédient par ID
 // @route   GET /api/ingredients/:id
-// @access  Public
+// @access  Private (Admin)
 router.get(
   '/:id',
+  authenticate,
+  authorize('admin'),
   asyncHandler(async (req: Request, res: Response) => {
     const ingredient = await Ingredient.findById(req.params.id);
 
@@ -91,7 +99,7 @@ router.post(
   authenticate,
   authorize('admin'),
   asyncHandler(async (req: Request, res: Response) => {
-    const { name, pricePerUnit, unit, category, description, supplier } = req.body;
+    const { name, pricePerUnit, unit, category, description, supplier, minStock } = req.body;
 
     // Vérifier si l'ingrédient existe déjà
     const existingIngredient = await Ingredient.findOne({ name });
@@ -106,6 +114,7 @@ router.post(
       category,
       description,
       supplier,
+      minStock: typeof minStock === 'number' && minStock > 0 ? minStock : undefined,
     });
 
     await ingredient.save();
@@ -145,6 +154,9 @@ router.put(
         {
           pricePerUnit: newPrice,
           lastPriceUpdate: new Date(),
+          $push: {
+            referencePriceHistory: { price: newPrice, changedAt: new Date(), reason: 'en masse' },
+          },
         },
         { new: true }
       );
@@ -186,9 +198,31 @@ router.put(
       }
     }
 
-    // Mettre à jour l'ingrédient
-    Object.assign(ingredient, req.body);
+    // Mettre à jour l'ingrédient (l'historique des prix n'est pas modifiable directement)
+    const updates = { ...req.body };
+    delete updates.referencePriceHistory;
+    delete updates.lastPriceUpdate;
+    delete updates._id;
+    delete updates.stockNote;
+    // Le stock ne se modifie pas ici : correction tracee avec raison obligatoire
+    // (POST /:id/stock-adjustment), achat ou preparation.
+    if (updates.stockQuantity !== undefined) {
+      const asked = parseFloat(updates.stockQuantity);
+      if (Number.isFinite(asked) && roundQty(asked) !== roundQty(ingredient.stockQuantity || 0)) {
+        throw createError(
+          'Pour changer le stock, utilisez "Corriger le stock" (raison obligatoire)',
+          400
+        );
+      }
+      delete updates.stockQuantity;
+    }
+    if (updates.minStock === '' || updates.minStock === null) {
+      updates.minStock = undefined;
+    }
+    Object.assign(ingredient, updates);
     await ingredient.save();
+    // stock (ou unite) modifie : recalculer les besoins d'achat des commandes
+    await syncPurchaseNeedsSafe();
 
     logger.info(`✅ Ingrédient mis à jour: ${ingredient.name} par ${req.user!.email}`);
 
@@ -197,6 +231,27 @@ router.put(
       message: 'Ingrédient mis à jour avec succès',
       data: { ingredient },
     });
+  })
+);
+
+// @desc    Corriger le stock a la main (inventaire, perte, casse...) — raison obligatoire, tracee
+// @route   POST /api/ingredients/:id/stock-adjustment   { newQuantity, reason, note? }
+router.post(
+  '/:id/stock-adjustment',
+  authenticate,
+  authorize('admin'),
+  idempotent(),
+  asyncHandler(async (req: Request, res: Response) => {
+    const result = await adjustStock(req.params.id, {
+      newQuantity: req.body.newQuantity,
+      reason: req.body.reason,
+      note: req.body.note,
+      actor: req.user!.email,
+    });
+    logger.info(
+      `Stock corrige: ${result.ingredient.name} ${result.entry.stockBefore} -> ${result.entry.stockAfter} (${result.entry.reason}) par ${req.user!.email}`
+    );
+    res.status(201).json({ success: true, data: result });
   })
 );
 

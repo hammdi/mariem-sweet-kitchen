@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import api from '../../services/api';
-import { Box, Typography, TextField, IconButton, Paper, Fab, Fade, Avatar } from '@mui/material';
+import { Box, Typography, TextField, IconButton, Paper, Fade, Avatar } from '@mui/material';
 import { Close, Send, AutoAwesome } from '@mui/icons-material';
+import { useHelp } from '../../help/HelpContext';
+import { color, radius, shadow } from '../../theme/tokens';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -10,8 +12,12 @@ interface Message {
   timestamp: Date;
 }
 
+/**
+ * Assistant IA (questions libres, réponse écrite). Ouvert depuis le panneau
+ * d'aide ✨ ; il ne fait qu'envoyer la question et afficher la réponse.
+ */
 const AiAssistant = ({ page }: { page?: string }) => {
-  const [open, setOpen] = useState(false);
+  const { aiOpen: open, closeAi } = useHelp();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
@@ -21,17 +27,11 @@ const AiAssistant = ({ page }: { page?: string }) => {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [pulse, setPulse] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  // Stop pulsing after first open
-  useEffect(() => {
-    if (open) setPulse(false);
-  }, [open]);
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
@@ -71,40 +71,23 @@ const AiAssistant = ({ page }: { page?: string }) => {
 
   return (
     <>
-      {/* Bouton flottant */}
-      <Fab
-        onClick={() => setOpen(!open)}
-        sx={{
-          position: 'fixed',
-          bottom: 24,
-          right: 24,
-          zIndex: 9999,
-          bgcolor: open ? '#666' : '#f1770a',
-          color: 'white',
-          '&:hover': { bgcolor: open ? '#555' : '#e25a05' },
-          animation: pulse ? 'pulse-glow 2s ease-in-out infinite' : 'none',
-          '@keyframes pulse-glow': {
-            '0%, 100%': { boxShadow: '0 0 0 0 rgba(241, 119, 10, 0.4)' },
-            '50%': { boxShadow: '0 0 0 15px rgba(241, 119, 10, 0)' },
-          },
-        }}
-      >
-        {open ? <Close /> : <AutoAwesome />}
-      </Fab>
-
       {/* Chat panel */}
-      <Fade in={open}>
+      <Fade in={open} unmountOnExit>
         <Paper
-          elevation={8}
+          role="dialog"
+          aria-label="Assistant IA"
           sx={{
             position: 'fixed',
-            bottom: 90,
-            right: 24,
-            width: { xs: 'calc(100% - 32px)', sm: 380 },
-            maxHeight: { xs: '70vh', sm: 500 },
-            zIndex: 9998,
-            borderRadius: 3,
-            display: open ? 'flex' : 'none',
+            bottom: { xs: 0, md: 96 },
+            right: { xs: 0, md: 24 },
+            left: { xs: 0, md: 'auto' },
+            width: { xs: '100%', md: 400 },
+            maxHeight: { xs: '82vh', md: 540 },
+            zIndex: 1260, // sous les fenetres de dialogue (1300)
+            borderRadius: { xs: `${radius.xl}px ${radius.xl}px 0 0`, md: `${radius.xl}px` },
+            boxShadow: shadow.floating,
+            border: `1px solid ${color.border}`,
+            display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
           }}
@@ -112,7 +95,7 @@ const AiAssistant = ({ page }: { page?: string }) => {
           {/* Header */}
           <Box
             sx={{
-              bgcolor: '#f1770a',
+              bgcolor: color.primary,
               color: 'white',
               px: 2,
               py: 1.5,
@@ -124,14 +107,17 @@ const AiAssistant = ({ page }: { page?: string }) => {
             <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 36, height: 36 }}>
               <AutoAwesome sx={{ fontSize: 20 }} />
             </Avatar>
-            <Box>
+            <Box sx={{ flex: 1 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
-                Assistant Mariem
+                Assistant
               </Typography>
-              <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                {loading ? 'reflechit...' : 'en ligne'}
+              <Typography variant="caption" sx={{ opacity: 0.85 }}>
+                {loading ? 'réfléchit…' : 'répond à vos questions, ne modifie rien'}
               </Typography>
             </Box>
+            <IconButton onClick={closeAi} aria-label="Fermer l'assistant" sx={{ color: 'white' }}>
+              <Close />
+            </IconButton>
           </Box>
 
           {/* Messages */}
@@ -176,7 +162,7 @@ const AiAssistant = ({ page }: { page?: string }) => {
                   color="text.secondary"
                   sx={{ px: 0.5, fontSize: '0.6rem' }}
                 >
-                  {msg.timestamp.toLocaleTimeString('fr-TN', {
+                  {msg.timestamp.toLocaleTimeString('fr-FR', {
                     hour: '2-digit',
                     minute: '2-digit',
                   })}

@@ -1,293 +1,195 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../../services/api';
-import {
-  Container,
-  Typography,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  TextField,
-  IconButton,
-  Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Switch,
-  FormControlLabel,
-} from '@mui/material';
-import { ArrowBack, Save } from '@mui/icons-material';
+import { Box, Button, Card, TextField, Switch, FormControlLabel, MenuItem, Tab, Tabs, Typography } from '@mui/material';
+import { Save, Settings, Calculate, Category, Storefront, Palette, NotificationsActive, ChevronRight } from '@mui/icons-material';
+import { PageHeader, SoftIcon } from '../../components/ui';
+import { CategoriesContent } from './CategoriesPage';
+import { useThemeMode } from '../../theme/ThemeModeContext';
+import { color } from '../../theme/tokens';
 
+const TABS = ['calcul', 'categories', 'commerce', 'apparence'] as const;
+type TabId = (typeof TABS)[number];
+
+function Section({ icon, title, subtitle, children }: { icon: React.ReactNode; title: string; subtitle?: string; children: React.ReactNode }) {
+  return (
+    <Card sx={{ p: { xs: 2, md: 2.5 }, mb: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+        <SoftIcon tone="primary" size={38}>
+          {icon}
+        </SoftIcon>
+        <Box>
+          <Typography variant="h6" sx={{ fontSize: '1rem' }}>
+            {title}
+          </Typography>
+          {subtitle && (
+            <Typography variant="caption" sx={{ color: color.inkSoft }}>
+              {subtitle}
+            </Typography>
+          )}
+        </Box>
+      </Box>
+      {children}
+    </Card>
+  );
+}
+
+const grid = { display: 'grid', gap: 2.5, gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0,1fr))' } } as const;
+
+/**
+ * Paramètres : calcul des prix et alertes (enregistrés sur le serveur),
+ * catégories, informations du commerce, apparence. Organisé en sections.
+ */
 const SettingsPage = () => {
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const tab: TabId = (TABS as readonly string[]).includes(params.get('tab') || '') ? (params.get('tab') as TabId) : 'calcul';
+  const { mode, toggle } = useThemeMode();
 
-  // Prix
-  const [pricing, setPricing] = useState({
-    stegTariff: 0.235,
-    waterForfaitSmall: 0.3,
-    waterForfaitLarge: 0.5,
-    marginPercent: 15,
-  });
-
-  // Preferences (stockees en localStorage pour l'instant)
+  const [pricing, setPricing] = useState({ stegTariff: 0.235, waterForfaitSmall: 0.3, waterForfaitLarge: 0.5, marginPercent: 15, actionAlertHours: 24, orderMinLeadHours: 24 });
+  // Informations du commerce : enregistrées sur cet appareil
   const [prefs, setPrefs] = useState({
-    darkMode: false,
-    language: 'fr',
     whatsappNumber: `+${import.meta.env.VITE_WHATSAPP_NUMBER || '21612345678'}`,
     businessName: "Mariem's Sweet Kitchen",
     businessPhone: `+${import.meta.env.VITE_WHATSAPP_NUMBER || '21612345678'}`,
     businessAddress: '',
     currency: 'DT',
-    telegramEnabled: false,
-    telegramChatId: '',
   });
 
   useEffect(() => {
-    // Charger pricing depuis le backend
-    const loadPricing = async () => {
-      try {
-        const res = await api.get('/settings');
-        const data = res.data.data?.settings || [];
+    api
+      .get('/settings')
+      .then((res) => {
         const obj: Record<string, number> = {};
-        data.forEach((s: any) => {
-          obj[s.key] = s.value;
-        });
+        (res.data.data?.settings || []).forEach((s: any) => (obj[s.key] = s.value));
         if (Object.keys(obj).length > 0) setPricing((prev) => ({ ...prev, ...obj }));
-      } catch {
-        /* ignore */
-      }
-    };
-    loadPricing();
-
-    // Charger prefs depuis localStorage
-    const saved = localStorage.getItem('adminPrefs');
-    if (saved) {
-      try {
-        setPrefs((prev) => ({ ...prev, ...JSON.parse(saved) }));
-      } catch {
-        /* ignore */
-      }
+      })
+      .catch(() => undefined);
+    try {
+      const saved = localStorage.getItem('adminPrefs');
+      if (saved) setPrefs((prev) => ({ ...prev, ...JSON.parse(saved) }));
+    } catch {
+      /* préférences locales illisibles : valeurs par défaut */
     }
   }, []);
 
   const handleSave = async () => {
     try {
-      // Sauvegarder pricing dans le backend
       await api.put('/settings', pricing);
       localStorage.setItem('adminPrefs', JSON.stringify(prefs));
-      toast.success('Parametres enregistres');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Erreur lors de la sauvegarde');
+      toast.success('Paramètres enregistrés');
+    } catch {
+      /* toast intercepteur */
     }
   };
 
+  const num = (key: keyof typeof pricing) => (e: React.ChangeEvent<HTMLInputElement>) => setPricing({ ...pricing, [key]: parseFloat(e.target.value) || 0 });
+
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#fafafa' }}>
-      <Box sx={{ bgcolor: 'white', borderBottom: '1px solid #eee', py: 2, px: 3 }}>
-        <Container maxWidth="lg">
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <IconButton onClick={() => navigate('/admin')}>
-                <ArrowBack />
-              </IconButton>
-              <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                Parametres
-              </Typography>
-            </Box>
+    <Box>
+      <PageHeader
+        title="Paramètres"
+        subtitle="Calcul des prix, alertes, catégories et préférences."
+        icon={<Settings />}
+        tone="neutral"
+        helpFlow="recipe"
+        actions={
+          tab === 'calcul' || tab === 'commerce' ? (
             <Button variant="contained" startIcon={<Save />} onClick={handleSave}>
               Enregistrer
             </Button>
+          ) : undefined
+        }
+      />
+
+      <Tabs value={tab} onChange={(_, v) => setParams({ tab: v }, { replace: true })} variant="scrollable" allowScrollButtonsMobile sx={{ mb: 2.5, borderBottom: `1px solid ${color.border}` }}>
+        <Tab value="calcul" label="Calcul et alertes" />
+        <Tab value="categories" label="Catégories" />
+        <Tab value="commerce" label="Commerce" />
+        <Tab value="apparence" label="Apparence" />
+      </Tabs>
+
+      {tab === 'calcul' && (
+        <>
+          <Section icon={<Calculate />} title="Calcul des prix" subtitle="Utilisé pour le prix de chaque recette (les commandes existantes gardent leur prix figé).">
+            <Box sx={grid}>
+              <TextField fullWidth label="Tarif STEG (DT/kWh)" type="number" helperText="Prix moyen de l’électricité" value={pricing.stegTariff} onChange={num('stegTariff')} inputProps={{ step: 0.001 }} />
+              <TextField fullWidth label="Marge (%)" type="number" helperText="Pourcentage ajouté au total" value={pricing.marginPercent} onChange={num('marginPercent')} />
+              <TextField fullWidth label="Forfait eau — petit (DT)" type="number" helperText="Recettes de 8 portions ou moins" value={pricing.waterForfaitSmall} onChange={num('waterForfaitSmall')} inputProps={{ step: 0.1 }} />
+              <TextField fullWidth label="Forfait eau — grand (DT)" type="number" helperText="Recettes de plus de 8 portions" value={pricing.waterForfaitLarge} onChange={num('waterForfaitLarge')} inputProps={{ step: 0.1 }} />
+            </Box>
+          </Section>
+          <Section icon={<NotificationsActive />} title="Commandes et alertes" subtitle="Seuils utilisés par la liste de courses et les commandes urgentes.">
+            <Box sx={grid}>
+              <TextField
+                fullWidth
+                label="Alerte ingrédients manquants (heures)"
+                type="number"
+                helperText="Une commande prévue dans moins de X heures sans tous ses ingrédients est « urgente »"
+                value={pricing.actionAlertHours}
+                onChange={num('actionAlertHours')}
+                inputProps={{ min: 0, step: 1 }}
+              />
+              <TextField
+                fullWidth
+                label="Délai minimum de commande (heures)"
+                type="number"
+                helperText="Pour les commandes passées depuis le site"
+                value={pricing.orderMinLeadHours}
+                onChange={num('orderMinLeadHours')}
+                inputProps={{ min: 0, step: 1 }}
+              />
+            </Box>
+          </Section>
+        </>
+      )}
+
+      {tab === 'categories' && <CategoriesContent />}
+
+      {tab === 'commerce' && (
+        <>
+          <Section icon={<Storefront />} title="Informations du commerce" subtitle="Enregistrées sur cet appareil.">
+            <Box sx={grid}>
+              <TextField fullWidth label="Nom du commerce" value={prefs.businessName} onChange={(e) => setPrefs({ ...prefs, businessName: e.target.value })} />
+              <TextField fullWidth label="Téléphone" value={prefs.businessPhone} onChange={(e) => setPrefs({ ...prefs, businessPhone: e.target.value })} />
+              <TextField fullWidth label="Numéro WhatsApp" value={prefs.whatsappNumber} onChange={(e) => setPrefs({ ...prefs, whatsappNumber: e.target.value })} />
+              <TextField fullWidth label="Devise" value={prefs.currency} onChange={(e) => setPrefs({ ...prefs, currency: e.target.value })} />
+              <TextField fullWidth label="Adresse" value={prefs.businessAddress} onChange={(e) => setPrefs({ ...prefs, businessAddress: e.target.value })} placeholder="Adresse de retrait des commandes" sx={{ gridColumn: '1 / -1' }} />
+            </Box>
+          </Section>
+          <Card sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer' }} onClick={() => navigate('/admin/sources')}>
+            <SoftIcon tone="info" size={38}>
+              <Storefront />
+            </SoftIcon>
+            <Box sx={{ flex: 1 }}>
+              <Typography sx={{ fontWeight: 700 }}>Sources d’achat</Typography>
+              <Typography variant="caption" sx={{ color: color.inkSoft }}>
+                Fournisseurs, magasins et prix par ingrédient
+              </Typography>
+            </Box>
+            <ChevronRight />
+          </Card>
+        </>
+      )}
+
+      {tab === 'apparence' && (
+        <Section icon={<Palette />} title="Apparence" subtitle="Préférences de cet appareil.">
+          <Box sx={grid}>
+            <FormControlLabel control={<Switch checked={mode === 'dark'} onChange={toggle} />} label="Thème sombre" />
+            <TextField select fullWidth label="Langue" value="fr" helperText="Autres langues bientôt disponibles">
+              <MenuItem value="fr">Français</MenuItem>
+              <MenuItem value="ar" disabled>
+                العربية (bientôt)
+              </MenuItem>
+            </TextField>
           </Box>
-        </Container>
-      </Box>
-
-      <Container maxWidth="md" sx={{ py: 3 }}>
-        {/* Calcul des prix */}
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-              Calcul des prix
-            </Typography>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Tarif STEG (DT/kWh)"
-                  type="number"
-                  helperText="Prix moyen electricite Tunisie"
-                  value={pricing.stegTariff}
-                  onChange={(e) =>
-                    setPricing({ ...pricing, stegTariff: parseFloat(e.target.value) || 0 })
-                  }
-                  inputProps={{ step: 0.001 }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Marge effort (%)"
-                  type="number"
-                  helperText="Pourcentage ajoute au total"
-                  value={pricing.marginPercent}
-                  onChange={(e) =>
-                    setPricing({ ...pricing, marginPercent: parseFloat(e.target.value) || 0 })
-                  }
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Forfait eau - Petit (DT)"
-                  type="number"
-                  helperText="Pour les recettes <= 8 portions"
-                  value={pricing.waterForfaitSmall}
-                  onChange={(e) =>
-                    setPricing({ ...pricing, waterForfaitSmall: parseFloat(e.target.value) || 0 })
-                  }
-                  inputProps={{ step: 0.1 }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Forfait eau - Grand (DT)"
-                  type="number"
-                  helperText="Pour les recettes > 8 portions"
-                  value={pricing.waterForfaitLarge}
-                  onChange={(e) =>
-                    setPricing({ ...pricing, waterForfaitLarge: parseFloat(e.target.value) || 0 })
-                  }
-                  inputProps={{ step: 0.1 }}
-                />
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-
-        {/* Informations business */}
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-              Informations du commerce
-            </Typography>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Nom du commerce"
-                  value={prefs.businessName}
-                  onChange={(e) => setPrefs({ ...prefs, businessName: e.target.value })}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Telephone"
-                  value={prefs.businessPhone}
-                  onChange={(e) => setPrefs({ ...prefs, businessPhone: e.target.value })}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Numero WhatsApp"
-                  value={prefs.whatsappNumber}
-                  helperText="Affiche sur le site pour les clients"
-                  onChange={(e) => setPrefs({ ...prefs, whatsappNumber: e.target.value })}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Devise"
-                  value={prefs.currency}
-                  onChange={(e) => setPrefs({ ...prefs, currency: e.target.value })}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Adresse"
-                  value={prefs.businessAddress}
-                  onChange={(e) => setPrefs({ ...prefs, businessAddress: e.target.value })}
-                  placeholder="Adresse pour la recuperation des commandes"
-                />
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-
-        {/* Notifications */}
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-              Notifications
-            </Typography>
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={prefs.telegramEnabled}
-                      onChange={(e) => setPrefs({ ...prefs, telegramEnabled: e.target.checked })}
-                    />
-                  }
-                  label="Activer les notifications Telegram"
-                />
-              </Grid>
-              {prefs.telegramEnabled && (
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Telegram Chat ID"
-                    value={prefs.telegramChatId}
-                    onChange={(e) => setPrefs({ ...prefs, telegramChatId: e.target.value })}
-                    helperText="ID du chat pour recevoir les commandes"
-                  />
-                </Grid>
-              )}
-            </Grid>
-          </CardContent>
-        </Card>
-
-        {/* Preferences interface */}
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-              Preferences d'interface
-            </Typography>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Langue</InputLabel>
-                  <Select
-                    value={prefs.language}
-                    label="Langue"
-                    onChange={(e) => setPrefs({ ...prefs, language: e.target.value })}
-                  >
-                    <MenuItem value="fr">Francais</MenuItem>
-                    <MenuItem value="ar">Arabe (bientot)</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={prefs.darkMode}
-                      onChange={(e) => setPrefs({ ...prefs, darkMode: e.target.checked })}
-                    />
-                  }
-                  label="Mode sombre (bientot)"
-                />
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-      </Container>
+          <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1, color: color.inkSoft }}>
+            <Category fontSize="small" />
+            <Typography variant="body2">« Moins d’animations » se règle dans l’aide ✨ (et suit le réglage de votre appareil).</Typography>
+          </Box>
+        </Section>
+      )}
     </Box>
   );
 };

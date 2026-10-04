@@ -3,16 +3,19 @@ import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
 import { createError } from '../middleware/errorHandler';
 import { asyncHandler } from '../middleware/errorHandler';
-import { authenticate } from '../middleware/auth';
+import { authenticate, authorize } from '../middleware/auth';
 import { logger } from '../utils/logger';
 
 const router = express.Router();
 
 // @desc    Inscription d'un nouvel utilisateur
 // @route   POST /api/auth/register
-// @access  Public
+// @access  Private (Admin) — le seul role existant est "admin" : une inscription
+//          publique donnerait l'acces complet (clients, prix d'achat, stock) a n'importe qui.
 router.post(
   '/register',
+  authenticate,
+  authorize('admin'),
   asyncHandler(async (req: Request, res: Response) => {
     const { email, password, firstName, lastName, phone } = req.body;
 

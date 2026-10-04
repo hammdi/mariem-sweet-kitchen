@@ -13,7 +13,8 @@ const mockedSettings = Settings as jest.Mocked<typeof Settings>;
 function makePopulatedRecipe(
   overrides: Partial<{
     portions: number;
-    ingredients: { _id: string; name: string; pricePerUnit: number }[];
+    // unit = unité de l'ingrédient (prix/stock) ; par défaut identique à celle de la recette
+    ingredients: { _id: string; name: string; pricePerUnit: number; unit?: string }[];
     quantities: number[];
     units: string[];
     appliances: { _id: string; name: string; powerConsumption: number; unit: string }[];
@@ -41,7 +42,7 @@ function makePopulatedRecipe(
         sizeName: 'Petit',
         portions,
         ingredients: ingredients.map((ing, i) => ({
-          ingredientId: ing,
+          ingredientId: { unit: units[i], ...ing },
           quantity: quantities[i],
           unit: units[i],
         })),
@@ -201,10 +202,12 @@ describe('PriceCalculationService', () => {
       const result = await PriceCalculationService.calculateVariantPrice('recipe1', 0, []);
 
       expect(result.ingredientsDetail).toHaveLength(3);
-      expect(result.ingredientsDetail[0]).toEqual({
+      expect(result.ingredientsDetail[0]).toMatchObject({
         name: 'Farine',
         quantity: 0.5,
         unit: 'kg',
+        quantityInStockUnit: 0.5,
+        stockUnit: 'kg',
         unitPrice: 1.5,
         cost: 0.75,
         providedByClient: false,

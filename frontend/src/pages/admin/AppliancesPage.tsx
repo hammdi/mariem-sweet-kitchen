@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { PageHeader } from '../../components/ui';
+import { Blender } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import api from '../../services/api';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import {
-  Container,
-  Typography,
   Box,
   Button,
   Card,
@@ -28,7 +27,7 @@ import {
   Chip,
   InputAdornment,
 } from '@mui/material';
-import { Add, Edit, Delete, ArrowBack, Search } from '@mui/icons-material';
+import { Add, Edit, Delete, Search } from '@mui/icons-material';
 
 const categories = [
   { value: 'cooking', label: 'Cuisson' },
@@ -40,7 +39,6 @@ const categories = [
 const emptyForm = { name: '', powerConsumption: '', category: 'cooking' };
 
 const AppliancesPage = () => {
-  const navigate = useNavigate();
   const [appliances, setAppliances] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -83,10 +81,10 @@ const AppliancesPage = () => {
       const body = { ...form, powerConsumption: parseFloat(form.powerConsumption), unit: 'W' };
       if (editId) {
         await api.put(`/appliances/${editId}`, body);
-        toast.success('Machine modifiee');
+        toast.success('Machine modifiée');
       } else {
         await api.post('/appliances', body);
-        toast.success('Machine ajoutee');
+        toast.success('Machine ajoutée');
       }
       setDialogOpen(false);
       load();
@@ -99,7 +97,7 @@ const AppliancesPage = () => {
     if (!deleteId) return;
     try {
       await api.delete(`/appliances/${deleteId}`);
-      toast.success('Machine supprimee');
+      toast.success('Machine supprimée');
       setDeleteId(null);
       load();
     } catch (err: any) {
@@ -108,50 +106,31 @@ const AppliancesPage = () => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#fafafa' }}>
-      <Box sx={{ bgcolor: 'white', borderBottom: '1px solid #eee', py: 2, px: 3 }}>
-        <Container maxWidth="lg">
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: { xs: 'column', sm: 'row' },
-              justifyContent: 'space-between',
-              alignItems: { xs: 'stretch', sm: 'center' },
-              gap: 1,
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <IconButton onClick={() => navigate('/admin')}>
-                <ArrowBack />
-              </IconButton>
-              <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                Machines
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <TextField
-                size="small"
-                placeholder="Rechercher..."
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ width: { xs: '100%', sm: 200 } }}
-              />
-              <Button variant="contained" startIcon={<Add />} onClick={openAdd}>
-                Ajouter
-              </Button>
-            </Box>
-          </Box>
-        </Container>
-      </Box>
-
-      <Container maxWidth="lg" sx={{ py: 3 }}>
+    <Box>
+      <PageHeader
+        title="Machines"
+        subtitle="Four, batteur, réfrigérateur… La puissance et la durée servent au coût d’électricité des recettes."
+        icon={<Blender />}
+        tone="warning"
+        helpFlow="recipe"
+        actions={
+          <>
+            <TextField
+              size="small"
+              placeholder="Rechercher…"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              inputProps={{ 'aria-label': 'Rechercher une machine' }}
+              InputProps={{ startAdornment: <InputAdornment position="start"><Search /></InputAdornment> }}
+              sx={{ width: { xs: '100%', sm: 220 } }}
+            />
+            <Button variant="contained" startIcon={<Add />} onClick={openAdd}>
+              Ajouter
+            </Button>
+          </>
+        }
+      />
+      <Box>
         {/* Filtres categorie */}
         <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
           <Chip
@@ -179,7 +158,7 @@ const AppliancesPage = () => {
               <TableRow>
                 <TableCell>Nom</TableCell>
                 <TableCell>Puissance</TableCell>
-                <TableCell>Categorie</TableCell>
+                <TableCell>Catégorie</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -225,7 +204,7 @@ const AppliancesPage = () => {
             </TableBody>
           </Table>
         </TableContainer>
-      </Container>
+      </Box>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{editId ? 'Modifier la machine' : 'Ajouter une machine'}</DialogTitle>
@@ -246,10 +225,10 @@ const AppliancesPage = () => {
             sx={{ mb: 2 }}
           />
           <FormControl fullWidth>
-            <InputLabel>Categorie</InputLabel>
+            <InputLabel>Catégorie</InputLabel>
             <Select
               value={form.category}
-              label="Categorie"
+              label="Catégorie"
               onChange={(e) => setForm({ ...form, category: e.target.value })}
             >
               {categories.map((c) => (

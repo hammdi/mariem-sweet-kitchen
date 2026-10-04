@@ -1,5 +1,5 @@
-import { Routes, Route } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
 // Layout
@@ -18,70 +18,19 @@ import AppliancesPage from './pages/admin/AppliancesPage';
 import OrdersPage from './pages/admin/OrdersPage';
 import OrderDetailPage from './pages/admin/OrderDetailPage';
 import StockPage from './pages/admin/StockPage';
-import CategoriesPage from './pages/admin/CategoriesPage';
 import SettingsPage from './pages/admin/SettingsPage';
 import CalendarPage from './pages/admin/CalendarPage';
 import ManualOrderPage from './pages/admin/ManualOrderPage';
 import ShoppingListPage from './pages/admin/ShoppingListPage';
+import ClientsPage from './pages/admin/ClientsPage';
+import ClientDetailPage from './pages/admin/ClientDetailPage';
+import PurchaseSourcesPage from './pages/admin/PurchaseSourcesPage';
+import IngredientDetailPage from './pages/admin/IngredientDetailPage';
+import CashPage from './pages/admin/CashPage';
+import StatisticsPage from './pages/admin/StatisticsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ProtectedRoute from './components/common/ProtectedRoute';
-
-// Theme
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#f1770a',
-      light: '#f49332',
-      dark: '#e25a05',
-    },
-    secondary: {
-      main: '#0ea5e9',
-      light: '#38bdf8',
-      dark: '#0284c7',
-    },
-    background: {
-      default: '#fafafa',
-      paper: '#ffffff',
-    },
-  },
-  typography: {
-    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-    h1: {
-      fontFamily: '"Playfair Display", "Georgia", serif',
-      fontWeight: 600,
-    },
-    h2: {
-      fontFamily: '"Playfair Display", "Georgia", serif',
-      fontWeight: 600,
-    },
-    h3: {
-      fontFamily: '"Playfair Display", "Georgia", serif',
-      fontWeight: 500,
-    },
-  },
-  shape: {
-    borderRadius: 12,
-  },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          textTransform: 'none',
-          fontWeight: 500,
-          borderRadius: 8,
-        },
-      },
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          borderRadius: 12,
-        },
-      },
-    },
-  },
-});
+import { theme } from './theme/theme';
 
 function App() {
   return (
@@ -105,15 +54,24 @@ function App() {
           <Route path="recipes/new" element={<RecipeFormPage />} />
           <Route path="recipes/:id/edit" element={<RecipeFormPage />} />
           <Route path="ingredients" element={<IngredientsPage />} />
+          <Route path="ingredients/:id" element={<IngredientDetailPage />} />
           <Route path="appliances" element={<AppliancesPage />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="orders/new" element={<ManualOrderPage />} />
           <Route path="orders/:id" element={<OrderDetailPage />} />
           <Route path="stock" element={<StockPage />} />
-          <Route path="categories" element={<CategoriesPage />} />
+          {/* Catégories : gérées dans Paramètres */}
+          <Route path="categories" element={<Navigate to="/admin/settings?tab=categories" replace />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="shopping-list" element={<ShoppingListPage />} />
+          <Route path="clients" element={<ClientsPage />} />
+          <Route path="clients/:id" element={<ClientDetailPage />} />
+          <Route path="sources" element={<PurchaseSourcesPage />} />
+          {/* Ventes et caisse fusionnees : l'ancienne page Ventes ouvre la Caisse */}
+          <Route path="sales" element={<Navigate to="/admin/cash?tab=receivables" replace />} />
+          <Route path="cash" element={<CashPage />} />
+          <Route path="statistics" element={<StatisticsPage />} />
         </Route>
 
         {/* 404 */}

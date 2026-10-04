@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
+import { PageHeader } from '../../components/ui';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../../services/api';
 import {
-  Container,
   Typography,
   Box,
   Button,
@@ -27,7 +27,7 @@ import {
   DialogActions,
   CircularProgress,
 } from '@mui/material';
-import { ArrowBack, Add, Delete, ContentCopy, Close, CloudUpload } from '@mui/icons-material';
+import { Add, Delete, ContentCopy, Close, CloudUpload } from '@mui/icons-material';
 
 const emptyVariant = () => ({
   sizeName: '',
@@ -119,7 +119,7 @@ const RecipeFormPage = () => {
       }
     };
     load();
-  }, [id]);
+  }, [id, navigate]);
 
   const updateVariant = (idx: number, field: string, value: any) => {
     const newVars = [...variants];
@@ -185,6 +185,37 @@ const RecipeFormPage = () => {
   };
 
   const handleSave = async () => {
+    // Validation locale avant envoi
+    if (!name.trim()) {
+      toast.error('Le nom de la recette est obligatoire');
+      return;
+    }
+    if (variants.length === 0) {
+      toast.error('Ajoutez au moins une taille');
+      return;
+    }
+    for (let i = 0; i < variants.length; i++) {
+      const v = variants[i];
+      if (!v.sizeName.trim()) {
+        toast.error(`Taille ${i + 1} : le nom est obligatoire (ex: Petit, Grand...)`);
+        return;
+      }
+      if (v.ingredients.length === 0) {
+        toast.error(`Taille "${v.sizeName}" : ajoutez au moins un ingrédient`);
+        return;
+      }
+      for (const ing of v.ingredients) {
+        if (!ing.ingredientId) {
+          toast.error(`Taille "${v.sizeName}" : sélectionnez un ingrédient dans la liste`);
+          return;
+        }
+        if (!ing.quantity || ing.quantity <= 0) {
+          toast.error(`Taille "${v.sizeName}" : la quantité de chaque ingrédient doit être > 0`);
+          return;
+        }
+      }
+    }
+
     setSaving(true);
     try {
       const body = { name, description, categories, variants, images };
@@ -203,26 +234,19 @@ const RecipeFormPage = () => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#fafafa' }}>
-      <Box sx={{ bgcolor: 'white', borderBottom: '1px solid #eee', py: 2, px: 3 }}>
-        <Container maxWidth="lg">
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <IconButton onClick={() => navigate('/admin/recipes')}>
-                <ArrowBack />
-              </IconButton>
-              <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                {isEdit ? 'Modifier la recette' : 'Nouvelle recette'}
-              </Typography>
-            </Box>
-            <Button variant="contained" onClick={handleSave} disabled={saving}>
-              {saving ? 'Sauvegarde...' : 'Enregistrer'}
-            </Button>
-          </Box>
-        </Container>
-      </Box>
-
-      <Container maxWidth="lg" sx={{ py: 3 }}>
+    <Box>
+      <PageHeader
+        title={isEdit ? 'Modifier la recette' : 'Nouvelle recette'}
+        subtitle="Chaque taille a ses propres quantités d’ingrédients et durées de machines. La préparation n’est jamais enregistrée."
+        backTo="/admin/recipes"
+        helpFlow="recipe"
+        actions={
+          <Button variant="contained" onClick={handleSave} disabled={saving}>
+            {saving ? 'Enregistrement…' : 'Enregistrer'}
+          </Button>
+        }
+      />
+      <Box>
         {/* Info generales */}
         <Card sx={{ mb: 3 }}>
           <CardContent>
@@ -233,14 +257,14 @@ const RecipeFormPage = () => {
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="Nom de la recette"
+                  label="Nom de la recette *"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
               </Grid>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
-                  <InputLabel>Categories</InputLabel>
+                  <InputLabel>Catégories</InputLabel>
                   <Select
                     multiple
                     value={categories}
@@ -376,7 +400,7 @@ const RecipeFormPage = () => {
                       const urls: string[] = res.data.data?.urls || res.data.urls || [];
                       if (urls.length > 0) {
                         setImages((prev) => [...prev, ...urls]);
-                        toast.success('Image ajoutee');
+                        toast.success('Image ajoutée');
                       }
                     } catch (err: any) {
                       toast.error(err.response?.data?.message || "Erreur lors de l'upload");
@@ -426,7 +450,7 @@ const RecipeFormPage = () => {
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
-                    label="Nom de la taille"
+                    label="Nom de la taille *"
                     value={variant.sizeName}
                     onChange={(e) => updateVariant(vIdx, 'sizeName', e.target.value)}
                     placeholder="Petit, Moyen, Grand, 12 pieces..."
@@ -451,10 +475,10 @@ const RecipeFormPage = () => {
                 <Grid container spacing={1} key={iIdx} sx={{ mb: 1 }} alignItems="center">
                   <Grid item xs={12} md={5}>
                     <FormControl fullWidth size="small">
-                      <InputLabel>Ingredient</InputLabel>
+                      <InputLabel>Ingrédient</InputLabel>
                       <Select
                         value={ing.ingredientId}
-                        label="Ingredient"
+                        label="Ingrédient"
                         onChange={(e) =>
                           updateIngredient(vIdx, iIdx, 'ingredientId', e.target.value)
                         }
@@ -472,7 +496,7 @@ const RecipeFormPage = () => {
                       fullWidth
                       size="small"
                       type="number"
-                      label="Quantite"
+                      label="Quantité"
                       value={ing.quantity}
                       onChange={(e) =>
                         updateIngredient(vIdx, iIdx, 'quantity', parseFloat(e.target.value) || 0)
@@ -481,10 +505,10 @@ const RecipeFormPage = () => {
                   </Grid>
                   <Grid item xs={4} md={3}>
                     <FormControl fullWidth size="small">
-                      <InputLabel>Unite</InputLabel>
+                      <InputLabel>Unité</InputLabel>
                       <Select
                         value={ing.unit}
-                        label="Unite"
+                        label="Unité"
                         onChange={(e) => updateIngredient(vIdx, iIdx, 'unit', e.target.value)}
                       >
                         {['kg', 'g', 'l', 'ml', 'piece', 'cuillere', 'tasse'].map((u) => (
@@ -544,7 +568,7 @@ const RecipeFormPage = () => {
                       fullWidth
                       size="small"
                       type="number"
-                      label="Duree (minutes)"
+                      label="Durée (minutes)"
                       value={app.duration}
                       onChange={(e) =>
                         updateAppliance(vIdx, aIdx, 'duration', parseInt(e.target.value) || 0)
@@ -578,7 +602,7 @@ const RecipeFormPage = () => {
         >
           Ajouter une taille (copie de la precedente)
         </Button>
-      </Container>
+      </Box>
 
       {/* Dialog ajouter categorie */}
       <Dialog
@@ -587,12 +611,12 @@ const RecipeFormPage = () => {
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>Nouvelle categorie</DialogTitle>
+        <DialogTitle>Nouvelle catégorie</DialogTitle>
         <DialogContent>
           <TextField
             fullWidth
             autoFocus
-            label="Nom de la categorie"
+            label="Nom de la catégorie"
             value={newCatName}
             onChange={(e) => setNewCatName(e.target.value.toLowerCase())}
             sx={{ mt: 1 }}

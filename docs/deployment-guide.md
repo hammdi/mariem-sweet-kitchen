@@ -30,11 +30,11 @@ MongoDB est sur **Atlas M0** (cloud), pas sur l'EC2 — backups gérés par Mong
 
 ## Ports utilisés
 
-| Service | Port hôte | Port container | Notes |
-|---------|-----------|----------------|-------|
-| `mariem-frontend` | 3000 | 80 (nginx) | Sert le SPA + proxy `/api/*` vers backend |
-| `mariem-backend` | 3001 | 3001 (Express) | Exposé uniquement pour debug/health check |
-| `evalpro` (autre projet) | 5173, 5001, 5432 | — | Pas de conflit |
+| Service                  | Port hôte        | Port container | Notes                                     |
+| ------------------------ | ---------------- | -------------- | ----------------------------------------- |
+| `mariem-frontend`        | 3000             | 80 (nginx)     | Sert le SPA + proxy `/api/*` vers backend |
+| `mariem-backend`         | 3001             | 3001 (Express) | Exposé uniquement pour debug/health check |
+| `evalpro` (autre projet) | 5173, 5001, 5432 | —              | Pas de conflit                            |
 
 ## Prérequis (déjà en place côté Hamdi)
 
@@ -46,6 +46,7 @@ MongoDB est sur **Atlas M0** (cloud), pas sur l'EC2 — backups gérés par Mong
 - ✅ Projet `evalpro` tourne déjà (sur des ports différents)
 
 À vérifier :
+
 - Certbot installé (sinon `sudo apt install certbot python3-certbot-nginx`)
 - MongoDB Atlas : cluster créé, IP `35.181.245.57` whitelistée dans Network Access
 
@@ -101,6 +102,7 @@ docker compose -f docker-compose.prod.yml logs -f backend
 ```
 
 Tu dois voir dans les logs backend :
+
 ```
 ✅ Connexion à la base de données établie
 🚀 Serveur démarré sur le port 3001
@@ -154,12 +156,14 @@ sudo certbot --nginx -d mariem.hamdikbaier.dev
 ```
 
 Certbot va :
+
 1. Vérifier que le domaine pointe bien vers cette IP.
 2. Créer le certificat.
 3. Modifier `/etc/nginx/sites-available/mariem` pour ajouter le bloc HTTPS + redirection HTTP → HTTPS.
 4. Recharger Nginx.
 
 Vérifier le renouvellement automatique :
+
 ```bash
 sudo certbot renew --dry-run
 ```
@@ -167,6 +171,7 @@ sudo certbot renew --dry-run
 ## Étape 9 — Vérifications finales
 
 Dans le navigateur :
+
 - ✅ `https://mariem.hamdikbaier.dev` → site React s'affiche
 - ✅ `https://mariem.hamdikbaier.dev/api/health` → `{"success":true,...}`
 - ✅ Badge cadenas dans l'URL (HTTPS valide)
@@ -184,30 +189,36 @@ docker compose -f docker-compose.prod.yml up -d --build
 ## Dépannage
 
 ### Le backend crash au démarrage
+
 ```bash
 docker compose -f docker-compose.prod.yml logs backend
 ```
 
 Causes fréquentes :
+
 - `JWT_SECRET manquant ou trop court` → ajouter dans `.env.production`.
 - `MongooseError: bad auth` ou `timeout` → URL-encoder le mot de passe Atlas + vérifier l'IP whitelist Atlas.
 - `ENOTFOUND` sur l'URI Atlas → problème DNS, vérifier l'URI.
 
 ### Le frontend affiche mais pas d'API
+
 ```bash
 docker compose -f docker-compose.prod.yml logs frontend
 ```
 
 Le nginx du container frontend proxy `/api/*` vers `http://backend:3001`. Si ça ne marche pas :
+
 - Vérifier que les deux containers sont sur le même réseau Docker (`mariem-network`).
 - Vérifier que le backend écoute bien sur `0.0.0.0:3001`, pas `127.0.0.1`.
 
 ### "site can't be reached" sur le domaine
+
 - Vérifier que l'enregistrement A est bien actif : `dig mariem.hamdikbaier.dev +short` → doit retourner `35.181.245.57`.
 - Vérifier que nginx écoute : `sudo ss -tlnp | grep :80`.
 - Vérifier les Security Groups EC2 : ports 80 et 443 ouverts en inbound.
 
 ### Telegram ne notifie pas
+
 - Vérifier que `TELEGRAM_BOT_TOKEN` et `TELEGRAM_CHAT_ID` sont bien dans `.env.production`.
 - Vérifier que Mariem a fait `/start` sur le bot au moins une fois.
 - Tester manuellement :
@@ -217,6 +228,7 @@ Le nginx du container frontend proxy `/api/*` vers `http://backend:3001`. Si ça
   ```
 
 ### L'IA ne répond pas (Gemini / Groq)
+
 - Vérifier les clés dans `.env.production`.
 - Consulter les logs backend : `docker compose -f docker-compose.prod.yml logs backend | grep -i "ai"`.
 - Le fallback Gemini → Groq est automatique. Si les deux échouent, vérifier que les tiers gratuits ne sont pas épuisés.

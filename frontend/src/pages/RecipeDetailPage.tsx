@@ -77,7 +77,7 @@ const RecipeDetailPage = () => {
       setLoading(false);
     };
     load();
-  }, [id]);
+  }, [id, navigate]);
 
   // Calculer le prix quand le variant ou les offres client changent
   useEffect(() => {
@@ -105,7 +105,10 @@ const RecipeDetailPage = () => {
       await api.post('/orders', {
         clientName: orderForm.clientName,
         clientPhone: orderForm.clientPhone,
-        requestedDate: orderForm.requestedDate || null,
+        // "YYYY-MM-DDTHH:mm" saisi en heure locale → ISO UTC (pas de decalage cote serveur)
+        requestedDate: orderForm.requestedDate
+          ? new Date(orderForm.requestedDate).toISOString()
+          : null,
         items: [
           {
             recipeId: recipe._id,

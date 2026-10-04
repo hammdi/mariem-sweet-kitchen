@@ -45,7 +45,11 @@ api.interceptors.response.use(
           toast.error('Accès refusé');
           break;
         case 404:
-          toast.error('Ressource non trouvée');
+          toast.error(data?.message || 'Ressource non trouvée');
+          break;
+        case 409:
+          // opération déjà en cours / déjà enregistrée : rien n'a été fait deux fois
+          toast.info(data?.message || 'Opération déjà en cours');
           break;
         case 422:
           // Erreurs de validation
@@ -74,5 +78,8 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+/** En-tête d'idempotence d'une opération sensible (argent ou stock). */
+export const withIdempotency = (key: string) => ({ headers: { 'Idempotency-Key': key } });
 
 export default api;

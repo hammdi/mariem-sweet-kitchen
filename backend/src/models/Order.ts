@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
+import { nextSequence } from './Counter';
 
 export interface IPriceBreakdown {
   ingredientsCost: number;
@@ -8,6 +9,16 @@ export interface IPriceBreakdown {
   total: number;
 }
 
+// Valeurs figees a la creation : un changement de prix d'ingredient ne modifie
+// jamais le prix d'une commande existante.
+export interface IOrderPriceSnapshot {
+  ingredients: { ingredientId: Types.ObjectId | string; name: string; fullCost: number }[];
+  electricityCost: number;
+  waterCost: number;
+  marginPercent: number;
+  capturedAt: Date;
+}
+
 export interface IOrderItem {
   recipeId: Types.ObjectId;
   variantIndex: number;
@@ -15,16 +26,62 @@ export interface IOrderItem {
   clientOfferedIngredients: Types.ObjectId[]; // ce que le client propose de ramener
   clientProvidedIngredients: Types.ObjectId[]; // ce que Mariem confirme
   calculatedPrice: IPriceBreakdown;
+  priceSnapshot?: IOrderPriceSnapshot;
+}
+
+export type OrderStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'preparing'
+  | 'ready'
+  | 'delivered'
+  | 'paid'
+  | 'cancelled';
+export const ORDER_STATUSES: OrderStatus[] = [
+  'pending',
+  'confirmed',
+  'preparing',
+  'ready',
+  'delivered',
+  'paid',
+  'cancelled',
+];
+
+export interface IStatusChange {
+  from: string;
+  to: string;
+  at: Date;
+  by: string;
+  reason?: string;
 }
 
 export interface IOrder extends Document {
   _id: string;
+  orderNumber?: number; // numero lisible (CMD-12), absent sur les anciennes commandes
+  clientId: Types.ObjectId | null; // fiche client (optionnelle pour les anciennes commandes)
   clientName: string;
   clientPhone: string;
   items: IOrderItem[];
   totalPrice: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'paid' | 'cancelled';
+  // Avancement réel de la commande. Le paiement est suivi À PART (paymentStatus).
+  // "paid" : ancien statut (avant la séparation paiement / préparation), gardé
+  // pour lire les anciennes commandes ; il se comporte comme "confirmed".
+  status: OrderStatus;
   ingredientsReady: boolean;
+  deliveredAt: Date | null;
+  // Annulation : raison obligatoire dès que la préparation a commencé
+  cancellationReason: string;
+  cancelledAt: Date | null;
+  cancelledBy: string;
+  cancelledAfterPreparation: boolean;
+  statusHistory: IStatusChange[];
+  stockDeducted: boolean; // le stock de cette commande a ete deduit (une seule fois)
+  // Paiement : copie calculee depuis la caisse (CashMovement), jamais saisie a la main
+  amountPaid: number;
+  paymentStatus: 'unpaid' | 'partial' | 'paid';
+  paymentMethod: string | null;
+  paidAt: Date | null;
+  stockDeductedAt: Date | null;
   requestedDate: Date | null;
   confirmedDate: Date | null;
   additionalFees: { label: string; amount: number }[];
@@ -41,6 +98,24 @@ const priceBreakdownSchema = new Schema<IPriceBreakdown>(
     waterCost: { type: Number, default: 0 },
     margin: { type: Number, default: 0 },
     total: { type: Number, default: 0 },
+  },
+  { _id: false }
+);
+
+const priceSnapshotSchema = new Schema<IOrderPriceSnapshot>(
+  {
+    ingredients: [
+      {
+        ingredientId: { type: Schema.Types.ObjectId, ref: 'Ingredient' },
+        name: String,
+        fullCost: Number,
+        _id: false,
+      },
+    ],
+    electricityCost: Number,
+    waterCost: Number,
+    marginPercent: Number,
+    capturedAt: Date,
   },
   { _id: false }
 );
@@ -78,12 +153,24 @@ const orderItemSchema = new Schema<IOrderItem>(
       type: priceBreakdownSchema,
       default: () => ({}),
     },
+    priceSnapshot: {
+      type: priceSnapshotSchema,
+      default: undefined,
+    },
   },
   { _id: false }
 );
 
 const orderSchema = new Schema<IOrder>(
   {
+    orderNumber: {
+      type: Number,
+    },
+    clientId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Client',
+      default: null,
+    },
     clientName: {
       type: String,
       required: [true, 'Nom du client requis'],
@@ -109,12 +196,52 @@ const orderSchema = new Schema<IOrder>(
     },
     status: {
       type: String,
-      enum: ['pending', 'confirmed', 'preparing', 'ready', 'paid', 'cancelled'],
+      enum: ORDER_STATUSES,
       default: 'pending',
     },
     ingredientsReady: {
       type: Boolean,
       default: false,
+    },
+    deliveredAt: { type: Date, default: null },
+    cancellationReason: { type: String, trim: true, maxlength: 300, default: '' },
+    cancelledAt: { type: Date, default: null },
+    cancelledBy: { type: String, default: '' },
+    cancelledAfterPreparation: { type: Boolean, default: false },
+    statusHistory: [
+      {
+        from: String,
+        to: String,
+        at: Date,
+        by: String,
+        reason: String,
+        _id: false,
+      },
+    ],
+    stockDeducted: {
+      type: Boolean,
+      default: false,
+    },
+    amountPaid: {
+      type: Number,
+      default: 0,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['unpaid', 'partial', 'paid'],
+      default: 'unpaid',
+    },
+    paymentMethod: {
+      type: String,
+      default: null,
+    },
+    paidAt: {
+      type: Date,
+      default: null,
+    },
+    stockDeductedAt: {
+      type: Date,
+      default: null,
     },
     requestedDate: {
       type: Date,
@@ -148,9 +275,18 @@ const orderSchema = new Schema<IOrder>(
 );
 
 // Index
+orderSchema.index({ orderNumber: 1 }, { unique: true, sparse: true });
 orderSchema.index({ status: 1 });
+
+// Numero de commande sequentiel attribue a la creation
+orderSchema.pre('save', async function () {
+  if (this.isNew && this.orderNumber === undefined) {
+    this.orderNumber = await nextSequence('order');
+  }
+});
 orderSchema.index({ createdAt: -1 });
 orderSchema.index({ clientPhone: 1 });
+orderSchema.index({ clientId: 1, createdAt: -1 });
 
 // Recalculer totalPrice quand items changent.
 // Arrondi au millime près (3 décimales) pour éviter les dérives flottantes sur la somme.

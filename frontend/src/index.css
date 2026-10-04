@@ -2,7 +2,7 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap');
 
 @layer base {
   * {
@@ -159,4 +159,27 @@
 
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Notifications (react-toastify) aux couleurs du design system */
+:root {
+  --toastify-font-family: 'Inter', sans-serif;
+  --toastify-color-success: #2f9e62;
+  --toastify-color-error: #dc3d43;
+  --toastify-color-warning: #e69a00;
+  --toastify-color-info: #3b7be0;
+  --toastify-text-color-light: #2a1f17;
+  --toastify-toast-bd-radius: 14px;
+  --toastify-toast-min-height: 56px;
+}
+.Toastify__toast {
+  border: 1px solid #efe6da;
+  box-shadow: 0 14px 36px rgba(42, 31, 23, 0.16);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+@media (prefers-reduced-motion: reduce) {
+  .Toastify__toast {
+    animation: none !important;
+  }
 }

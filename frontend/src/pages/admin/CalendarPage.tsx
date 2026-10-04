@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
+import { PageHeader } from '../../components/ui';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../../services/api';
 import {
-  Container,
   Typography,
   Box,
   IconButton,
@@ -23,7 +23,6 @@ import {
   ListItemSecondaryAction,
 } from '@mui/material';
 import {
-  ArrowBack,
   ChevronLeft,
   ChevronRight,
   CalendarToday,
@@ -53,7 +52,7 @@ const statusColors: Record<
 const statusLabels: Record<string, string> = {
   pending: 'En attente',
   confirmed: 'Confirmee',
-  preparing: 'En preparation',
+  preparing: 'En préparation',
   ready: 'Prete',
   paid: 'Payee',
   cancelled: 'Annulee',
@@ -153,7 +152,7 @@ const CalendarPage = () => {
         endDate: end.toISOString(),
         reason: blockReason.trim() || undefined,
       });
-      toast.success('Jour bloque');
+      toast.success('Jour bloqué');
       setBlockDialogOpen(false);
       await loadBlocks();
     } catch (err: unknown) {
@@ -165,7 +164,7 @@ const CalendarPage = () => {
   const unblockDay = async (blockId: string) => {
     try {
       await api.delete(`/availability/blocks/${blockId}`);
-      toast.success('Jour debloque');
+      toast.success('Jour débloqué');
       await loadBlocks();
     } catch {
       toast.error('Erreur');
@@ -228,26 +227,15 @@ const CalendarPage = () => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#fafafa' }}>
-      {/* Header */}
-      <Box sx={{ bgcolor: 'white', borderBottom: '1px solid #eee', py: 2, px: 3 }}>
-        <Container maxWidth="lg">
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <IconButton onClick={() => navigate('/admin')}>
-              <ArrowBack />
-            </IconButton>
-            <CalendarToday color="primary" />
-            <Typography
-              variant="h5"
-              sx={{ fontWeight: 600, fontSize: { xs: '1.1rem', md: '1.5rem' } }}
-            >
-              Calendrier des commandes
-            </Typography>
-          </Box>
-        </Container>
-      </Box>
-
-      <Container maxWidth="lg" sx={{ py: 3 }}>
+    <Box>
+      <PageHeader
+        title="Calendrier des commandes"
+        subtitle="Commandes prévues par jour : dates confirmées, préparations et retraits."
+        icon={<CalendarToday />}
+        tone="primary"
+        helpFlow="payment"
+      />
+      <Box>
         <Grid container spacing={3}>
           {/* Calendrier */}
           <Grid item xs={12} md={selectedDay ? 7 : 12}>
@@ -450,7 +438,7 @@ const CalendarPage = () => {
                     <Box
                       sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main' }}
                     />
-                    <Typography variant="caption">Confirme</Typography>
+                    <Typography variant="caption">Confirmée</Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <Box
@@ -460,7 +448,7 @@ const CalendarPage = () => {
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <Block sx={{ fontSize: 12, color: 'error.main' }} />
-                    <Typography variant="caption">Indispo</Typography>
+                    <Typography variant="caption">Indisponible</Typography>
                   </Box>
                 </Box>
                 <Typography
@@ -468,7 +456,7 @@ const CalendarPage = () => {
                   color="text.secondary"
                   sx={{ display: 'block', textAlign: 'center', mt: 1 }}
                 >
-                  Clic sur un jour libre = bloquer · clic sur un jour bloque = debloquer
+                  Clic sur un jour libre = le bloquer · clic sur un jour bloqué = le débloquer
                 </Typography>
               </CardContent>
             </Card>
@@ -487,7 +475,7 @@ const CalendarPage = () => {
                   <List dense>
                     {upcomingBlocks.slice(0, 10).map((b) => {
                       const start = new Date(b.startDate);
-                      const label = start.toLocaleDateString('fr-TN', {
+                      const label = start.toLocaleDateString('fr-FR', {
                         weekday: 'short',
                         day: '2-digit',
                         month: 'short',
@@ -580,7 +568,7 @@ const CalendarPage = () => {
                       {selectedOrders.map((order) => {
                         const d = getEventDate(order);
                         const time = d
-                          ? d.toLocaleTimeString('fr-TN', { hour: '2-digit', minute: '2-digit' })
+                          ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
                           : '';
 
                         return (
@@ -664,7 +652,7 @@ const CalendarPage = () => {
             </Grid>
           )}
         </Grid>
-      </Container>
+      </Box>
 
       {/* Dialog : bloquer un jour */}
       <Dialog

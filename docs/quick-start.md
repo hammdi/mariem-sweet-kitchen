@@ -39,8 +39,15 @@ Frontend : éditer `frontend/.env` si besoin (par défaut `VITE_API_URL=http://l
 
 ## Démarrer
 
+MongoDB local tourne dans Docker (service `mongodb` de `docker-compose.yml`). Les identifiants
+`MONGO_USERNAME` / `MONGO_PASSWORD` de `.env.docker` doivent correspondre à `MONGODB_URI` de
+`backend/.env` (`mongodb://admin:<mdp>@localhost:27017/mariem_kitchen?authSource=admin`).
+
 ```bash
-# Tout en une commande (backend + frontend)
+# 1. MongoDB seul (première fois : cp .env.docker.example .env.docker puis remplir)
+docker compose --env-file .env.docker up -d mongodb
+
+# 2. Backend + frontend en local
 npm run dev
 
 # Ou séparément
@@ -67,8 +74,8 @@ Crée :
 ## Avec Docker
 
 ```bash
-docker compose up --build    # MongoDB + Backend + Frontend
-docker compose down          # Arrête tout
+docker compose --env-file .env.docker up --build    # MongoDB + Backend + Frontend (pas en même temps que npm run dev : ports 3000/3001)
+docker compose --env-file .env.docker down          # Arrête tout (les données restent dans le volume)
 ```
 
 ## Accès

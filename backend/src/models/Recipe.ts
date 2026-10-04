@@ -98,7 +98,7 @@ const recipeSchema = new Schema<IRecipe>(
     },
     description: {
       type: String,
-      required: [true, 'Description requise'],
+      default: '',
       trim: true,
       maxlength: [1000, 'La description ne peut pas dépasser 1000 caractères'],
     },

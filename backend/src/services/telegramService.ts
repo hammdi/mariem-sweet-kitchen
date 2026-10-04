@@ -101,6 +101,7 @@ export class TelegramService {
       confirmed: '✅',
       preparing: '👩‍🍳',
       ready: '🎉',
+      delivered: '📦',
       paid: '💵',
       cancelled: '❌',
     };

@@ -59,6 +59,8 @@ const RecipesPage = () => {
   useEffect(() => {
     setPage(1);
     load(1);
+    // rechargement seulement quand la catégorie change (load lit l'état courant)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category]);
 
   const handleSearch = (e: React.FormEvent) => {

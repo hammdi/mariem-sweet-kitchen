@@ -13,7 +13,18 @@ const ALLOWED_SETTING_KEYS = [
   'waterForfaitLarge',
   'marginPercent',
   'orderMinLeadHours', // delai minimum entre commande et date de recuperation souhaitee
+  'actionAlertHours', // alerte "ingredients manquants" quand la commande est dans moins de X heures
 ] as const;
+
+// Libelles utilises si le parametre n'existe pas encore en base (creation a la volee)
+const SETTING_LABELS: Record<string, string> = {
+  stegTariff: 'Tarif STEG (DT/kWh)',
+  waterForfaitSmall: 'Forfait eau petit (DT)',
+  waterForfaitLarge: 'Forfait eau grand (DT)',
+  marginPercent: 'Marge effort (%)',
+  orderMinLeadHours: 'Delai minimum de commande (heures)',
+  actionAlertHours: 'Alerte ingredients manquants (heures avant la commande)',
+};
 
 // @desc    Récupérer tous les paramètres (admin)
 // @route   GET /api/settings
@@ -55,7 +66,12 @@ router.put(
       if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
         throw createError(`Valeur invalide pour ${key}`, 400);
       }
-      await Settings.findOneAndUpdate({ key }, { value }, { upsert: false });
+      // upsert : un parametre jamais seede (ex: base de production) est cree au lieu d'etre ignore
+      await Settings.findOneAndUpdate(
+        { key },
+        { $set: { value }, $setOnInsert: { label: SETTING_LABELS[key] || key } },
+        { upsert: true }
+      );
     }
 
     const settings = await Settings.find();

@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import api from '../../services/api';
+import api, { withIdempotency } from '../../services/api';
+import { useIdempotentAction } from '../../hooks/useIdempotencyKey';
+import { PageHeader } from '../../components/ui';
+import { color } from '../../theme/tokens';
 import {
-  Container,
   Typography,
   Box,
   Button,
@@ -22,7 +24,13 @@ import {
   Switch,
   FormControlLabel,
 } from '@mui/material';
-import { ArrowBack, Add, Delete, ShoppingBag } from '@mui/icons-material';
+import { Add, Delete, ShoppingBag, Inventory2 } from '@mui/icons-material';
+import ClientPicker from '../../components/admin/ClientPicker';
+import StockNeedsPanel from '../../components/admin/StockNeedsPanel';
+import type { Client, Quote } from '../../types/admin';
+import { formatDT } from '../../utils/format';
+import { getOrderFormIssues } from '../../utils/orderForm';
+import DateTimeField from '../../components/common/DateTimeField';
 
 interface CustomIngredient {
   ingredientId: string;
@@ -77,11 +85,12 @@ const emptyItem = (): OrderItemForm => ({
 
 const ManualOrderPage = () => {
   const navigate = useNavigate();
-  const [sending, setSending] = useState(false);
+  const [searchParams] = useSearchParams();
+  const op = useIdempotentAction(); // une commande = une clé : un double clic ne crée qu'une commande
+  const sending = op.busy;
 
-  // Client info
-  const [clientName, setClientName] = useState('');
-  const [clientPhone, setClientPhone] = useState('');
+  // Client (fiche existante ou nouvelle)
+  const [client, setClient] = useState<Client | null>(null);
   const [requestedDate, setRequestedDate] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -98,6 +107,30 @@ const ManualOrderPage = () => {
   const [recipes, setRecipes] = useState<any[]>([]);
   const [ingredients, setIngredients] = useState<any[]>([]);
   const [appliances, setAppliances] = useState<any[]>([]);
+  // Prix de chaque taille : { recipeId: [{ sizeName, total }] }
+  const [catalogPrices, setCatalogPrices] = useState<Record<string, { total: number }[]>>({});
+  const [quote, setQuote] = useState<Quote | null>(null);
+
+  // Commande lancee depuis une fiche client : ?clientId=...
+  useEffect(() => {
+    const clientId = searchParams.get('clientId');
+    if (!clientId) return;
+    api
+      .get(`/clients/${clientId}`)
+      .then((res) => setClient(res.data.data?.client || null))
+      .catch(() => {
+        /* ignore */
+      });
+  }, [searchParams]);
+
+  useEffect(() => {
+    api
+      .get('/prices/catalog')
+      .then((res) => setCatalogPrices(res.data.data?.prices || {}))
+      .catch(() => {
+        /* ignore */
+      });
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -181,89 +214,103 @@ const ManualOrderPage = () => {
     });
   };
 
+  const buildItemsPayload = (list: OrderItemForm[]) =>
+    list.map((item) => {
+      if (item.mode === 'existing') {
+        return {
+          recipeId: item.recipeId,
+          variantIndex: item.variantIndex,
+          quantity: item.quantity,
+          clientProvidedIngredients: item.clientProvidedIngredients,
+        };
+      }
+      return {
+        quantity: item.quantity,
+        clientProvidedIngredients: item.clientProvidedIngredients,
+        custom: {
+          name: item.customName,
+          description: item.customDescription,
+          sizeName: item.customSizeName,
+          portions: item.customPortions,
+          ingredients: item.customIngredients
+            .filter((i) => i.ingredientId)
+            .map((i) => ({
+              ingredientId: i.ingredientId,
+              quantity: i.quantity,
+              unit: i.unit,
+            })),
+          appliances: item.customAppliances
+            .filter((a) => a.applianceId)
+            .map((a) => ({
+              applianceId: a.applianceId,
+              duration: a.duration,
+            })),
+        },
+      };
+    });
+
+  const validFees = useMemo(() => fees.filter((f) => f.label && f.amount > 0), [fees]);
+
+  // Apercu du prix et du stock AVANT creation (recalcule a chaque modification)
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.post('/prices/quote', {
+          // lignes incompletes envoyees vides → prix null pour cette ligne
+          items: items.map((item) =>
+            (item.mode === 'existing' && !item.recipeId) ||
+            (item.mode === 'custom' && !item.customName)
+              ? {}
+              : buildItemsPayload([item])[0]
+          ),
+          additionalFees: validFees,
+          requestedDate: requestedDate || null, // ordre d'attribution du stock entre commandes
+        });
+        setQuote(res.data.data);
+      } catch {
+        setQuote(null);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [items, validFees, requestedDate]);
+
+  // Conditions du bouton (le stock n'en fait pas partie, voir utils/orderForm)
+  const formIssues = getOrderFormIssues({ hasClient: !!client, items });
+
   const handleSubmit = async () => {
-    if (!clientName || !clientPhone) {
-      toast.error('Nom et telephone requis');
-      return;
-    }
-    if (items.every((i) => (i.mode === 'existing' ? !i.recipeId : !i.customName))) {
-      toast.error('Ajoutez au moins un article');
+    if (!client || formIssues.length > 0) {
+      toast.error(formIssues[0]);
       return;
     }
 
-    setSending(true);
-    try {
+    await op.run(async (key) => {
       const payload = {
-        clientName,
-        clientPhone,
+        clientId: client._id,
         notes,
         requestedDate: requestedDate || null,
         saveAsRecipe,
-        additionalFees: fees.filter((f) => f.label && f.amount > 0),
-        items: items.map((item) => {
-          if (item.mode === 'existing') {
-            return {
-              recipeId: item.recipeId,
-              variantIndex: item.variantIndex,
-              quantity: item.quantity,
-              clientProvidedIngredients: item.clientProvidedIngredients,
-            };
-          }
-          return {
-            quantity: item.quantity,
-            clientProvidedIngredients: item.clientProvidedIngredients,
-            custom: {
-              name: item.customName,
-              description: item.customDescription,
-              sizeName: item.customSizeName,
-              portions: item.customPortions,
-              ingredients: item.customIngredients
-                .filter((i) => i.ingredientId)
-                .map((i) => ({
-                  ingredientId: i.ingredientId,
-                  quantity: i.quantity,
-                  unit: i.unit,
-                })),
-              appliances: item.customAppliances
-                .filter((a) => a.applianceId)
-                .map((a) => ({
-                  applianceId: a.applianceId,
-                  duration: a.duration,
-                })),
-            },
-          };
-        }),
+        additionalFees: validFees,
+        items: buildItemsPayload(items),
       };
 
-      await api.post('/orders/manual', payload);
-      toast.success('Commande creee !');
-      navigate('/admin/orders');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Erreur lors de la creation');
-    }
-    setSending(false);
+      const res = await api.post('/orders/manual', payload, withIdempotency(key));
+      const order = res.data.data.order;
+      toast.success(`Commande CMD-${order.orderNumber} enregistrée`);
+      // Fiche de la commande : ingrédients disponibles / manquants, date du besoin
+      navigate(`/admin/orders/${order._id}`);
+    }).catch(() => undefined /* message du serveur affiché par l'intercepteur */);
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#fafafa' }}>
-      {/* Header */}
-      <Box sx={{ bgcolor: 'white', borderBottom: '1px solid #eee', py: 2, px: 3 }}>
-        <Container maxWidth="lg">
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <IconButton onClick={() => navigate('/admin/orders')}>
-              <ArrowBack />
-            </IconButton>
-            <Typography
-              variant="h5"
-              sx={{ fontWeight: 600, fontSize: { xs: '1.1rem', md: '1.5rem' } }}
-            >
-              Nouvelle commande manuelle
-            </Typography>
-          </Box>
-        </Container>
-      </Box>
-
-      <Container maxWidth="lg" sx={{ py: 3 }}>
+    <Box>
+      <PageHeader
+        backTo="/admin/orders"
+        title="Nouvelle commande"
+        helpTour="create-order"
+        helpFlow="missing"
+        subtitle="Vous pouvez enregistrer la commande même s’il manque un ingrédient : le stock n’est utilisé qu’au début de la préparation."
+      />
+      <Box>
         <Grid container spacing={3}>
           {/* Colonne gauche — Client */}
           <Grid item xs={12} md={4}>
@@ -272,33 +319,17 @@ const ManualOrderPage = () => {
                 <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
                   Client
                 </Typography>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Nom du client *"
-                  sx={{ mb: 2 }}
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                />
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Telephone *"
-                  sx={{ mb: 2 }}
-                  value={clientPhone}
-                  onChange={(e) => setClientPhone(e.target.value)}
-                  placeholder="+216 XX XXX XXX"
-                />
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Date souhaitee"
-                  type="datetime-local"
-                  sx={{ mb: 2 }}
-                  value={requestedDate}
-                  onChange={(e) => setRequestedDate(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                />
+                <Box data-tour="order-client">
+                  <ClientPicker value={client} onChange={setClient} />
+                </Box>
+                <Divider sx={{ my: 2 }} />
+                <Box sx={{ mb: 2 }} data-tour="order-date">
+                  <DateTimeField
+                    label="Date souhaitée"
+                    value={requestedDate || null}
+                    onChange={(iso) => setRequestedDate(iso || '')}
+                  />
+                </Box>
                 <TextField
                   fullWidth
                   size="small"
@@ -307,7 +338,7 @@ const ManualOrderPage = () => {
                   rows={2}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Details, demandes speciales..."
+                  placeholder="Détails, demandes spéciales…"
                 />
               </CardContent>
             </Card>
@@ -335,7 +366,7 @@ const ManualOrderPage = () => {
                 </Box>
                 {fees.length === 0 && (
                   <Typography variant="body2" color="text.secondary">
-                    Livraison, emballage special...
+                    Livraison, emballage spécial…
                   </Typography>
                 )}
                 {fees.map((fee, i) => (
@@ -402,7 +433,7 @@ const ManualOrderPage = () => {
                         sx={{ cursor: 'pointer' }}
                       />
                       <Chip
-                        label="Recette speciale"
+                        label="Recette spéciale"
                         color={item.mode === 'custom' ? 'primary' : 'default'}
                         variant={item.mode === 'custom' ? 'filled' : 'outlined'}
                         onClick={() => updateItem(itemIndex, { mode: 'custom' })}
@@ -424,6 +455,7 @@ const ManualOrderPage = () => {
                   {item.mode === 'existing' && (
                     <>
                       <Autocomplete
+                        data-tour={itemIndex === 0 ? 'order-product' : undefined}
                         size="small"
                         options={recipes}
                         getOptionLabel={(r: any) => r.name}
@@ -449,7 +481,7 @@ const ManualOrderPage = () => {
                               {recipe.variants.map((v: any, vi: number) => (
                                 <Chip
                                   key={vi}
-                                  label={`${v.sizeName} (${v.portions} portions)`}
+                                  label={`${v.sizeName} — ${formatDT(catalogPrices[recipe._id]?.[vi]?.total)}`}
                                   color={item.variantIndex === vi ? 'primary' : 'default'}
                                   variant={item.variantIndex === vi ? 'filled' : 'outlined'}
                                   onClick={() => updateItem(itemIndex, { variantIndex: vi })}
@@ -545,9 +577,9 @@ const ManualOrderPage = () => {
                             }}
                           >
                             <FormControl size="small" sx={{ minWidth: 150, flex: 2 }}>
-                              <InputLabel>Ingredient</InputLabel>
+                              <InputLabel>Ingrédient</InputLabel>
                               <Select
-                                label="Ingredient"
+                                label="Ingrédient"
                                 value={ing.ingredientId}
                                 onChange={(e) => {
                                   const sel = ingredients.find(
@@ -655,7 +687,7 @@ const ManualOrderPage = () => {
                             </FormControl>
                             <TextField
                               size="small"
-                              label="Duree (min)"
+                              label="Durée (min)"
                               type="number"
                               sx={{ width: 100 }}
                               value={app.duration}
@@ -678,18 +710,39 @@ const ManualOrderPage = () => {
                   )}
 
                   <Divider sx={{ my: 1.5 }} />
-                  <TextField
-                    size="small"
-                    label="Quantite"
-                    type="number"
-                    sx={{ width: 100 }}
-                    value={item.quantity}
-                    onChange={(e) =>
-                      updateItem(itemIndex, {
-                        quantity: Math.max(1, parseInt(e.target.value) || 1),
-                      })
-                    }
-                  />
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 2,
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <TextField
+                      data-tour={itemIndex === 0 ? 'order-quantity' : undefined}
+                      size="small"
+                      label="Quantité"
+                      type="number"
+                      sx={{ width: 100 }}
+                      value={item.quantity}
+                      inputProps={{ min: 1, inputMode: 'numeric' }}
+                      onChange={(e) =>
+                        updateItem(itemIndex, {
+                          quantity: Math.max(1, parseInt(e.target.value) || 1),
+                        })
+                      }
+                    />
+                    {quote?.lines[itemIndex] && (
+                      <Typography sx={{ fontWeight: 600 }}>
+                        {quote.lines[itemIndex]!.quantity} ×{' '}
+                        {formatDT(quote.lines[itemIndex]!.unitPrice)} ={' '}
+                        <Box component="span" sx={{ color: 'primary.main' }}>
+                          {formatDT(quote.lines[itemIndex]!.lineTotal)}
+                        </Box>
+                      </Typography>
+                    )}
+                  </Box>
                 </CardContent>
               </Card>
             ))}
@@ -705,6 +758,76 @@ const ManualOrderPage = () => {
               Ajouter un article
             </Button>
 
+            {/* Récapitulatif : prix et ingrédients visibles AVANT la création */}
+            {!(quote && quote.lines.some(Boolean)) && (
+              <Card sx={{ mb: 2, borderStyle: 'dashed' }} data-tour="order-stock">
+                <CardContent sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                  <Inventory2 sx={{ color: color.inkMuted }} />
+                  <Typography variant="body2" sx={{ color: color.inkSoft }}>
+                    Choisissez un produit : le prix et les ingrédients nécessaires (disponibles ou manquants) s’affichent ici.
+                  </Typography>
+                </CardContent>
+              </Card>
+            )}
+            {quote && quote.lines.some(Boolean) && (
+              <Card sx={{ mb: 2 }} data-tour="order-stock">
+                <CardContent>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                    Récapitulatif
+                  </Typography>
+                  {quote.lines.map(
+                    (l, i) =>
+                      l && (
+                        <Box
+                          key={i}
+                          sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, py: 0.5 }}
+                        >
+                          <Typography variant="body2">
+                            {l.label} {l.sizeName} — {l.quantity} × {formatDT(l.unitPrice)}
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}
+                          >
+                            {formatDT(l.lineTotal)}
+                          </Typography>
+                        </Box>
+                      )
+                  )}
+                  {validFees.map((f, i) => (
+                    <Box
+                      key={`fee-${i}`}
+                      sx={{ display: 'flex', justifyContent: 'space-between', py: 0.5 }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        {f.label}
+                      </Typography>
+                      <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                        {formatDT(f.amount)}
+                      </Typography>
+                    </Box>
+                  ))}
+                  <Divider sx={{ my: 1 }} />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      Total
+                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                      {formatDT(quote.total)}
+                    </Typography>
+                  </Box>
+                  {quote.stockNeeds.length > 0 && (
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                        Ingrédients nécessaires
+                      </Typography>
+                      <StockNeedsPanel needs={quote.stockNeeds} />
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Options + Soumettre */}
             <Card>
               <CardContent>
@@ -716,27 +839,48 @@ const ManualOrderPage = () => {
                         onChange={(e) => setSaveAsRecipe(e.target.checked)}
                       />
                     }
-                    label="Sauvegarder la recette speciale dans le catalogue (visible aux clients)"
+                    label="Enregistrer la recette spéciale dans le catalogue (visible par les clients)"
                     sx={{ mb: 2, display: 'block' }}
                   />
                 )}
 
                 <Button
+                  data-tour="order-submit"
                   variant="contained"
                   fullWidth
                   size="large"
                   startIcon={<ShoppingBag />}
                   onClick={handleSubmit}
-                  disabled={sending || !clientName || !clientPhone}
+                  disabled={sending || formIssues.length > 0}
                   sx={{ py: 1.5 }}
                 >
-                  {sending ? 'Creation...' : 'Creer la commande'}
+                  {sending
+                    ? 'Création…'
+                    : quote && quote.total > 0
+                      ? `Créer la commande — ${formatDT(quote.total)}`
+                      : 'Créer la commande'}
                 </Button>
+                {formIssues.length > 0 && (
+                  <Box sx={{ mt: 1 }}>
+                    {formIssues.map((issue) => (
+                      <Typography key={issue} variant="body2" color="warning.dark">
+                        • {issue}
+                      </Typography>
+                    ))}
+                  </Box>
+                )}
+                {formIssues.length === 0 &&
+                  quote?.stockNeeds.some((n) => n.status === 'missing') && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      Il manque des ingrédients : la commande sera enregistrée, seule la préparation
+                      attendra l&apos;achat (l&apos;ingrédient part dans la liste de courses).
+                    </Typography>
+                  )}
               </CardContent>
             </Card>
           </Grid>
         </Grid>
-      </Container>
+      </Box>
     </Box>
   );
 };

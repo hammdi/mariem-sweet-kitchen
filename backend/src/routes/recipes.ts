@@ -3,6 +3,8 @@ import { Recipe } from '../models/Recipe';
 import { authenticate, authorize } from '../middleware/auth';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
+import { assertRecipeUnits } from '../services/recipeUnitValidation';
+import { syncPurchaseNeedsSafe } from '../services/purchaseNeedService';
 
 const router = express.Router();
 
@@ -77,6 +79,7 @@ router.post(
       throw createError('Au moins un variant (taille) est requis', 400);
     }
 
+    await assertRecipeUnits(variants);
     const recipe = new Recipe({ name, description, categories, variants });
     await recipe.save();
 
@@ -160,6 +163,7 @@ router.put(
       recipe.categories = categories;
     }
     if (variants !== undefined) {
+      await assertRecipeUnits(variants);
       recipe.variants = variants;
     }
     if (images !== undefined) {
@@ -173,6 +177,7 @@ router.put(
       { path: 'variants.appliances.applianceId', select: 'name powerConsumption category' },
     ]);
 
+    await syncPurchaseNeedsSafe(); // quantites modifiees : besoins des commandes en cours
     logger.info(`Recette modifiee: ${recipe.name} par ${req.user!.email}`);
 
     res.json({ success: true, data: { recipe } });

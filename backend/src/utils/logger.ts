@@ -55,6 +55,8 @@ export const logger = winston.createLogger({
   format,
   transports,
   exitOnError: false,
+  // Pas de logs pendant les tests (sinon ils polluent la console et logs/*.log)
+  silent: process.env.NODE_ENV === 'test',
 });
 
 // Logger pour les requêtes HTTP

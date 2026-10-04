@@ -1,71 +1,81 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import api from '../../services/api';
+import api, { withIdempotency } from '../../services/api';
 import {
-  Container,
   Typography,
   Box,
   Button,
   Card,
   CardContent,
-  Grid,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableRow,
-  IconButton,
   Chip,
   Checkbox,
   FormControlLabel,
   Paper,
+  Alert,
   TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Stepper,
-  Step,
-  StepLabel,
+  ButtonBase,
 } from '@mui/material';
-import { ArrowBack } from '@mui/icons-material';
+import {
+  Call,
+  CheckCircle,
+  WhatsApp,
+  Cancel as CancelIcon,
+  Replay,
+  Inventory2,
+  Person,
+  EventAvailable,
+  WarningAmber,
+} from '@mui/icons-material';
+import StockNeedsPanel from '../../components/admin/StockNeedsPanel';
+import DateTimeField from '../../components/common/DateTimeField';
+import OrderPaymentCard from '../../components/admin/OrderPaymentCard';
+import type { OrderStockState, StockNeed } from '../../types/admin';
+import { formatDate, formatDT, formatQty } from '../../utils/format';
+import { useIdempotentAction } from '../../hooks/useIdempotencyKey';
+import { useAdminData } from '../../context/AdminDataContext';
+import { OrderStatusBadge, PageHeader, PaymentStatusBadge, ResponsiveDialog, SoftIcon, StatusBadge } from '../../components/ui';
+import { color, ORDER_STATUS, radius } from '../../theme/tokens';
 
-// Ordre logique des étapes
-const STATUS_STEPS = ['pending', 'confirmed', 'paid', 'preparing', 'ready'] as const;
+/** Avancement réel (le paiement est suivi à part, carte « Paiement »). */
+const STEPS = [
+  { status: 'pending', label: 'En attente', emoji: '📝' },
+  { status: 'confirmed', label: 'Confirmée', emoji: '✅' },
+  { status: 'preparing', label: 'En préparation', emoji: '👩‍🍳' },
+  { status: 'ready', label: 'Prête', emoji: '🎂' },
+  { status: 'delivered', label: 'Remise', emoji: '🤝' },
+] as const;
+const stepIndex = (status: string) => STEPS.findIndex((s) => s.status === (status === 'paid' ? 'confirmed' : status));
+const STARTED = ['preparing', 'ready', 'delivered'];
+const CANCEL_REASONS = ['Client a annulé', 'Client injoignable', 'Erreur de saisie', 'Problème de préparation'];
 
-const statusLabels: Record<string, { label: string; color: any }> = {
-  pending: { label: 'En attente', color: 'warning' },
-  confirmed: { label: 'Confirmee', color: 'info' },
-  preparing: { label: 'En preparation', color: 'primary' },
-  ready: { label: 'Prete', color: 'success' },
-  paid: { label: 'Payee', color: 'default' },
-  cancelled: { label: 'Annulee', color: 'error' },
-};
+type Transition = { status: string; title: string; text: string; confirm: string; tone?: 'error' | 'primary' | 'success' };
 
 const OrderDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { refresh } = useAdminData();
   const [order, setOrder] = useState<any>(null);
   const [allIngredients, setAllIngredients] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
-  const [confirmDialog, setConfirmDialog] = useState<{
-    open: boolean;
-    status: string;
-    label: string;
-  }>({ open: false, status: '', label: '' });
+  const [stockNeeds, setStockNeeds] = useState<({ needs: StockNeed[]; deducted: boolean } & OrderStockState) | null>(null);
+  const [transition, setTransition] = useState<Transition | null>(null);
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [restoreOpen, setRestoreOpen] = useState(false);
+  const [restoreReason, setRestoreReason] = useState('');
+  const restoreOp = useIdempotentAction();
 
-  // Charger ingredients pour avoir les noms
   useEffect(() => {
-    const loadIngredients = async () => {
-      try {
-        const res = await api.get('/ingredients');
-        setAllIngredients(res.data.data?.ingredients || res.data.data || []);
-      } catch {
-        /* ignore */
-      }
-    };
-    loadIngredients();
+    api
+      .get('/ingredients')
+      .then((res) => setAllIngredients(res.data.data?.ingredients || res.data.data || []))
+      .catch(() => undefined);
   }, []);
 
   const load = useCallback(async () => {
@@ -74,6 +84,14 @@ const OrderDetailPage = () => {
       setOrder(res.data.data?.order);
     } catch {
       navigate('/admin/orders');
+      return;
+    }
+    try {
+      const needsRes = await api.get(`/orders/${id}/stock-needs`);
+      const data: OrderStockState = needsRes.data.data;
+      setStockNeeds({ ...data, needs: data.stockNeeds || [], deducted: !!data.stockDeducted });
+    } catch {
+      setStockNeeds(null);
     }
   }, [id, navigate]);
 
@@ -81,331 +99,389 @@ const OrderDetailPage = () => {
     load();
   }, [load]);
 
-  // Trouver l'ingredient complet depuis allIngredients (source de verite pour le stock)
   const findIngredient = (ingId: any) => {
-    const id = typeof ingId === 'object' ? ingId._id?.toString() : ingId?.toString();
-    return allIngredients.find((i) => i._id === id) || (typeof ingId === 'object' ? ingId : null);
+    const iid = typeof ingId === 'object' ? ingId._id?.toString() : ingId?.toString();
+    return allIngredients.find((i) => i._id === iid) || (typeof ingId === 'object' ? ingId : null);
   };
+  const getIngredientName = (ingId: any) => findIngredient(ingId)?.name || 'Ingrédient';
 
-  const getIngredientName = (ingId: any) => findIngredient(ingId)?.name || 'Ingredient';
-  const getIngredientPrice = (ingId: any) => findIngredient(ingId)?.pricePerUnit || 0;
-  const getIngredientStock = (ingId: any) => findIngredient(ingId)?.stockQuantity || 0;
-  const getIngredientUnit = (ingId: any) => findIngredient(ingId)?.unit || '';
-
-  // Toggle ingredient et sauvegarde auto
+  // Cocher « le client apporte » : prix recalculé avec les prix figés
   const toggleIngredient = async (itemIndex: number, ingredientId: string) => {
     if (!order || saving) return;
     setSaving(true);
-
     const item = order.items[itemIndex];
     const provided = [...(item.clientProvidedIngredients || [])];
     const idx = provided.indexOf(ingredientId);
     if (idx >= 0) provided.splice(idx, 1);
     else provided.push(ingredientId);
-
     try {
       const updates = order.items.map((_: any, i: number) => ({
         index: i,
-        clientProvidedIngredients:
-          i === itemIndex ? provided : order.items[i].clientProvidedIngredients || [],
+        clientProvidedIngredients: i === itemIndex ? provided : order.items[i].clientProvidedIngredients || [],
       }));
       await api.put(`/orders/${id}`, { items: updates });
       await load();
-      toast.success('Prix recalcule');
+      toast.success('Prix recalculé');
     } catch {
-      toast.error('Erreur lors du recalcul');
+      /* toast intercepteur */
     }
     setSaving(false);
   };
 
-  const changeStatus = async (status: string) => {
+  const changeStatus = async (status: string, why?: string) => {
+    setBusy(true);
     try {
-      await api.put(`/orders/${id}/status`, { status });
+      await api.put(`/orders/${id}/status`, { status, reason: why || undefined });
       await load();
-      const label = statusLabels[status]?.label || status;
-      if (status === 'paid') {
-        toast.success(`Commande payee ! Merci ${order.clientName}`);
-      } else if (status === 'ready') {
-        toast.success(`Commande prete ! Appelez ${order.clientName}`);
-      } else if (status === 'cancelled') {
-        toast.warn('Commande annulee');
-      } else {
-        toast.success(`Statut : ${label}`);
-      }
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Erreur lors du changement de statut');
+      refresh();
+      const messages: Record<string, string> = {
+        confirmed: 'Commande confirmée',
+        preparing: 'Préparation commencée — ingrédients utilisés',
+        ready: `Commande prête ! Prévenez ${order.clientName}`,
+        delivered: 'Commande remise au client',
+        cancelled: 'Commande annulée',
+        pending: 'Commande remise en attente',
+      };
+      toast.success(messages[status] || 'Avancement mis à jour');
+      setTransition(null);
+    } catch {
+      /* toast intercepteur (message du serveur) */
     }
+    setBusy(false);
   };
 
   if (!order) return null;
 
-  const isEditable = ['pending', 'confirmed', 'paid'].includes(order.status);
-  const isTerminal = ['ready', 'cancelled'].includes(order.status);
+  const status = order.status as string;
+  const current = stepIndex(status);
+  const consumed = STARTED.includes(status) || !!stockNeeds?.deducted;
+  const isEditable = ['pending', 'confirmed', 'paid'].includes(status);
+  const unpaid = order.paymentStatus !== 'paid';
+  const ref = stockNeeds?.orderRef || '';
+  const canPrepare = !stockNeeds || stockNeeds.canStartPreparation;
+
+  // Action principale selon l'avancement
+  const next: (Transition & { label: string; disabled?: boolean; hint?: string }) | null =
+    status === 'pending'
+      ? { status: 'confirmed', label: 'Confirmer la commande', title: 'Confirmer la commande ?', text: 'Elle devient une vente (comptée dans le chiffre d’affaires, payée ou non).', confirm: 'Confirmer' }
+      : status === 'confirmed' || status === 'paid'
+        ? {
+            status: 'preparing',
+            label: 'Commencer la préparation',
+            title: 'Commencer la préparation ?',
+            text: stockNeeds?.usesReservedStock
+              ? 'Attention : ces ingrédients sont prévus pour des commandes plus proches. Les utiliser maintenant les mettra en manque. Les ingrédients seront retirés du stock (une seule fois).'
+              : 'Les ingrédients de la commande vont être retirés du stock (une seule fois). Le paiement n’est pas obligatoire pour commencer.',
+            confirm: 'Commencer',
+            disabled: !canPrepare,
+            hint: !canPrepare ? 'Stock insuffisant : achetez d’abord les ingrédients manquants.' : stockNeeds?.usesReservedStock ? 'Stock réservé à des commandes plus proches.' : undefined,
+          }
+        : status === 'preparing'
+          ? { status: 'ready', label: 'Marquer prête', title: 'La commande est prête ?', text: 'Vous pourrez prévenir le client.', confirm: 'Oui, elle est prête', tone: 'success' }
+          : status === 'ready'
+            ? {
+                status: 'delivered',
+                label: 'Remettre au client',
+                title: 'Remettre la commande au client ?',
+                text: unpaid
+                  ? `Elle n’est pas entièrement payée : elle restera dans « À encaisser » jusqu’au paiement.`
+                  : 'La commande est payée et sera marquée comme remise.',
+                confirm: 'Remise au client',
+                tone: 'success',
+              }
+            : null;
+
+  const back: Transition | null =
+    status === 'confirmed' || status === 'paid'
+      ? { status: 'pending', title: 'Remettre en attente ?', text: 'La commande ne sera plus comptée comme une vente.', confirm: 'Remettre en attente' }
+      : status === 'ready'
+        ? { status: 'preparing', title: 'Revenir à « En préparation » ?', text: 'Les ingrédients ne sont pas retirés une deuxième fois.', confirm: 'Revenir' }
+        : status === 'delivered'
+          ? { status: 'ready', title: 'Revenir à « Prête » ?', text: 'Si la remise a été notée par erreur.', confirm: 'Revenir' }
+          : null;
+
+  const canCancel = ['pending', 'confirmed', 'paid', 'preparing', 'ready'].includes(status);
+  const canReactivate = status === 'cancelled' && !stockNeeds?.deducted;
+  const reasonRequired = transition?.status === 'cancelled' && consumed;
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#fafafa' }}>
-      <Box sx={{ bgcolor: 'white', borderBottom: '1px solid #eee', py: 2, px: 3 }}>
-        <Container maxWidth="lg">
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <IconButton onClick={() => navigate('/admin/orders')}>
-              <ArrowBack />
-            </IconButton>
-            <Typography
-              variant="h5"
-              sx={{ fontWeight: 600, fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' } }}
-            >
-              Commande de {order.clientName}
-            </Typography>
-            <Chip
-              label={statusLabels[order.status]?.label || order.status}
-              color={statusLabels[order.status]?.color || 'default'}
-            />
-            {saving && <Chip label="Recalcul..." size="small" color="info" />}
-          </Box>
-        </Container>
+    <Box>
+      <PageHeader
+        backTo="/admin/orders"
+        helpFlow="payment"
+        title={
+          <>
+            {ref ? `${ref} · ` : ''}
+            {order.clientName}
+          </>
+        }
+        subtitle={
+          <>
+            {order.confirmedDate || order.requestedDate
+              ? `Prévue le ${formatDate(order.confirmedDate || order.requestedDate, true)}`
+              : 'Sans date prévue'}{' '}
+            · commandée le {formatDate(order.createdAt, true)}
+          </>
+        }
+        actions={
+          <>
+            <Button variant="outlined" startIcon={<WhatsApp />} href={`https://wa.me/${order.clientPhone?.replace('+', '')}`} target="_blank">
+              WhatsApp
+            </Button>
+            <Button variant="outlined" startIcon={<Call />} href={`tel:${order.clientPhone}`}>
+              Appeler
+            </Button>
+          </>
+        }
+      />
+
+      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2, mt: -1.5 }}>
+        <OrderStatusBadge status={status} size="medium" />
+        <PaymentStatusBadge status={order.paymentStatus} size="medium" />
+        {order.clientId?.type === 'cafe' && <StatusBadge tone="info" label="Café" size="medium" />}
+        {saving && <StatusBadge tone="neutral" label="Recalcul…" size="medium" />}
       </Box>
 
-      {/* Bandeau statut terminal */}
-      {order.status === 'ready' && (
-        <Box
-          sx={{
-            bgcolor: '#e8f5e9',
-            borderBottom: '2px solid #4caf50',
-            py: 1.5,
-            px: 3,
-            textAlign: 'center',
-          }}
+      {status === 'cancelled' && (
+        <Alert
+          severity="error"
+          icon={<CancelIcon />}
+          sx={{ mb: 2 }}
+          action={
+            canReactivate ? (
+              <Button color="inherit" size="small" startIcon={<Replay />} onClick={() => setTransition({ status: 'pending', title: 'Réactiver la commande ?', text: 'Elle repasse « En attente ».', confirm: 'Réactiver' })}>
+                Réactiver
+              </Button>
+            ) : undefined
+          }
         >
-          <Typography variant="body1" sx={{ fontWeight: 600, color: '#2e7d32' }}>
-            Commande prete — {order.totalPrice?.toFixed(2)} DT — Appelez {order.clientName} !
+          <Typography sx={{ fontWeight: 700 }}>
+            Commande annulée{order.cancelledAt ? ` le ${formatDate(order.cancelledAt, true)}` : ''}
           </Typography>
-        </Box>
+          {order.cancellationReason && <Typography variant="body2">Raison : {order.cancellationReason}</Typography>}
+          {stockNeeds?.deducted && (
+            <Typography variant="body2">
+              Les ingrédients avaient déjà été utilisés : ils n’ont pas été remis en stock automatiquement.
+            </Typography>
+          )}
+          {order.amountPaid > 0 && (
+            <Typography variant="body2">{formatDT(order.amountPaid)} reçus : à rembourser depuis la carte Paiement si besoin.</Typography>
+          )}
+        </Alert>
       )}
-      {order.status === 'cancelled' && (
-        <Box
-          sx={{
-            bgcolor: '#ffebee',
-            borderBottom: '2px solid #ef5350',
-            py: 1.5,
-            px: 3,
-            textAlign: 'center',
-          }}
-        >
-          <Typography variant="body1" sx={{ fontWeight: 600, color: '#c62828' }}>
-            Commande annulee
-          </Typography>
-        </Box>
+      {status === 'ready' && (
+        <Alert severity="success" icon={<CheckCircle />} sx={{ mb: 2 }}>
+          Commande prête — {formatDT(order.totalPrice)}. Prévenez {order.clientName} !
+          {unpaid ? ' Pensez à encaisser le paiement.' : ''}
+        </Alert>
       )}
 
-      <Container maxWidth="lg" sx={{ py: 3 }}>
-        <Grid container spacing={3}>
-          {/* Info client */}
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                  Client
-                </Typography>
-                <Typography>
-                  <strong>Nom :</strong> {order.clientName}
-                </Typography>
-                <Typography>
-                  <strong>Tel :</strong> {order.clientPhone}
-                </Typography>
-                {order.notes && (
-                  <Typography sx={{ mt: 1 }}>
-                    <strong>Notes :</strong> {order.notes}
-                  </Typography>
-                )}
-                <Typography sx={{ mt: 1 }}>
-                  <strong>Commande le :</strong> {new Date(order.createdAt).toLocaleString('fr-TN')}
-                </Typography>
-
-                {/* Rendez-vous */}
-                {order.requestedDate && (
-                  <Paper
-                    variant="outlined"
-                    sx={{ p: 1.5, mt: 2, bgcolor: '#fff3e0', borderColor: '#ffb74d' }}
-                  >
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#e65100' }}>
-                      RDV souhaite par le client :
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {new Date(order.requestedDate).toLocaleString('fr-TN', {
-                        dateStyle: 'full',
-                        timeStyle: 'short',
-                      })}
-                    </Typography>
-                  </Paper>
-                )}
-
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600 }}>
-                    Date confirmee :
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    type="datetime-local"
-                    disabled={isTerminal}
-                    value={
-                      order.confirmedDate
-                        ? new Date(order.confirmedDate).toISOString().slice(0, 16)
-                        : ''
-                    }
-                    InputLabelProps={{ shrink: true }}
-                    onChange={async (e) => {
-                      try {
-                        await api.put(`/orders/${id}`, { confirmedDate: e.target.value || null });
-                        await load();
-                        toast.success(e.target.value ? 'Date confirmee' : 'Date retiree');
-                      } catch {
-                        toast.error('Erreur');
-                      }
-                    }}
-                  />
-                  {order.confirmedDate && (
-                    <Chip label="Confirme" color="success" size="small" sx={{ mt: 0.5 }} />
-                  )}
-                </Box>
-
-                {/* Etapes de la commande */}
-                <Box sx={{ mt: 3 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                    Progression :
-                  </Typography>
-                  <Stepper
-                    activeStep={STATUS_STEPS.indexOf(order.status as any)}
-                    orientation="vertical"
-                    sx={{ '& .MuiStepLabel-label': { fontSize: '0.8rem' } }}
-                  >
-                    {STATUS_STEPS.map((s) => (
-                      <Step
-                        key={s}
-                        completed={STATUS_STEPS.indexOf(order.status) > STATUS_STEPS.indexOf(s)}
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 5fr) minmax(0, 7fr)', lg: 'minmax(0, 4fr) minmax(0, 8fr)' }, alignItems: 'start' }}>
+        {/* Colonne gauche : avancement, paiement, client */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+          <Card data-tour="order-progress" sx={{ p: 2.25 }}>
+            <Typography variant="h6" sx={{ fontSize: '1rem', mb: 0.25 }}>
+              Avancement
+            </Typography>
+            <Typography variant="caption" sx={{ color: color.inkSoft }}>
+              Ce qui est fait — le paiement se suit à part
+            </Typography>
+            <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column' }}>
+              {STEPS.map((s, i) => {
+                const done = status !== 'cancelled' && i < current;
+                const active = status !== 'cancelled' && i === current;
+                const t = ORDER_STATUS[s.status];
+                return (
+                  <Box key={s.status} sx={{ display: 'flex', gap: 1.25, alignItems: 'stretch' }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 30 }}>
+                      <Box
+                        sx={{
+                          width: 30,
+                          height: 30,
+                          borderRadius: '50%',
+                          display: 'grid',
+                          placeItems: 'center',
+                          fontSize: 15,
+                          bgcolor: active ? color.primarySoft : done ? color.successSoft : color.bgSubtle,
+                          border: `2px solid ${active ? color.primary : done ? color.success : color.border}`,
+                          filter: !done && !active ? 'grayscale(1)' : 'none',
+                          opacity: !done && !active ? 0.6 : 1,
+                        }}
                       >
-                        <StepLabel
-                          sx={{
-                            cursor: s !== order.status ? 'pointer' : 'default',
-                            '&:hover': s !== order.status ? { bgcolor: '#f5f5f5' } : {},
-                          }}
-                          onClick={() => {
-                            if (s !== order.status) {
-                              setConfirmDialog({
-                                open: true,
-                                status: s,
-                                label: statusLabels[s]?.label || s,
-                              });
-                            }
-                          }}
-                        >
-                          {statusLabels[s]?.label || s}
-                        </StepLabel>
-                      </Step>
-                    ))}
-                  </Stepper>
-                  {order.status !== 'cancelled' && (
-                    <Button
-                      size="small"
-                      color="error"
-                      variant="outlined"
-                      fullWidth
-                      sx={{ mt: 2 }}
-                      onClick={() =>
-                        setConfirmDialog({ open: true, status: 'cancelled', label: 'Annulee' })
-                      }
-                    >
-                      Annuler la commande
-                    </Button>
-                  )}
-                  {order.status === 'cancelled' && (
-                    <Button
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                      fullWidth
-                      sx={{ mt: 2 }}
-                      onClick={() =>
-                        setConfirmDialog({ open: true, status: 'pending', label: 'En attente' })
-                      }
-                    >
-                      Reactiver la commande
-                    </Button>
-                  )}
-                </Box>
+                        {done ? <CheckCircle sx={{ fontSize: 18, color: color.success }} /> : s.emoji}
+                      </Box>
+                      {i < STEPS.length - 1 && <Box sx={{ flex: 1, width: 2, minHeight: 12, bgcolor: done ? color.success : color.border }} />}
+                    </Box>
+                    <Box sx={{ pb: i < STEPS.length - 1 ? 1.25 : 0, pt: 0.5 }}>
+                      <Typography sx={{ fontWeight: active ? 800 : 600, fontSize: '0.9rem', color: active ? color.ink : done ? color.inkSoft : color.inkMuted }}>
+                        {s.label} {active && t && <Box component="span" sx={{ color: color.primaryDark, fontSize: '0.75rem' }}>· maintenant</Box>}
+                      </Typography>
+                    </Box>
+                  </Box>
+                );
+              })}
+            </Box>
 
-                {/* Contact rapide */}
-                <Box sx={{ mt: 3 }}>
-                  <Button
-                    variant="outlined"
-                    fullWidth
-                    size="small"
-                    href={`https://wa.me/${order.clientPhone?.replace('+', '')}`}
-                    target="_blank"
-                    sx={{ mb: 1 }}
-                  >
-                    Contacter sur WhatsApp
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    fullWidth
-                    size="small"
-                    href={`tel:${order.clientPhone}`}
-                  >
-                    Appeler
-                  </Button>
-                </Box>
-              </CardContent>
-            </Card>
-
-            {/* Bouton Ingrédients prêts — visible quand payée, avant preparation */}
-            {order.status === 'paid' && (
-              <Card sx={{ mt: 2, border: '2px solid #ff9800' }}>
-                <CardContent>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                    Lancer la preparation ?
+            {next && (
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  data-tour="order-prepare"
+                  variant="contained"
+                  fullWidth
+                  size="large"
+                  color={next.tone === 'success' ? 'success' : 'primary'}
+                  disabled={next.disabled || busy}
+                  onClick={() => setTransition(next)}
+                >
+                  {next.label}
+                </Button>
+                {next.hint && (
+                  <Typography variant="caption" sx={{ display: 'block', mt: 0.75, color: next.disabled ? color.dangerDark : color.warningDark }}>
+                    {next.hint}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Verifiez les ingredients a droite, puis confirmez. Le stock sera deduit
-                    automatiquement.
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    color="success"
-                    fullWidth
-                    onClick={async () => {
-                      try {
-                        await api.put(`/orders/${id}`, { ingredientsReady: true });
-                        await load();
-                        toast.success('Preparation lancee ! Stock deduit.');
-                      } catch (err: any) {
-                        toast.error(err.response?.data?.message || 'Erreur');
-                      }
-                    }}
-                  >
-                    Ingredients prets — Lancer la preparation
-                  </Button>
-                </CardContent>
-              </Card>
+                )}
+              </Box>
             )}
+            <Box sx={{ display: 'flex', gap: 1, mt: 1.25, flexWrap: 'wrap' }}>
+              {back && (
+                <Button size="small" variant="outlined" sx={{ flex: 1 }} onClick={() => setTransition(back)}>
+                  {back.status === 'pending' ? 'Remettre en attente' : 'Revenir en arrière'}
+                </Button>
+              )}
+              {canCancel && (
+                <Button
+                  data-tour="order-cancel"
+                  size="small"
+                  color="error"
+                  variant="outlined"
+                  sx={{ flex: 1 }}
+                  onClick={() => {
+                    setReason('');
+                    setTransition({
+                      status: 'cancelled',
+                      title: 'Annuler la commande ?',
+                      text: consumed
+                        ? 'La préparation a commencé : les ingrédients ont déjà été utilisés et ne seront PAS remis en stock automatiquement. Indiquez la raison.'
+                        : 'Rien n’a encore été utilisé : les achats prévus pour cette commande seront libérés.',
+                      confirm: 'Annuler la commande',
+                      tone: 'error',
+                    });
+                  }}
+                >
+                  Annuler la commande
+                </Button>
+              )}
+            </Box>
+          </Card>
 
-            {/* Indicateur si en preparation */}
-            {order.status === 'preparing' && (
-              <Card sx={{ mt: 2, border: '2px solid #4caf50', bgcolor: '#e8f5e9' }}>
-                <CardContent>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#2e7d32' }}>
-                    En cours de preparation
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Stock deduit. Marquez "Prete" quand c'est fini.
-                  </Typography>
-                </CardContent>
-              </Card>
+          <OrderPaymentCard orderId={order._id} orderStatus={status} refreshKey={`${status}-${order.totalPrice}-${order.amountPaid}`} onChanged={() => { load(); refresh(); }} />
+
+          <Card sx={{ p: 2.25 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1.5 }}>
+              <SoftIcon tone="info" size={34}>
+                <Person />
+              </SoftIcon>
+              <Typography variant="h6" sx={{ fontSize: '1rem', flex: 1 }}>
+                Client
+              </Typography>
+              {order.clientId?._id && (
+                <Button size="small" onClick={() => navigate(`/admin/clients/${order.clientId._id}`)}>
+                  Fiche client
+                </Button>
+              )}
+            </Box>
+            <Typography sx={{ fontWeight: 700 }}>{order.clientName}</Typography>
+            <Typography variant="body2" sx={{ color: color.inkSoft }}>
+              {order.clientPhone}
+            </Typography>
+            {order.clientId?.conditions && (
+              <Typography variant="body2" sx={{ color: color.inkSoft, mt: 0.5 }}>
+                Conditions : {order.clientId.conditions}
+              </Typography>
             )}
-          </Grid>
+            {order.notes && (
+              <Box sx={{ mt: 1, p: 1.25, borderRadius: `${radius.sm}px`, bgcolor: color.bgSubtle }}>
+                <Typography variant="body2">📝 {order.notes}</Typography>
+              </Box>
+            )}
+            {order.requestedDate && (
+              <Box sx={{ mt: 1.5, p: 1.25, borderRadius: `${radius.sm}px`, bgcolor: color.warningSoft, border: `1px solid ${color.border}` }}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: color.warningDark }}>
+                  Rendez-vous souhaité par le client
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {new Date(order.requestedDate).toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' })}
+                </Typography>
+              </Box>
+            )}
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 0.75, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <EventAvailable sx={{ fontSize: 18, color: color.success }} /> Date confirmée
+              </Typography>
+              <DateTimeField
+                label="Date confirmée"
+                disabled={['delivered', 'cancelled'].includes(status)}
+                value={order.confirmedDate || null}
+                onChange={async (iso) => {
+                  try {
+                    await api.put(`/orders/${id}`, { confirmedDate: iso });
+                    await load();
+                    toast.success(iso ? 'Date confirmée' : 'Date retirée');
+                  } catch {
+                    /* toast intercepteur */
+                  }
+                }}
+              />
+            </Box>
+          </Card>
+        </Box>
 
-          {/* Articles */}
-          <Grid item xs={12} md={8}>
+        {/* Colonne droite : ingrédients, produits, total */}
+        <Box sx={{ minWidth: 0 }}>
+          {stockNeeds?.active &&
+            (() => {
+              const missing = stockNeeds.needs.filter((n) => n.status === 'missing');
+              const dateText = stockNeeds.neededBy ? `Ingrédients nécessaires pour le ${formatDate(stockNeeds.neededBy, true)}` : 'Pas de date prévue pour cette commande';
+              if (missing.length === 0) {
+                return (
+                  <Alert severity="success" sx={{ mb: 2 }}>
+                    Tous les ingrédients sont disponibles. {dateText}.
+                  </Alert>
+                );
+              }
+              const purchaseLabel = (ingredientId: string) => {
+                const pn = stockNeeds.purchaseNeeds.find((p) => String(p.ingredientId) === ingredientId && p.status === 'open');
+                if (!pn) return 'à acheter';
+                return pn.missingQty < pn.maxMissingQty ? 'partiellement acheté' : 'à acheter';
+              };
+              return (
+                <Alert
+                  data-tour="order-missing"
+                  severity={stockNeeds.canStartPreparation ? 'info' : 'warning'}
+                  icon={<WarningAmber />}
+                  sx={{ mb: 2, alignItems: 'flex-start' }}
+                  action={
+                    <Button color="inherit" size="small" onClick={() => navigate('/admin/shopping-list')}>
+                      Liste de courses
+                    </Button>
+                  }
+                >
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                    Commande enregistrée —{' '}
+                    {stockNeeds.canStartPreparation ? 'stock réservé à des commandes prévues avant' : 'la préparation ne peut pas encore commencer'}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 0.5 }}>
+                    {dateText}.
+                  </Typography>
+                  {missing.map((n) => (
+                    <Typography variant="body2" key={n.ingredientId}>
+                      <strong>{n.name}</strong> : manque {formatQty(n.missing)} {n.unit} (disponible {formatQty(n.stock)} / nécessaire {formatQty(n.needed)}) — {purchaseLabel(n.ingredientId)}
+                    </Typography>
+                  ))}
+                </Alert>
+              );
+            })()}
+
             {order.items.map((item: any, itemIndex: number) => {
               const recipe = item.recipeId;
               const recipeName = recipe && typeof recipe === 'object' ? recipe.name : 'Recette';
@@ -416,8 +492,8 @@ const OrderDetailPage = () => {
                 <Card key={itemIndex} sx={{ mb: 2 }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                        {recipeName} x{item.quantity}
+                      <Typography variant="h6" sx={{ fontSize: '1.05rem' }}>
+                        {recipeName} ×{item.quantity}
                       </Typography>
                       <Typography variant="h6" color="primary.main" sx={{ fontWeight: 600 }}>
                         {((item.calculatedPrice?.total || 0) * item.quantity).toFixed(2)} DT
@@ -434,10 +510,10 @@ const OrderDetailPage = () => {
                     {item.clientOfferedIngredients?.length > 0 && (
                       <Paper
                         variant="outlined"
-                        sx={{ p: 1.5, mb: 2, bgcolor: '#e3f2fd', borderColor: '#90caf9' }}
+                        sx={{ p: 1.5, mb: 2, bgcolor: color.infoSoft, borderColor: color.border }}
                       >
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1565c0' }}>
-                          Le client propose de ramener :
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: color.infoDark }}>
+                          Le client propose d’apporter :
                         </Typography>
                         {item.clientOfferedIngredients.map((offId: string) => {
                           const name = getIngredientName(offId);
@@ -453,23 +529,27 @@ const OrderDetailPage = () => {
                     {/* Ingredients avec checkbox — sauvegarde auto */}
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>
                       {isEditable
-                        ? 'Confirmer les ingredients que le client ramene :'
-                        : 'Ingredients :'}
+                        ? 'Cochez les ingrédients que le client apporte :'
+                        : 'Ingrédients :'}
                     </Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 2 }}>
                       {variant?.ingredients?.map((vi: any) => {
                         const ingRef = vi.ingredientId;
                         const ingId = typeof ingRef === 'object' ? ingRef._id : ingRef;
                         const ingName = getIngredientName(ingRef);
-                        const ingPrice = getIngredientPrice(ingRef);
-                        const stock = getIngredientStock(ingRef);
-                        const stockUnit = getIngredientUnit(ingRef);
                         const isProvided = (item.clientProvidedIngredients || []).includes(ingId);
                         const isOfferedByClient = (item.clientOfferedIngredients || []).includes(
                           ingId
                         );
-                        const cost = vi.quantity * ingPrice;
-                        const hasEnough = stock >= vi.quantity;
+                        // Cout fige a la creation de la commande (unites deja converties)
+                        const cost: number | null =
+                          item.priceSnapshot?.ingredients?.find(
+                            (si: any) => String(si.ingredientId) === String(ingId)
+                          )?.fullCost ?? null;
+                        // Stock : meme calcul que la deduction (besoin total de la commande)
+                        const need = stockNeeds?.needs.find(
+                          (n) => n.ingredientId === String(ingId)
+                        );
 
                         return (
                           <Box
@@ -502,10 +582,10 @@ const OrderDetailPage = () => {
                                   {isProvided
                                     ? isOfferedByClient
                                       ? ' (client fournit)'
-                                      : ' (ajoute par Mariem)'
+                                      : ' (ajouté)'
                                     : isOfferedByClient
-                                      ? ' (propose par client — non confirme)'
-                                      : cost > 0
+                                      ? ' (proposé par le client — non confirmé)'
+                                      : cost !== null && cost > 0
                                         ? ` → ${cost.toFixed(3)} DT`
                                         : ''}
                                 </Typography>
@@ -514,7 +594,7 @@ const OrderDetailPage = () => {
                             {isOfferedByClient && (
                               <Chip
                                 size="small"
-                                label="Propose"
+                                label="Proposé"
                                 color={isProvided ? 'info' : 'warning'}
                                 variant={isProvided ? 'filled' : 'outlined'}
                                 sx={{ fontSize: '0.7rem', height: 22 }}
@@ -523,23 +603,29 @@ const OrderDetailPage = () => {
                             {isProvided && !isOfferedByClient && (
                               <Chip
                                 size="small"
-                                label="Mariem"
+                                label="Ajouté"
                                 color="secondary"
                                 variant="outlined"
                                 sx={{ fontSize: '0.7rem', height: 22 }}
                               />
                             )}
-                            {!isProvided && !isOfferedByClient && (
+                            {!isProvided && !isOfferedByClient && need && !stockNeeds?.deducted && (
                               <Chip
                                 size="small"
                                 label={
-                                  hasEnough
-                                    ? `Stock: ${stock} ${stockUnit}`
-                                    : stock > 0
-                                      ? `Stock: ${stock}/${vi.quantity} ${stockUnit}`
-                                      : 'Pas en stock'
+                                  need.unitMismatch
+                                    ? 'Unité incompatible'
+                                    : need.status === 'missing'
+                                      ? `Manque ${formatQty(need.missing)} ${need.unit}`
+                                      : `Stock: ${formatQty(need.stock)} ${need.unit}`
                                 }
-                                color={hasEnough ? 'success' : stock > 0 ? 'warning' : 'error'}
+                                color={
+                                  need.unitMismatch || need.status === 'missing'
+                                    ? 'error'
+                                    : need.status === 'low'
+                                      ? 'warning'
+                                      : 'success'
+                                }
                                 variant="outlined"
                                 sx={{ fontSize: '0.7rem', height: 22 }}
                               />
@@ -559,13 +645,13 @@ const OrderDetailPage = () => {
                         <Table size="small">
                           <TableBody>
                             <TableRow>
-                              <TableCell>Ingredients</TableCell>
+                              <TableCell>Ingrédients</TableCell>
                               <TableCell align="right">
                                 {item.calculatedPrice.ingredientsCost?.toFixed(2)} DT
                               </TableCell>
                             </TableRow>
                             <TableRow>
-                              <TableCell>Electricite</TableCell>
+                              <TableCell>Électricité</TableCell>
                               <TableCell align="right">
                                 {item.calculatedPrice.electricityCost?.toFixed(2)} DT
                               </TableCell>
@@ -582,7 +668,7 @@ const OrderDetailPage = () => {
                                 {item.calculatedPrice.margin?.toFixed(2)} DT
                               </TableCell>
                             </TableRow>
-                            <TableRow sx={{ bgcolor: '#fff3e0' }}>
+                            <TableRow sx={{ bgcolor: color.primarySoft }}>
                               <TableCell sx={{ fontWeight: 700 }}>Total unitaire</TableCell>
                               <TableCell
                                 align="right"
@@ -600,56 +686,143 @@ const OrderDetailPage = () => {
               );
             })}
 
-            {/* Total global */}
-            <Card>
+          {stockNeeds && stockNeeds.needs.length > 0 && (status !== 'cancelled' || stockNeeds.deducted) && (
+            <Card sx={{ mb: 2 }}>
               <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                    Total
-                  </Typography>
-                  <Typography variant="h5" color="primary.main" sx={{ fontWeight: 700 }}>
-                    {order.totalPrice?.toFixed(2)} DT
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1.5 }}>
+                  <SoftIcon tone="success" size={34}>
+                    <Inventory2 />
+                  </SoftIcon>
+                  <Typography variant="h6" sx={{ fontSize: '1rem' }}>
+                    Stock pour cette commande
                   </Typography>
                 </Box>
+                <StockNeedsPanel
+                  needs={stockNeeds.needs}
+                  stockDeducted={stockNeeds.deducted}
+                  note={stockNeeds.active ? 'Stock = quantité disponible pour cette commande après les commandes prévues avant.' : undefined}
+                />
+                {/* Remise en stock exceptionnelle : seulement une commande annulée qui a consommé du stock */}
+                {stockNeeds.deducted && status === 'cancelled' && (
+                  <Button
+                    variant="outlined"
+                    color="warning"
+                    fullWidth
+                    sx={{ mt: 1.5 }}
+                    onClick={() => {
+                      restoreOp.reset();
+                      setRestoreReason('');
+                      setRestoreOpen(true);
+                    }}
+                  >
+                    Remise en stock exceptionnelle…
+                  </Button>
+                )}
               </CardContent>
             </Card>
-          </Grid>
-        </Grid>
-      </Container>
-
-      {/* Dialog de confirmation changement de statut */}
-      <Dialog
-        open={confirmDialog.open}
-        onClose={() => setConfirmDialog({ ...confirmDialog, open: false })}
-      >
-        <DialogTitle>Confirmer le changement</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Changer le statut de <strong>{statusLabels[order?.status]?.label}</strong> vers{' '}
-            <strong>{confirmDialog.label}</strong> ?
-          </Typography>
-          {confirmDialog.status === 'cancelled' && (
-            <Typography color="error" sx={{ mt: 1 }}>
-              La commande sera annulee. Vous pourrez la reactiver plus tard.
-            </Typography>
           )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDialog({ ...confirmDialog, open: false })}>
-            Non, annuler
-          </Button>
-          <Button
-            variant="contained"
-            color={confirmDialog.status === 'cancelled' ? 'error' : 'primary'}
-            onClick={async () => {
-              setConfirmDialog({ ...confirmDialog, open: false });
-              await changeStatus(confirmDialog.status);
-            }}
-          >
-            Oui, confirmer
-          </Button>
-        </DialogActions>
-      </Dialog>
+
+          <Card sx={{ p: 2.25, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: color.primarySoft, borderColor: color.primaryTint }}>
+            <Typography variant="h6">Total</Typography>
+            <Typography variant="h5" sx={{ color: color.primaryDark }}>
+              {formatDT(order.totalPrice)}
+            </Typography>
+          </Card>
+        </Box>
+      </Box>
+
+      {/* Remise en stock exceptionnelle (tracée, raison obligatoire) */}
+      <ResponsiveDialog
+        open={restoreOpen}
+        onClose={() => setRestoreOpen(false)}
+        maxWidth="xs"
+        title="Remise en stock exceptionnelle"
+        subtitle="À utiliser seulement si les ingrédients n’ont pas vraiment été utilisés."
+        actions={
+          <>
+            <Button onClick={() => setRestoreOpen(false)}>Annuler</Button>
+            <Button
+              variant="contained"
+              color="warning"
+              disabled={restoreOp.busy || restoreReason.trim().length < 3}
+              onClick={() =>
+                restoreOp
+                  .run(async (key) => {
+                    const res = await api.post(`/orders/${id}/restore-stock`, { reason: restoreReason.trim() }, withIdempotency(key));
+                    toast.success(res.data.message);
+                    setRestoreOpen(false);
+                    await load();
+                    refresh();
+                  })
+                  .catch(() => undefined)
+              }
+            >
+              Remettre en stock
+            </Button>
+          </>
+        }
+      >
+        <Typography variant="body2" sx={{ mb: 2 }}>
+          Les quantités retirées pour cette commande seront rajoutées au stock. L’opération est notée dans l’historique du stock avec votre raison.
+        </Typography>
+        <TextField fullWidth required autoFocus label="Raison" placeholder="ex : la pâte n’avait pas été commencée" value={restoreReason} onChange={(e) => setRestoreReason(e.target.value)} />
+      </ResponsiveDialog>
+
+      {/* Confirmation d'un changement d'avancement */}
+      <ResponsiveDialog
+        open={!!transition}
+        onClose={() => setTransition(null)}
+        maxWidth="xs"
+        title={transition?.title}
+        actions={
+          <>
+            <Button onClick={() => setTransition(null)}>Retour</Button>
+            <Button
+              variant="contained"
+              color={transition?.tone === 'error' ? 'error' : transition?.tone === 'success' ? 'success' : 'primary'}
+              disabled={busy || (reasonRequired && reason.trim().length < 3)}
+              onClick={() => transition && changeStatus(transition.status, reason.trim())}
+            >
+              {busy ? 'Enregistrement…' : transition?.confirm}
+            </Button>
+          </>
+        }
+      >
+        <Typography variant="body2" sx={{ color: color.inkSoft }}>
+          {transition?.text}
+        </Typography>
+        {transition?.status === 'cancelled' && (
+          <Box sx={{ mt: 2 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
+              {CANCEL_REASONS.map((r) => (
+                <ButtonBase
+                  key={r}
+                  onClick={() => setReason(r)}
+                  sx={{
+                    px: 1.25,
+                    py: 0.5,
+                    borderRadius: `${radius.pill}px`,
+                    border: `1px solid ${reason === r ? color.danger : color.borderStrong}`,
+                    bgcolor: reason === r ? color.dangerSoft : color.surface,
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  {r}
+                </ButtonBase>
+              ))}
+            </Box>
+            <TextField
+              fullWidth
+              label={reasonRequired ? 'Raison (obligatoire)' : 'Raison (facultative)'}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              required={reasonRequired}
+              error={reasonRequired && reason.length > 0 && reason.trim().length < 3}
+            />
+          </Box>
+        )}
+      </ResponsiveDialog>
     </Box>
   );
 };

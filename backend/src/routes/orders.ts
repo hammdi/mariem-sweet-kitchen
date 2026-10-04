@@ -1,7 +1,6 @@
 import express, { Request, Response } from 'express';
 import { Order } from '../models/Order';
 import { Recipe } from '../models/Recipe';
-import { Ingredient } from '../models/Ingredient';
 import { StockHistory } from '../models/StockHistory';
 import { AvailabilityBlock } from '../models/AvailabilityBlock';
 import { Settings } from '../models/Settings';
@@ -10,17 +9,33 @@ import { authenticate, authorize } from '../middleware/auth';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 import { TelegramService } from '../services/telegramService';
+import { Client } from '../models/Client';
+import { normalizePhone } from '../utils/phone';
+import { computeConsumption, computeStockNeeds } from '../services/stockForecastService';
+import {
+  isStockDeducted,
+  loadOrderForStock,
+  orderLines,
+  restoreStockForOrder,
+} from '../services/stockMovementService';
+import { assertRecipeUnits } from '../services/recipeUnitValidation';
+import { roundQty } from '../services/unitService';
+import {
+  buildActionRequired,
+  buildShoppingList,
+  computeAllocation,
+  orderNeededBy,
+  orderRef,
+  syncPurchaseNeedsSafe,
+} from '../services/purchaseNeedService';
+import { checkPreparation } from '../services/stockMovementService';
+import { PurchaseNeed } from '../models/PurchaseNeed';
+import { buildOrderFilters, saleDateQuery } from '../services/salesService';
+import { refreshOrderPayment } from '../services/cashService';
+import { recordStockPurchase } from '../services/stockPurchaseService';
 
-// State machine : transitions autorisées
-// Transitions autorisées — Mariem peut revenir en arrière en cas d'erreur
-const ALLOWED_TRANSITIONS: Record<string, string[]> = {
-  pending: ['confirmed', 'cancelled'],
-  confirmed: ['paid', 'pending', 'cancelled'],
-  paid: ['preparing', 'confirmed', 'cancelled'],
-  preparing: ['ready', 'paid'],
-  ready: ['preparing'],
-  cancelled: ['pending'],
-};
+import { changeOrderStatus, PREPARATION_STARTED } from '../services/orderWorkflowService';
+import { idempotent } from '../middleware/idempotency';
 
 const router = express.Router();
 
@@ -28,6 +43,7 @@ const router = express.Router();
 // @route   POST /api/orders
 router.post(
   '/',
+  idempotent({ required: false }), // double envoi du formulaire public : une seule commande
   asyncHandler(async (req: Request, res: Response) => {
     const { clientName, clientPhone, items, notes, requestedDate } = req.body;
 
@@ -98,10 +114,18 @@ router.post(
           margin: price.margin,
           total: price.total,
         },
+        priceSnapshot: PriceCalculationService.snapshotOf(price),
       });
     }
 
+    // Rattacher a une fiche client existante (meme numero normalise) — jamais de creation auto
+    const normalizedPhone = normalizePhone(clientPhone);
+    const knownClient = normalizedPhone
+      ? await Client.findOne({ phone: normalizedPhone, isActive: true })
+      : null;
+
     const order = new Order({
+      clientId: knownClient?._id || null,
       clientName,
       clientPhone,
       items: orderItems,
@@ -135,6 +159,9 @@ router.post(
       }),
     });
 
+    // Le manque de stock n'empeche jamais l'enregistrement : il cree des besoins d'achat
+    await syncPurchaseNeedsSafe();
+
     res.status(201).json({
       success: true,
       message: 'Commande envoyee, Mariem vous contactera',
@@ -149,9 +176,21 @@ router.post(
   '/manual',
   authenticate,
   authorize('admin'),
+  idempotent(), // double clic sur "Créer la commande" : une seule commande
   asyncHandler(async (req: Request, res: Response) => {
-    const { clientName, clientPhone, items, notes, requestedDate, additionalFees, saveAsRecipe } =
-      req.body;
+    const { clientId, items, notes, requestedDate, additionalFees, saveAsRecipe } = req.body;
+    let { clientName, clientPhone } = req.body;
+
+    // Client choisi dans la liste : nom et telephone viennent de sa fiche
+    let client = null;
+    if (clientId) {
+      client = await Client.findById(clientId);
+      if (!client || !client.isActive) {
+        throw createError('Client introuvable', 400);
+      }
+      clientName = client.name;
+      clientPhone = client.phone;
+    }
 
     if (!clientName || !clientPhone) {
       throw createError('Nom et telephone du client requis', 400);
@@ -191,11 +230,13 @@ router.post(
             margin: price.margin,
             total: price.total,
           },
+          priceSnapshot: PriceCalculationService.snapshotOf(price),
         });
       }
       // Mode 2 : recette custom (créée à la volée)
       else if (item.custom) {
         const c = item.custom;
+        await assertRecipeUnits([{ sizeName: c.sizeName, ingredients: c.ingredients }]);
         const newRecipe = new Recipe({
           name: c.name || `Commande speciale ${clientName}`,
           description: c.description || `Recette personnalisee pour ${clientName}`,
@@ -240,11 +281,13 @@ router.post(
             margin: price.margin,
             total: price.total,
           },
+          priceSnapshot: PriceCalculationService.snapshotOf(price),
         });
       }
     }
 
     const order = new Order({
+      clientId: client?._id || null,
       clientName,
       clientPhone,
       items: orderItems,
@@ -278,6 +321,9 @@ router.post(
       }),
     });
 
+    // Le manque de stock n'empeche jamais l'enregistrement : il cree des besoins d'achat
+    await syncPurchaseNeedsSafe();
+
     res.status(201).json({ success: true, message: 'Commande manuelle creee', data: { order } });
   })
 );
@@ -289,131 +335,93 @@ router.get(
   authenticate,
   authorize('admin'),
   asyncHandler(async (req: Request, res: Response) => {
-    const { page = 1, limit = 20, status } = req.query;
+    // Historique : recherche CMD / client, dates, statut, paiement, particulier/cafe
+    const { status, search, clientType, paymentStatus, from, to, dateField } = req.query;
+    const page = Math.max(1, parseInt((req.query.page as string) || '1') || 1);
+    const limit = Math.min(500, Math.max(1, parseInt((req.query.limit as string) || '20') || 20));
 
-    const query: any = {};
-    if (status) {
-      query.status = status;
+    const and: any[] = await buildOrderFilters({
+      search: search as string,
+      clientType: clientType as string,
+      paymentStatus: paymentStatus as string,
+    });
+    const fromDate = from ? new Date(from as string) : null;
+    const toDate = to ? new Date(to as string) : null;
+    if (fromDate && toDate && !isNaN(fromDate.getTime()) && !isNaN(toDate.getTime())) {
+      // date de commande (creation) ou date prevue (date confirmee / souhaitee)
+      and.push(
+        dateField === 'scheduled'
+          ? saleDateQuery(fromDate, toDate)
+          : { createdAt: { $gte: fromDate, $lt: toDate } }
+      );
     }
+    const base = and.length ? { $and: and } : {};
+    // "Confirmees" inclut l'ancien statut "paid" (avant la separation paiement / avancement)
+    const query: any = status
+      ? { ...base, status: status === 'confirmed' ? { $in: ['confirmed', 'paid'] } : status }
+      : base;
 
-    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+    const [orders, total, byStatus] = await Promise.all([
+      Order.find(query)
+        .populate('items.recipeId', 'name images variants.sizeName')
+        .populate('clientId', 'name type')
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      Order.countDocuments(query),
+      // compteurs par statut avec les memes filtres (pour les puces)
+      Order.aggregate([{ $match: base }, { $group: { _id: '$status', count: { $sum: 1 } } }]),
+    ]);
 
-    const orders = await Order.find(query)
-      .populate('items.recipeId', 'name images')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit as string));
-
-    const total = await Order.countDocuments(query);
+    // Commandes avec ingredients manquants (besoins d'achat ouverts) : reperables dans la liste
+    const openNeeds = await PurchaseNeed.find({
+      status: 'open',
+      orderId: { $in: orders.map((o) => o._id) },
+    }).select('orderId ingredientName missingQty unit');
+    const stockAlerts: Record<string, { missingCount: number; ingredients: string[] }> = {};
+    for (const n of openNeeds) {
+      const k = n.orderId.toString();
+      stockAlerts[k] = stockAlerts[k] || { missingCount: 0, ingredients: [] };
+      stockAlerts[k].missingCount += 1;
+      stockAlerts[k].ingredients.push(n.ingredientName);
+    }
 
     res.json({
       success: true,
       data: {
         orders,
+        stockAlerts,
+        counts: Object.fromEntries(byStatus.map((c) => [c._id, c.count])),
         pagination: {
           total,
-          page: parseInt(page as string),
-          totalPages: Math.ceil(total / parseInt(limit as string)),
+          page,
+          totalPages: Math.ceil(total / limit),
         },
       },
     });
   })
 );
 
-// @desc    Liste de courses — ingredients manquants pour les commandes payees
+// @desc    Liste de courses — manques des commandes en cours (en attente, confirmees, payees),
+//          regroupes par ingredient avec le detail des commandes concernees
 // @route   GET /api/orders/shopping-list
 router.get(
   '/shopping-list',
   authenticate,
   authorize('admin'),
   asyncHandler(async (_req: Request, res: Response) => {
-    const orders = await Order.find({ status: 'paid' }).populate({
-      path: 'items.recipeId',
-      populate: [
-        {
-          path: 'variants.ingredients.ingredientId',
-          select: 'name pricePerUnit unit stockQuantity',
-        },
-      ],
-    });
+    res.json({ success: true, data: await buildShoppingList() });
+  })
+);
 
-    // Agréger les besoins par ingrédient
-    const needs: Record<
-      string,
-      {
-        ingredientId: string;
-        name: string;
-        unit: string;
-        needed: number;
-        inStock: number;
-        pricePerUnit: number;
-      }
-    > = {};
-
-    for (const order of orders) {
-      for (const item of order.items) {
-        const recipe = item.recipeId as any;
-        if (!recipe?.variants) {
-          continue;
-        }
-        const variant = recipe.variants[item.variantIndex];
-        if (!variant) {
-          continue;
-        }
-
-        for (const vi of variant.ingredients) {
-          const ing = vi.ingredientId as any;
-          if (!ing) {
-            continue;
-          }
-          // Ignorer les ingrédients fournis par le client
-          if (
-            item.clientProvidedIngredients
-              .map((id: any) => id.toString())
-              .includes(ing._id.toString())
-          ) {
-            continue;
-          }
-
-          const key = ing._id.toString();
-          const needed = vi.quantity * item.quantity;
-
-          if (!needs[key]) {
-            needs[key] = {
-              ingredientId: key,
-              name: ing.name,
-              unit: ing.unit || vi.unit,
-              needed: 0,
-              inStock: ing.stockQuantity || 0,
-              pricePerUnit: ing.pricePerUnit || 0,
-            };
-          }
-          needs[key].needed += needed;
-        }
-      }
-    }
-
-    // Calculer ce qui manque
-    const shoppingList = Object.values(needs)
-      .map((item) => ({
-        ...item,
-        toBuy: Math.max(0, Math.round((item.needed - item.inStock) * 1000) / 1000),
-        estimatedCost:
-          Math.round(Math.max(0, item.needed - item.inStock) * item.pricePerUnit * 1000) / 1000,
-      }))
-      .filter((item) => item.toBuy > 0)
-      .sort((a, b) => b.estimatedCost - a.estimatedCost);
-
-    const totalCost = shoppingList.reduce((sum, i) => sum + i.estimatedCost, 0);
-
-    res.json({
-      success: true,
-      data: {
-        shoppingList,
-        totalCost: Math.round(totalCost * 1000) / 1000,
-        orderCount: orders.length,
-      },
-    });
+// @desc    Commandes necessitant une action (ingredients manquants), par urgence
+// @route   GET /api/orders/action-required
+router.get(
+  '/action-required',
+  authenticate,
+  authorize('admin'),
+  asyncHandler(async (_req: Request, res: Response) => {
+    res.json({ success: true, data: await buildActionRequired() });
   })
 );
 
@@ -423,90 +431,62 @@ router.post(
   '/shopping-list/purchase',
   authenticate,
   authorize('admin'),
+  idempotent(), // stock + caisse : jamais deux fois le même achat
   asyncHandler(async (req: Request, res: Response) => {
-    const { purchases } = req.body;
-    // purchases: [{ ingredientId, quantity }]
-
-    if (!purchases || !Array.isArray(purchases) || purchases.length === 0) {
-      throw createError('Aucun achat a enregistrer', 400);
-    }
-
-    for (const p of purchases) {
-      if (!p.ingredientId || !p.quantity || p.quantity <= 0) {
-        continue;
-      }
-
-      await Ingredient.findByIdAndUpdate(p.ingredientId, {
-        $inc: { stockQuantity: p.quantity },
-      });
-
-      await StockHistory.create({
-        ingredientId: p.ingredientId,
-        ingredientName: p.name || '',
-        quantity: p.quantity,
-        unit: p.unit || '',
-        type: 'restock',
-      });
-    }
-
-    logger.info(`Stock mis a jour: ${purchases.length} ingredients achetes par ${req.user!.email}`);
-
-    res.json({ success: true, message: `${purchases.length} ingredient(s) ajoute(s) au stock` });
+    // purchases: [{ ingredientId, quantity, unitPrice }] ; sourceId?
+    // Achat = stock + sortie de caisse + besoins recalcules (stockPurchaseService)
+    const { purchases, sourceId, paymentMethod } = req.body;
+    const result = await recordStockPurchase({
+      items: Array.isArray(purchases) ? purchases : [],
+      paymentMethod,
+      sourceId: sourceId || undefined,
+      actor: { userId: req.user!._id, email: req.user!.email },
+    });
+    logger.info(
+      `Stock mis a jour: ${result.entries.length} ingredient(s), ${result.total} DT (${result.paymentMethod}) par ${req.user!.email}`
+    );
+    res.json({
+      success: true,
+      message: `${result.entries.length} ingredient(s) ajoute(s) au stock`,
+      data: {
+        purchaseId: result.purchaseId,
+        paymentMethod: result.paymentMethod,
+        cashMovement: result.cashMovement,
+        unblockedOrders: result.unblockedOrders,
+      },
+    });
   })
 );
 
 // @desc    Vérifier quelles commandes sont preparables (stock suffisant)
 // @route   GET /api/orders/check-preparable
+// Chaque commande est evaluee seule contre le stock actuel, avec le meme calcul que la deduction.
 router.get(
   '/check-preparable',
   authenticate,
   authorize('admin'),
   asyncHandler(async (_req: Request, res: Response) => {
-    const orders = await Order.find({ status: { $in: ['pending', 'confirmed'] } }).populate({
-      path: 'items.recipeId',
-      populate: [{ path: 'variants.ingredients.ingredientId', select: 'name stockQuantity unit' }],
-    });
+    const orders = await Order.find({ status: { $in: ['pending', 'confirmed', 'paid'] } }).populate(
+      {
+        path: 'items.recipeId',
+        populate: [
+          { path: 'variants.ingredients.ingredientId', select: 'name stockQuantity unit' },
+        ],
+      }
+    );
 
     const result = orders.map((order) => {
-      let preparable = true;
-      const missingItems: string[] = [];
-
-      for (const item of order.items) {
-        const recipe = item.recipeId as any;
-        if (!recipe?.variants) {
-          preparable = false;
-          continue;
-        }
-        const variant = recipe.variants[item.variantIndex];
-        if (!variant) {
-          preparable = false;
-          continue;
-        }
-
-        for (const vi of variant.ingredients) {
-          const ing = vi.ingredientId as any;
-          if (!ing) {
-            continue;
-          }
-          if (
-            item.clientProvidedIngredients
-              .map((id: any) => id.toString())
-              .includes(ing._id.toString())
-          ) {
-            continue;
-          }
-          const needed = vi.quantity * item.quantity;
-          if (ing.stockQuantity < needed) {
-            preparable = false;
-            missingItems.push(ing.name);
-          }
-        }
-      }
+      const lines = orderLines(order);
+      const { items, unitIssues } = computeConsumption(lines);
+      const missingItems = items
+        .filter((c) => roundQty(c.ingredient.stockQuantity || 0) < roundQty(c.quantity))
+        .map((c) => c.name);
+      unitIssues.forEach((u) => missingItems.push(`${u.name} (unite incompatible)`));
       return {
         orderId: order._id,
         clientName: order.clientName,
         status: order.status,
-        preparable,
+        preparable: lines.length === order.items.length && missingItems.length === 0,
         missingItems,
       };
     });
@@ -543,6 +523,78 @@ router.get(
   })
 );
 
+// @desc    Besoins en ingredients d'une commande : stock actuel - besoin = reste prevu
+// @route   GET /api/orders/:id/stock-needs
+// Lecture seule. Memes lignes et meme conversion d'unites que la deduction reelle.
+router.get(
+  '/:id/stock-needs',
+  authenticate,
+  authorize('admin'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const order = await loadOrderForStock(req.params.id);
+    const stockDeducted = await isStockDeducted(order);
+    const active = ['pending', 'confirmed', 'paid'].includes(order.status) && !stockDeducted;
+
+    // Commande en cours : stock attribue par date (les commandes plus proches d'abord)
+    let stockNeeds = computeStockNeeds(orderLines(order));
+    if (active) {
+      const { allocation } = await computeAllocation();
+      stockNeeds = allocation.get(order._id.toString()) || stockNeeds;
+    }
+    const preparation = checkPreparation(order);
+    const purchaseNeeds = await PurchaseNeed.find({ orderId: order._id }).select(
+      'ingredientId ingredientName missingQty maxMissingQty status unit'
+    );
+
+    res.json({
+      success: true,
+      data: {
+        orderRef: orderRef(order),
+        neededBy: orderNeededBy(order),
+        active,
+        stockDeducted,
+        stockNeeds,
+        // regle de blocage : stock REEL suffisant pour cette commande
+        canStartPreparation: preparation.ok,
+        // stock reel suffisant MAIS attribue a des commandes plus proches : preparer
+        // maintenant les mettrait en manque (Rahma decide, l'interface previent)
+        usesReservedStock:
+          preparation.ok && active && stockNeeds.some((n: any) => n.status === 'missing'),
+        preparationBlockedReason: preparation.ok ? null : preparation.message,
+        purchaseNeeds,
+      },
+    });
+  })
+);
+
+// @desc    Remise en stock exceptionnelle d'une commande annulee (raison obligatoire, tracee)
+// @route   POST /api/orders/:id/restore-stock
+router.post(
+  '/:id/restore-stock',
+  authenticate,
+  authorize('admin'),
+  idempotent(),
+  asyncHandler(async (req: Request, res: Response) => {
+    // Exceptionnel : commande annulee uniquement, raison obligatoire, trace dans l'historique
+    const { restored } = await restoreStockForOrder(req.params.id, {
+      reason: req.body.reason,
+      actor: req.user!.email,
+    });
+    await syncPurchaseNeedsSafe();
+    logger.info(
+      `Stock remis pour commande ${req.params.id} (${restored.length} ingredient(s)) par ${req.user!.email}`
+    );
+    res.json({
+      success: true,
+      message:
+        restored.length > 0
+          ? `${restored.length} ingredient(s) remis en stock`
+          : 'Rien a remettre en stock',
+      data: { restored },
+    });
+  })
+);
+
 // @desc    Détail d'une commande (admin)
 // @route   GET /api/orders/:id
 router.get(
@@ -550,13 +602,15 @@ router.get(
   authenticate,
   authorize('admin'),
   asyncHandler(async (req: Request, res: Response) => {
-    const order = await Order.findById(req.params.id).populate({
-      path: 'items.recipeId',
-      populate: [
-        { path: 'variants.ingredients.ingredientId', select: 'name pricePerUnit unit' },
-        { path: 'variants.appliances.applianceId', select: 'name powerConsumption' },
-      ],
-    });
+    const order = await Order.findById(req.params.id)
+      .populate({
+        path: 'items.recipeId',
+        populate: [
+          { path: 'variants.ingredients.ingredientId', select: 'name pricePerUnit unit' },
+          { path: 'variants.appliances.applianceId', select: 'name powerConsumption' },
+        ],
+      })
+      .populate('clientId');
 
     if (!order) {
       throw createError('Commande non trouvee', 404);
@@ -597,20 +651,37 @@ router.put(
           orderItem.clientProvidedIngredients = update.clientProvidedIngredients;
         }
 
-        // Recalculer le prix avec les ingrédients cochés
-        const price = await PriceCalculationService.calculateVariantPrice(
-          orderItem.recipeId.toString(),
-          orderItem.variantIndex,
-          orderItem.clientProvidedIngredients.map((id: any) => id.toString())
-        );
-
-        orderItem.calculatedPrice = {
-          ingredientsCost: price.ingredientsCost,
-          electricityCost: price.electricityCost,
-          waterCost: price.waterCost,
-          margin: price.margin,
-          total: price.total,
-        };
+        // Recalculer avec les prix FIGES a la creation : un changement de prix
+        // d'ingredient ne modifie pas une commande existante
+        const provided = orderItem.clientProvidedIngredients.map((id: any) => id.toString());
+        if (orderItem.priceSnapshot) {
+          const price = PriceCalculationService.recomputeFromSnapshot(
+            orderItem.priceSnapshot as any,
+            provided
+          );
+          orderItem.calculatedPrice = {
+            ingredientsCost: price.ingredientsCost,
+            electricityCost: price.electricityCost,
+            waterCost: price.waterCost,
+            margin: price.margin,
+            total: price.total,
+          };
+        } else {
+          // Ancienne commande sans instantane : calcul avec les prix actuels, puis on fige
+          const price = await PriceCalculationService.calculateVariantPrice(
+            orderItem.recipeId.toString(),
+            orderItem.variantIndex,
+            provided
+          );
+          orderItem.calculatedPrice = {
+            ingredientsCost: price.ingredientsCost,
+            electricityCost: price.electricityCost,
+            waterCost: price.waterCost,
+            margin: price.margin,
+            total: price.total,
+          };
+          orderItem.priceSnapshot = PriceCalculationService.snapshotOf(price) as any;
+        }
       }
     }
 
@@ -624,241 +695,72 @@ router.put(
       order.requestedDate = req.body.requestedDate ? new Date(req.body.requestedDate) : null;
     }
 
-    // "Ingrédients prêts" → passer automatiquement en preparation + déduire le stock
-    if (req.body.ingredientsReady === true && !order.ingredientsReady) {
-      if (order.status !== 'paid') {
-        throw createError('La commande doit etre payee avant de lancer la preparation', 400);
-      }
+    await order.save();
 
-      // Recharger avec le stock pour vérifier
-      const populated = await Order.findById(order._id).populate({
-        path: 'items.recipeId',
-        populate: [
-          { path: 'variants.ingredients.ingredientId', select: 'name stockQuantity unit' },
-        ],
-      });
-      if (!populated) {
-        throw createError('Commande non trouvee', 404);
-      }
-
-      const missing: string[] = [];
-      for (const item of populated.items) {
-        const recipe = item.recipeId as any;
-        if (!recipe?.variants) {
-          continue;
-        }
-        const variant = recipe.variants[item.variantIndex];
-        if (!variant) {
-          continue;
-        }
-        for (const vi of variant.ingredients) {
-          const ing = vi.ingredientId as any;
-          if (!ing) {
-            continue;
-          }
-          if (
-            item.clientProvidedIngredients
-              .map((id: any) => id.toString())
-              .includes(ing._id.toString())
-          ) {
-            continue;
-          }
-          const needed = vi.quantity * item.quantity;
-          if (ing.stockQuantity < needed) {
-            missing.push(
-              `${ing.name}: besoin ${needed} ${vi.unit}, stock ${ing.stockQuantity} ${ing.unit}`
-            );
-          }
-        }
-      }
-      if (missing.length > 0) {
-        throw createError(`Stock insuffisant:\n${missing.join('\n')}`, 400);
-      }
-
-      // Déduire le stock
-      for (const item of populated.items) {
-        const recipe = item.recipeId as any;
-        if (!recipe?.variants) {
-          continue;
-        }
-        const variant = recipe.variants[item.variantIndex];
-        if (!variant) {
-          continue;
-        }
-        for (const vi of variant.ingredients) {
-          const ing = vi.ingredientId as any;
-          if (!ing) {
-            continue;
-          }
-          if (
-            item.clientProvidedIngredients
-              .map((id: any) => id.toString())
-              .includes(ing._id.toString())
-          ) {
-            continue;
-          }
-          const needed = vi.quantity * item.quantity;
-          await Ingredient.findByIdAndUpdate(ing._id, { $inc: { stockQuantity: -needed } });
-          await StockHistory.create({
-            ingredientId: ing._id,
-            ingredientName: ing.name,
-            quantity: needed,
-            unit: vi.unit,
-            orderId: order._id,
-            clientName: order.clientName,
-            recipeName: recipe.name,
-            type: 'deduction',
-          });
-        }
-      }
-
+    // "Ingrédients prêts" → lancer la préparation (déduction du stock, une seule fois).
+    // Le paiement n'est PAS une condition : il est suivi à part.
+    let result = order;
+    if (req.body.ingredientsReady === true && PREPARATION_STARTED.includes(order.status)) {
+      // preparation deja lancee (stock deja deduit) : on note seulement les ingredients prets
       order.ingredientsReady = true;
-      order.status = 'preparing';
-      logger.info(
-        `Ingredients confirmes + stock deduit + preparation lancee pour commande ${order._id}`
+      await order.save();
+    } else if (req.body.ingredientsReady === true && !order.ingredientsReady) {
+      if (!['confirmed', 'paid'].includes(order.status)) {
+        throw createError('La commande doit etre confirmee avant de lancer la preparation', 400);
+      }
+      const changed = await changeOrderStatus(order._id, 'preparing', {
+        actor: req.user!.email,
+      });
+      await Order.updateOne({ _id: order._id }, { $set: { ingredientsReady: true } });
+      result = (await Order.findById(order._id))!;
+      logger.info(`Ingredients confirmes + preparation lancee pour commande ${order._id}`);
+      TelegramService.notifyStatusChange(
+        order.clientName,
+        order.clientPhone,
+        changed.oldStatus,
+        'preparing'
       );
-
-      TelegramService.notifyStatusChange(order.clientName, order.clientPhone, 'paid', 'preparing');
     } else if (req.body.ingredientsReady === false) {
       order.ingredientsReady = false;
+      await order.save();
     }
 
-    await order.save();
-    await order.populate('items.recipeId', 'name images');
+    await refreshOrderPayment(order._id); // le total peut avoir change (ingredients apportes)
+    await syncPurchaseNeedsSafe(); // ingredients apportes, dates ou preparation changes
+    await result.populate('items.recipeId', 'name images');
 
     logger.info(`Commande ${order._id} mise a jour par ${req.user!.email}`);
 
     res.json({
       success: true,
-      data: { order },
+      data: { order: result },
     });
   })
 );
 
-// @desc    Changer le statut d'une commande (admin)
-// @route   PUT /api/orders/:id/status
+// @desc    Changer l'avancement d'une commande (admin) — indépendant du paiement
+// @route   PUT /api/orders/:id/status   { status, reason? }
 router.put(
   '/:id/status',
   authenticate,
   authorize('admin'),
+  idempotent({ required: false }),
   asyncHandler(async (req: Request, res: Response) => {
-    const { status } = req.body;
-    const validStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'paid', 'cancelled'];
-
-    if (!validStatuses.includes(status)) {
-      throw createError('Statut invalide', 400);
-    }
-
-    const order = await Order.findById(req.params.id).populate({
-      path: 'items.recipeId',
-      populate: [{ path: 'variants.ingredients.ingredientId', select: 'name stockQuantity unit' }],
+    const { order, oldStatus, changed } = await changeOrderStatus(req.params.id, req.body.status, {
+      reason: req.body.reason,
+      actor: req.user!.email,
     });
-    if (!order) {
-      throw createError('Commande non trouvee', 404);
-    }
-
-    // Valider la transition de statut
-    const allowed = ALLOWED_TRANSITIONS[order.status];
-    if (!allowed || !allowed.includes(status)) {
-      throw createError(
-        `Transition impossible : ${order.status} → ${status}. Transitions autorisees : ${(allowed || []).join(', ') || 'aucune'}`,
-        400
+    if (changed) {
+      // annulation / reactivation / preparation : les besoins d'achat suivent
+      await syncPurchaseNeedsSafe();
+      logger.info(`Commande ${order._id} ${oldStatus} -> ${order.status} par ${req.user!.email}`);
+      TelegramService.notifyStatusChange(
+        order.clientName,
+        order.clientPhone,
+        oldStatus,
+        order.status
       );
     }
-
-    // Si on passe en "preparing", vérifier stock + déduire
-    if (status === 'preparing') {
-      const missing: string[] = [];
-
-      // Vérifier le stock pour chaque item
-      for (const item of order.items) {
-        const recipe = item.recipeId as any;
-        if (!recipe?.variants) {
-          continue;
-        }
-        const variant = recipe.variants[item.variantIndex];
-        if (!variant) {
-          continue;
-        }
-
-        for (const vi of variant.ingredients) {
-          const ing = vi.ingredientId as any;
-          if (!ing) {
-            continue;
-          }
-          if (
-            item.clientProvidedIngredients
-              .map((id: any) => id.toString())
-              .includes(ing._id.toString())
-          ) {
-            continue;
-          }
-
-          const needed = vi.quantity * item.quantity;
-          if (ing.stockQuantity < needed) {
-            missing.push(
-              `${ing.name}: besoin ${needed} ${vi.unit}, stock ${ing.stockQuantity} ${ing.unit}`
-            );
-          }
-        }
-      }
-
-      if (missing.length > 0) {
-        throw createError(`Stock insuffisant:\n${missing.join('\n')}`, 400);
-      }
-
-      // Déduire du stock (séquentiel — les transactions nécessitent un replica set)
-      for (const item of order.items) {
-        const recipe = item.recipeId as any;
-        if (!recipe?.variants) {
-          continue;
-        }
-        const variant = recipe.variants[item.variantIndex];
-        if (!variant) {
-          continue;
-        }
-
-        for (const vi of variant.ingredients) {
-          const ing = vi.ingredientId as any;
-          if (!ing) {
-            continue;
-          }
-          if (
-            item.clientProvidedIngredients
-              .map((id: any) => id.toString())
-              .includes(ing._id.toString())
-          ) {
-            continue;
-          }
-
-          const needed = vi.quantity * item.quantity;
-
-          await Ingredient.findByIdAndUpdate(ing._id, { $inc: { stockQuantity: -needed } });
-
-          await StockHistory.create({
-            ingredientId: ing._id,
-            ingredientName: ing.name,
-            quantity: needed,
-            unit: vi.unit,
-            orderId: order._id,
-            clientName: order.clientName,
-            recipeName: recipe.name,
-            type: 'deduction',
-          });
-        }
-      }
-
-      logger.info(`Stock deduit pour commande ${order._id}`);
-    }
-
-    const oldStatus = order.status;
-    order.status = status;
-    await order.save();
-
-    logger.info(`Commande ${order._id} -> ${status} par ${req.user!.email}`);
-
-    // Notification Telegram (non-bloquant)
-    TelegramService.notifyStatusChange(order.clientName, order.clientPhone, oldStatus, status);
 
     res.json({
       success: true,

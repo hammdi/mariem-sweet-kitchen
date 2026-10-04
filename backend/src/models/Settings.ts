@@ -13,7 +13,14 @@ const settingSchema = new Schema<ISetting>(
       type: String,
       required: true,
       unique: true,
-      enum: ['stegTariff', 'waterForfaitSmall', 'waterForfaitLarge', 'marginPercent'],
+      enum: [
+        'stegTariff',
+        'waterForfaitSmall',
+        'waterForfaitLarge',
+        'marginPercent',
+        'orderMinLeadHours',
+        'actionAlertHours',
+      ],
     },
     value: {
       type: Number,

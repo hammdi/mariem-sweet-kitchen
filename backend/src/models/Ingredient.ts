@@ -8,6 +8,8 @@ export interface IIngredient extends Document {
   category: 'base' | 'sweetener' | 'dairy' | 'flavoring' | 'leavening' | 'other';
   isActive: boolean;
   stockQuantity: number;
+  minStock?: number; // seuil d'alerte (optionnel, meme unite que le stock)
+  referencePriceHistory: { price: number; changedAt: Date; reason?: string }[];
   description?: string;
   supplier?: string;
   lastPriceUpdate?: Date;
@@ -46,6 +48,22 @@ const ingredientSchema = new Schema<IIngredient>(
       default: 0,
       min: [0, 'Le stock ne peut pas etre negatif'],
     },
+    minStock: {
+      type: Number,
+      min: [0, 'Le seuil ne peut pas etre negatif'],
+    },
+    // Historique du prix de reference (pricePerUnit) : l'ancien prix n'est jamais perdu
+    referencePriceHistory: {
+      type: [
+        {
+          price: { type: Number, required: true },
+          changedAt: { type: Date, default: Date.now },
+          reason: { type: String, trim: true, maxlength: 100 },
+          _id: false,
+        },
+      ],
+      default: [],
+    },
     isActive: {
       type: Boolean,
       default: true,
@@ -77,9 +95,15 @@ ingredientSchema.index({ isActive: 1 });
 ingredientSchema.index({ pricePerUnit: 1 });
 
 // Middleware pour mettre à jour lastPriceUpdate
+// + garder une trace du prix de reference precedent
 ingredientSchema.pre('save', function (next) {
   if (this.isModified('pricePerUnit')) {
     this.lastPriceUpdate = new Date();
+    this.referencePriceHistory.push({
+      price: this.pricePerUnit,
+      changedAt: new Date(),
+      reason: (this as any).$locals?.priceChangeReason || (this.isNew ? 'creation' : 'manuel'),
+    });
   }
   next();
 });

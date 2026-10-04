@@ -19,16 +19,40 @@ export const errorHandler = (error: AppError, req: Request, res: Response, _next
     userAgent: req.get('User-Agent'),
   });
 
-  // Erreur de validation Mongoose
+  // Erreur de validation Mongoose — extraire les vrais messages
   if (error.name === 'ValidationError') {
     statusCode = 400;
-    message = 'Données de validation invalides';
+    const mongooseError = error as any;
+    if (mongooseError.errors) {
+      const messages = Object.values(mongooseError.errors).map((e: any) => e.message);
+      message = messages.join('. ');
+    } else {
+      message = 'Donnees invalides';
+    }
   }
 
   // Erreur de duplication Mongoose
   if (error.name === 'MongoError' && (error as any).code === 11000) {
     statusCode = 400;
-    message = 'Données dupliquées';
+    const keyValue = (error as any).keyValue;
+    if (keyValue) {
+      const field = Object.keys(keyValue)[0];
+      message = `"${keyValue[field]}" existe deja (champ: ${field})`;
+    } else {
+      message = 'Cette valeur existe deja';
+    }
+  }
+
+  // MongoServerError (MongoDB 5+)
+  if (error.name === 'MongoServerError' && (error as any).code === 11000) {
+    statusCode = 400;
+    const keyValue = (error as any).keyValue;
+    if (keyValue) {
+      const field = Object.keys(keyValue)[0];
+      message = `"${keyValue[field]}" existe deja (champ: ${field})`;
+    } else {
+      message = 'Cette valeur existe deja';
+    }
   }
 
   // Erreur de cast Mongoose
