@@ -27,7 +27,21 @@ export interface IOrderItem {
   clientProvidedIngredients: Types.ObjectId[]; // ce que Mariem confirme
   calculatedPrice: IPriceBreakdown;
   priceSnapshot?: IOrderPriceSnapshot;
+  // Emballage choisi pour CET article (quantités pour 1 article), prix figé au choix.
+  // Hors prix de la recette : s'ajoute au total de la commande.
+  packaging: IOrderItemPackaging[];
 }
+
+export interface IOrderItemPackaging {
+  packagingId: Types.ObjectId;
+  name: string;
+  quantity: number; // pour 1 article
+  unitPrice: number; // DT par pièce, figé
+}
+
+/** Coût d'emballage d'UN article (somme quantité × prix figé). */
+export const itemPackagingCost = (item: { packaging?: IOrderItemPackaging[] }) =>
+  (item.packaging || []).reduce((s, p) => s + (p.quantity || 0) * (p.unitPrice || 0), 0);
 
 export type OrderStatus =
   | 'pending'
@@ -156,6 +170,18 @@ const orderItemSchema = new Schema<IOrderItem>(
     priceSnapshot: {
       type: priceSnapshotSchema,
       default: undefined,
+    },
+    packaging: {
+      type: [
+        {
+          packagingId: { type: Schema.Types.ObjectId, ref: 'Ingredient', required: true },
+          name: { type: String, required: true, trim: true },
+          quantity: { type: Number, required: true, min: 0 },
+          unitPrice: { type: Number, required: true, min: 0 },
+          _id: false,
+        },
+      ],
+      default: [],
     },
   },
   { _id: false }
@@ -292,8 +318,9 @@ orderSchema.index({ clientId: 1, createdAt: -1 });
 // Arrondi au millime près (3 décimales) pour éviter les dérives flottantes sur la somme.
 orderSchema.pre('save', function (next) {
   if (this.isModified('items') || this.isModified('additionalFees')) {
+    // produits + emballage choisi pour chaque article
     const itemsTotal = this.items.reduce((sum, item) => {
-      return sum + (item.calculatedPrice?.total || 0) * item.quantity;
+      return sum + ((item.calculatedPrice?.total || 0) + itemPackagingCost(item)) * item.quantity;
     }, 0);
     const feesTotal = (this.additionalFees || []).reduce((sum, fee) => sum + (fee.amount || 0), 0);
     this.totalPrice = Math.round((itemsTotal + feesTotal) * 1000) / 1000;

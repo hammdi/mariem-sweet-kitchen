@@ -27,8 +27,17 @@ import AnimatedFlow from './AnimatedFlow';
  * Aucune action du panneau ne modifie de données.
  */
 export default function HelpPanel() {
-  const { panelOpen, closePanel, startTour, flowId, showFlow, openAi, reducedMotion, userReducedMotion, setUserReducedMotion } =
-    useHelp();
+  const {
+    panelOpen,
+    closePanel,
+    startTour,
+    flowId,
+    showFlow,
+    openAi,
+    reducedMotion,
+    userReducedMotion,
+    setUserReducedMotion,
+  } = useHelp();
   const { user } = useAdminData();
   const location = useLocation();
   const navigate = useNavigate();
@@ -58,7 +67,13 @@ export default function HelpPanel() {
 
   return (
     <>
-      {mobile && <Backdrop open={panelOpen} onClick={closePanel} sx={{ zIndex: 1255, bgcolor: 'rgba(28,18,10,0.35)' }} />}
+      {mobile && (
+        <Backdrop
+          open={panelOpen}
+          onClick={closePanel}
+          sx={{ zIndex: 1255, bgcolor: 'rgba(28,18,10,0.35)' }}
+        />
+      )}
       <Fade in={panelOpen} timeout={reducedMotion ? 0 : 200} unmountOnExit>
         <Paper
           role="dialog"
@@ -95,7 +110,12 @@ export default function HelpPanel() {
             }}
           >
             {flow ? (
-              <IconButton onClick={() => showFlow(null)} aria-label="Retour aux propositions" size="small" sx={{ mt: 0.25 }}>
+              <IconButton
+                onClick={() => showFlow(null)}
+                aria-label="Retour aux propositions"
+                size="small"
+                sx={{ mt: 0.25 }}
+              >
                 <ArrowBack />
               </IconButton>
             ) : (
@@ -154,19 +174,39 @@ export default function HelpPanel() {
                         bgcolor: color.surface,
                         textAlign: 'left',
                         transition: 'background-color 140ms, border-color 140ms, transform 140ms',
-                        '&:hover': { bgcolor: color.primarySoft, borderColor: color.primaryTint, transform: 'translateX(2px)' },
+                        '&:hover': {
+                          bgcolor: color.primarySoft,
+                          borderColor: color.primaryTint,
+                          transform: 'translateX(2px)',
+                        },
                       }}
                     >
                       <Box
                         aria-hidden
-                        sx={{ width: 36, height: 36, borderRadius: `${radius.sm}px`, bgcolor: color.bgSubtle, display: 'grid', placeItems: 'center', fontSize: 18, flexShrink: 0 }}
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: `${radius.sm}px`,
+                          bgcolor: color.bgSubtle,
+                          display: 'grid',
+                          placeItems: 'center',
+                          fontSize: 18,
+                          flexShrink: 0,
+                        }}
                       >
                         {a.icon}
                       </Box>
                       <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography sx={{ fontWeight: 700, fontSize: '0.92rem' }}>{a.label}</Typography>
+                        <Typography sx={{ fontWeight: 700, fontSize: '0.92rem' }}>
+                          {a.label}
+                        </Typography>
                         <Typography variant="caption" sx={{ color: color.inkSoft }}>
-                          {a.description || (a.kind === 'tour' ? 'Visite guidée' : a.kind === 'flow' ? 'Schéma animé' : 'Ouvrir la page')}
+                          {a.description ||
+                            (a.kind === 'tour'
+                              ? 'Visite guidée'
+                              : a.kind === 'flow'
+                                ? 'Schéma animé'
+                                : 'Ouvrir la page')}
                         </Typography>
                       </Box>
                       <ChevronRight sx={{ color: color.inkMuted }} />
@@ -174,11 +214,27 @@ export default function HelpPanel() {
                   ))}
                 </Box>
 
-                <Typography variant="overline" sx={{ color: color.inkMuted, fontSize: '0.68rem', display: 'block', mt: 2.5 }}>
+                <Typography
+                  variant="overline"
+                  sx={{ color: color.inkMuted, fontSize: '0.68rem', display: 'block', mt: 2.5 }}
+                >
                   Comprendre en images
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 0.5 }}>
-                  {(['sale', 'purchase', 'missing', 'order-check', 'payment', 'cash', 'stock', 'stats', 'recipe', 'cancel'] as const).map((id) => (
+                  {(
+                    [
+                      'sale',
+                      'purchase',
+                      'missing',
+                      'order-check',
+                      'payment',
+                      'cash',
+                      'stock',
+                      'stats',
+                      'recipe',
+                      'cancel',
+                    ] as const
+                  ).map((id) => (
                     <ButtonBase
                       key={id}
                       onClick={() => showFlow(id)}
@@ -214,7 +270,9 @@ export default function HelpPanel() {
                 >
                   <Forum sx={{ color: color.primary }} />
                   <Box sx={{ flex: 1 }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.9rem' }}>Poser une question à l’assistant</Typography>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.9rem' }}>
+                      Poser une question à l’assistant
+                    </Typography>
                     <Typography variant="caption" sx={{ color: color.inkSoft }}>
                       Réponse écrite (IA) — il ne modifie rien
                     </Typography>
@@ -239,7 +297,12 @@ export default function HelpPanel() {
             <Typography variant="caption" sx={{ color: color.inkSoft, flex: 1 }}>
               🔒 L’aide ne modifie jamais vos données.
             </Typography>
-            <Typography component="label" htmlFor="help-reduce-motion" variant="caption" sx={{ color: color.inkSoft }}>
+            <Typography
+              component="label"
+              htmlFor="help-reduce-motion"
+              variant="caption"
+              sx={{ color: color.inkSoft }}
+            >
               Moins d’animations
             </Typography>
             <Switch

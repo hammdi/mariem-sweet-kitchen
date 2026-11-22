@@ -19,6 +19,10 @@ export interface IRecipeVariant {
   portions: number;
   ingredients: IVariantIngredient[];
   appliances: IVariantAppliance[];
+  // Présentation client (catalogue) — jamais de coût ni d'ingrédient côté public
+  weightGrams?: number; // poids approximatif
+  dimensions?: string; // "Ø 20 cm", "20 × 30 cm"
+  saleMode?: string; // "À la pièce", "Boîte de 6", "Au kg"…
 }
 
 export interface IRecipe extends Document {
@@ -29,6 +33,7 @@ export interface IRecipe extends Document {
   categories: string[];
   isActive: boolean;
   variants: IRecipeVariant[];
+  recommendations: string[]; // conseils affichés au client (conservation, idéal pour…)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -84,6 +89,9 @@ const recipeVariantSchema = new Schema<IRecipeVariant>(
     },
     ingredients: [variantIngredientSchema],
     appliances: [variantApplianceSchema],
+    weightGrams: { type: Number, min: 0, max: 100000 },
+    dimensions: { type: String, trim: true, maxlength: 40 },
+    saleMode: { type: String, trim: true, maxlength: 40 },
   },
   { _id: false }
 );
@@ -123,6 +131,14 @@ const recipeSchema = new Schema<IRecipe>(
       validate: {
         validator: (v: IRecipeVariant[]) => v.length > 0,
         message: 'Au moins une taille (variant) est requise',
+      },
+    },
+    recommendations: {
+      type: [{ type: String, trim: true, maxlength: 140 }],
+      default: [],
+      validate: {
+        validator: (v: string[]) => v.length <= 8,
+        message: '8 recommandations maximum',
       },
     },
   },

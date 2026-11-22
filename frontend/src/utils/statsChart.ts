@@ -26,7 +26,11 @@ export interface Stats {
     unpriced: number;
     byMethod: Record<string, { total: number; count: number }>;
   };
-  expenses: { total: number; count: number; byMethod: Record<string, { total: number; count: number }> };
+  expenses: {
+    total: number;
+    count: number;
+    byMethod: Record<string, { total: number; count: number }>;
+  };
   orders: {
     total: number;
     byStatus: Record<string, number>;
@@ -97,4 +101,3 @@ export function buildChart(stats: Stats): StatsChart {
     balance,
   };
 }
-

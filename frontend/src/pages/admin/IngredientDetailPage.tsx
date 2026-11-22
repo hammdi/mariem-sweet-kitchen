@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
   Alert,
@@ -8,7 +8,6 @@ import {
   Button,
   Card,
   CardContent,
-  Checkbox,
   Chip,
   Collapse,
   Dialog,
@@ -17,7 +16,6 @@ import {
   DialogTitle,
   Divider,
   FormControl,
-  FormControlLabel,
   Grid,
   IconButton,
   InputLabel,
@@ -32,15 +30,27 @@ import {
   Add,
   Delete,
   History,
+  Inventory2,
   LocalOffer,
+  Place,
   ShoppingBasket,
   Star,
   TrendingFlat,
 } from '@mui/icons-material';
 import api, { withIdempotency } from '../../services/api';
 import { PageHeader } from '../../components/ui';
+import { color } from '../../theme/tokens';
+import {
+  averageComposition,
+  isStale,
+  PriceBasisCaption,
+} from '../../components/admin/IngredientPricing';
 import { useIdempotentAction } from '../../hooks/useIdempotencyKey';
 import SourceFormDialog from '../../components/admin/SourceFormDialog';
+import PromoPriceCheckbox from '../../components/admin/PromoPriceCheckbox';
+import StockAdjustDialog from '../../components/admin/StockAdjustDialog';
+import { tripTo, useTravel } from '../../components/map/useTravel';
+import { formatKm } from '../../utils/geo';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import PurchasePaymentSelect, {
   PurchasePaymentMethod,
@@ -83,15 +93,18 @@ const IngredientDetailPage = () => {
   const [priceTarget, setPriceTarget] = useState<IngredientOffer | null>(null);
   const [priceForm, setPriceForm] = useState({ price: '', checkedAt: today(), note: '' });
   const [removeTarget, setRemoveTarget] = useState<IngredientOffer | null>(null);
-  const [averageConfirm, setAverageConfirm] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  // ?action=achat|stock : ouvre directement l'achat ou la correction (depuis une liste)
+  const [searchParams, setSearchParams] = useSearchParams();
   const purchaseOp = useIdempotentAction(); // un achat = une clé : jamais enregistré deux fois
+  const { info: travel } = useTravel(); // distance et coût du trajet vers chaque source
   const [purchaseForm, setPurchaseForm] = useState({
     quantity: '',
     unitPrice: '',
     source: null as PurchaseSource | null,
     purchasedAt: today(),
-    updateSourcePrice: false,
+    promotion: false,
     paymentMethod: 'cash_register' as PurchasePaymentMethod,
   });
 
@@ -121,14 +134,43 @@ const IngredientDetailPage = () => {
     loadSources();
   }, [load]);
 
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (!ingredient || !action) return;
+    if (action === 'stock') setAdjustOpen(true);
+    if (action === 'achat') openPurchase();
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ingredient, searchParams]);
+
+  const openPurchase = () => {
+    setPurchaseForm({
+      quantity: '',
+      unitPrice: '',
+      source: null,
+      purchasedAt: today(),
+      promotion: false,
+      paymentMethod: 'cash_register',
+    });
+    purchaseOp.reset();
+    setPurchaseOpen(true);
+  };
+
   if (!ingredient || !summary) return null;
 
   const unit: string = ingredient.unit;
+  const isPack = ingredient.kind === 'packaging'; // emballage : même fiche, autre vocabulaire
+  const unitText = unit === 'piece' ? 'pièce(s)' : unit;
   const activeOffers = offers.filter((o) => o.isActive && o.sourceId?.isActive !== false);
   const inactiveOffers = offers.filter((o) => !activeOffers.includes(o));
   const usedSourceIds = new Set(activeOffers.map((o) => o.sourceId?._id));
-  const diffWithAverage =
-    summary.average !== null ? summary.average - ingredient.pricePerUnit : null;
+  const composition = averageComposition(offers, unit);
+  // Source active la plus proche du domicile (si les positions sont connues)
+  const nearestOfferId = activeOffers
+    .map((o) => ({ id: o._id, trip: tripTo(travel, o.sourceId?.location) }))
+    .filter((x) => x.trip)
+    .sort((a, b) => a.trip!.km - b.trip!.km)[0]?.id;
+  const staleCount = activeOffers.filter((o) => isStale(o.lastCheckedAt)).length;
 
   const addOffer = async () => {
     if (!addForm.source || addForm.price === '') {
@@ -179,19 +221,6 @@ const IngredientDetailPage = () => {
     }
   };
 
-  const applyAverage = async () => {
-    try {
-      const res = await api.post(`/ingredients/${id}/use-average-price`);
-      toast.success(
-        `Prix de référence : ${formatDT(res.data.data.previous, 4)} → ${formatDT(res.data.data.ingredient.pricePerUnit, 4)}`
-      );
-      setAverageConfirm(false);
-      load();
-    } catch {
-      /* ignore */
-    }
-  };
-
   const savePurchase = async () => {
     const quantity = parseFloat(purchaseForm.quantity);
     if (!quantity || quantity <= 0) {
@@ -203,32 +232,35 @@ const IngredientDetailPage = () => {
       toast.error('Indiquez le prix réellement payé');
       return;
     }
-    await purchaseOp.run(async (key) => {
-      const res = await api.post(
-        `/ingredients/${id}/purchases`,
-        {
-          quantity,
-          unitPrice,
-          sourceId: purchaseForm.source?._id,
-          purchasedAt: purchaseForm.purchasedAt,
-          updateSourcePrice: purchaseForm.updateSourcePrice,
-          paymentMethod: purchaseForm.paymentMethod,
-        },
-        withIdempotency(key)
-      );
-      const unblocked = res.data.data.unblockedOrders || [];
-      toast.success(
-        `+${quantity} ${unit} en stock · ` +
-          (res.data.data.cashMovement
-            ? `caisse −${formatDT(res.data.data.cashMovement.amount)}`
-            : `${PURCHASE_PAYMENT_LABELS[purchaseForm.paymentMethod]} : caisse inchangée`) +
-          (unblocked.length
-            ? ` · ${unblocked.map((u: any) => `CMD-${u.orderNumber}`).join(', ')} mise(s) à jour`
-            : '')
-      );
-      setPurchaseOpen(false);
-      load();
-    }).catch(() => undefined /* toast intercepteur */);
+    await purchaseOp
+      .run(async (key) => {
+        const res = await api.post(
+          `/ingredients/${id}/purchases`,
+          {
+            quantity,
+            unitPrice,
+            sourceId: purchaseForm.source?._id,
+            purchasedAt: purchaseForm.purchasedAt,
+            // par défaut le prix payé devient le prix de la source (sauf promotion)
+            promotion: purchaseForm.promotion,
+            paymentMethod: purchaseForm.paymentMethod,
+          },
+          withIdempotency(key)
+        );
+        const unblocked = res.data.data.unblockedOrders || [];
+        toast.success(
+          `+${quantity} ${unit} en stock · ` +
+            (res.data.data.cashMovement
+              ? `caisse −${formatDT(res.data.data.cashMovement.amount)}`
+              : `${PURCHASE_PAYMENT_LABELS[purchaseForm.paymentMethod]} : caisse inchangée`) +
+            (unblocked.length
+              ? ` · ${unblocked.map((u: any) => `CMD-${u.orderNumber}`).join(', ')} mise(s) à jour`
+              : '')
+        );
+        setPurchaseOpen(false);
+        load();
+      })
+      .catch(() => undefined /* toast intercepteur */);
   };
 
   return (
@@ -236,28 +268,26 @@ const IngredientDetailPage = () => {
       <PageHeader
         title={ingredient.name}
         subtitle={`Stock actuel : ${ingredient.stockQuantity ?? 0} ${unit}${ingredient.minStock ? ` · seuil ${ingredient.minStock} ${unit}` : ''}`}
-        backTo="/admin/ingredients"
+        backTo={isPack ? '/admin/packaging' : '/admin/ingredients'}
         helpFlow="purchase"
         actions={
-          <Button
-            variant="contained"
-            color="success"
-            startIcon={<ShoppingBasket />}
-            onClick={() => {
-              setPurchaseForm({
-                quantity: '',
-                unitPrice: '',
-                source: null,
-                purchasedAt: today(),
-                updateSourcePrice: false,
-                paymentMethod: 'cash_register',
-              });
-              purchaseOp.reset();
-              setPurchaseOpen(true);
-            }}
-          >
-            Enregistrer un achat
-          </Button>
+          <>
+            <Button
+              variant="outlined"
+              startIcon={<Inventory2 />}
+              onClick={() => setAdjustOpen(true)}
+            >
+              Corriger le stock
+            </Button>
+            <Button
+              variant="contained"
+              color="success"
+              startIcon={<ShoppingBasket />}
+              onClick={openPurchase}
+            >
+              Enregistrer un achat
+            </Button>
+          </>
         }
       />
 
@@ -268,11 +298,12 @@ const IngredientDetailPage = () => {
             <Card sx={{ height: '100%' }}>
               <CardContent sx={{ py: 1.5 }}>
                 <Typography variant="caption" color="text.secondary">
-                  Prix de reference (recettes)
+                  {isPack ? 'Prix utilisé (commandes)' : 'Prix utilisé (recettes)'}
                 </Typography>
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>
                   {formatDT(ingredient.pricePerUnit, 3)}/{unit}
                 </Typography>
+                <PriceBasisCaption ingredient={ingredient} summary={summary} />
               </CardContent>
             </Card>
           </Grid>
@@ -280,13 +311,20 @@ const IngredientDetailPage = () => {
             <Card sx={{ height: '100%' }}>
               <CardContent sx={{ py: 1.5 }}>
                 <Typography variant="caption" color="text.secondary">
-                  Prix moyen des sources
+                  Sources d’achat
                 </Typography>
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  {summary.average !== null ? `${formatDT(summary.average, 4)}/${unit}` : '—'}
+                  {summary.comparableCount}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {summary.comparableCount} source(s)
+                <Typography
+                  variant="caption"
+                  sx={{ color: staleCount ? color.warningDark : color.inkSoft }}
+                >
+                  {staleCount
+                    ? `${staleCount} prix à vérifier (+ de 3 mois)`
+                    : summary.comparableCount
+                      ? 'Prix à jour'
+                      : 'Aucune source'}
                 </Typography>
               </CardContent>
             </Card>
@@ -310,35 +348,84 @@ const IngredientDetailPage = () => {
             <Card sx={{ height: '100%' }}>
               <CardContent sx={{ py: 1.5 }}>
                 <Typography variant="caption" color="text.secondary">
-                  Stock maison
+                  {isPack ? 'Stock' : 'Stock maison'}
                 </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  {formatQty(ingredient.stockQuantity || 0)} {unit}
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 700,
+                    color: (ingredient.stockQuantity || 0) <= 0 ? color.dangerDark : undefined,
+                  }}
+                >
+                  {formatQty(ingredient.stockQuantity || 0)} {unitText}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {ingredient.minStock ? `Seuil : ${ingredient.minStock} ${unit}` : 'Pas de seuil'}
+                  {ingredient.minStock
+                    ? `Seuil : ${ingredient.minStock} ${unitText}`
+                    : 'Pas de seuil'}
                 </Typography>
+                <Box sx={{ display: 'flex', gap: 0.5, mt: 0.75, flexWrap: 'wrap' }}>
+                  <Button size="small" sx={{ px: 1 }} onClick={() => setAdjustOpen(true)}>
+                    Corriger
+                  </Button>
+                  <Button size="small" color="success" sx={{ px: 1 }} onClick={openPurchase}>
+                    + Achat
+                  </Button>
+                </Box>
               </CardContent>
             </Card>
           </Grid>
         </Grid>
 
-        {summary.average !== null &&
-          diffWithAverage !== null &&
-          Math.abs(diffWithAverage) > 0.0001 && (
-            <Alert
-              severity="info"
-              sx={{ mb: 2 }}
-              action={
-                <Button color="inherit" size="small" onClick={() => setAverageConfirm(true)}>
-                  Utiliser la moyenne
-                </Button>
-              }
-            >
-              Le prix de reference utilise dans les recettes ({formatDT(ingredient.pricePerUnit, 3)}
-              ) est different du prix moyen des sources ({formatDT(summary.average, 4)}).
-            </Alert>
-          )}
+        {/* Comment le prix utilisé est calculé */}
+        {composition.parts.length > 0 ? (
+          <Card
+            sx={{ mb: 2, p: 2, bgcolor: color.primarySoft, borderColor: color.primaryBorder }}
+            data-testid="price-composition"
+          >
+            <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+              Comment ce prix est calculé
+            </Typography>
+            <Typography variant="body2" sx={{ color: color.inkSoft, mb: 1 }}>
+              Prix utilisé dans {isPack ? 'les commandes' : 'les recettes et les factures'} =
+              moyenne des prix de vos sources (prix normaux, hors promotions). Il se met à jour tout
+              seul quand un prix de source change.
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1 }}>
+              {composition.parts.map((p, i) => (
+                <Chip
+                  key={i}
+                  size="small"
+                  variant="outlined"
+                  label={`${p.source} : ${formatDT(p.price, 3)}/${unit}`}
+                />
+              ))}
+            </Box>
+            <Typography sx={{ fontWeight: 700, color: color.primaryDark }}>
+              {composition.formula}
+            </Typography>
+          </Card>
+        ) : (
+          <Alert
+            severity="warning"
+            sx={{ mb: 2 }}
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => {
+                  setAddForm({ source: null, price: '', unit, checkedAt: today(), notes: '' });
+                  setAddOpen(true);
+                }}
+              >
+                Ajouter une source
+              </Button>
+            }
+          >
+            Ajoutez une source : sans source, le prix ({formatDT(ingredient.pricePerUnit, 3)}/{unit}
+            ) reste fixe.
+          </Alert>
+        )}
         {summary.incomparableCount > 0 && (
           <Alert severity="warning" sx={{ mb: 2 }}>
             {summary.incomparableCount} prix dans une unite non comparable a "{unit}" ne sont pas
@@ -375,7 +462,7 @@ const IngredientDetailPage = () => {
 
             {activeOffers.length === 0 && (
               <Typography color="text.secondary" sx={{ py: 2 }}>
-                Aucune source enregistree. Ajoutez ou vous achetez cet ingredient et a quel prix.
+                Aucune source enregistrée. Ajoutez où vous achetez cet ingrédient et à quel prix.
               </Typography>
             )}
 
@@ -401,6 +488,14 @@ const IngredientDetailPage = () => {
                           variant="outlined"
                           label={SOURCE_TYPE_LABELS[o.sourceId?.type] || ''}
                         />
+                        {isStale(o.lastCheckedAt) && (
+                          <Chip
+                            size="small"
+                            color="warning"
+                            variant="outlined"
+                            label="À vérifier"
+                          />
+                        )}
                         {isBest && (
                           <Chip
                             size="small"
@@ -409,11 +504,26 @@ const IngredientDetailPage = () => {
                             label="Meilleur prix"
                           />
                         )}
+                        {nearestOfferId === o._id && activeOffers.length > 1 && (
+                          <Chip size="small" color="info" icon={<Place />} label="La plus proche" />
+                        )}
                       </Box>
                       <Typography variant="caption" color="text.secondary">
-                        Verifie le {formatDate(o.lastCheckedAt)}
+                        Vérifié le {formatDate(o.lastCheckedAt)}
                         {o.notes ? ` · ${o.notes}` : ''}
                       </Typography>
+                      {(() => {
+                        const trip = tripTo(travel, o.sourceId?.location);
+                        return trip ? (
+                          <Typography
+                            variant="caption"
+                            sx={{ display: 'block', color: color.infoDark, fontWeight: 600 }}
+                          >
+                            📍 aller-retour ≈ {formatKm(trip.km)}
+                            {trip.cost > 0 ? ` · trajet ≈ ${trip.cost.toFixed(2)} DT` : ''}
+                          </Typography>
+                        ) : null;
+                      })()}
                     </Box>
                     <Typography
                       sx={{
@@ -482,14 +592,14 @@ const IngredientDetailPage = () => {
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Achats reels
+                  Achats réels
                 </Typography>
                 <Typography
                   variant="caption"
                   color="text.secondary"
                   sx={{ display: 'block', mb: 1 }}
                 >
-                  Prix reellement paye — independant du prix moyen.
+                  Prix réellement payé. Un prix promotionnel n’entre pas dans la moyenne.
                 </Typography>
                 {purchases.length === 0 && (
                   <Typography color="text.secondary">Aucun achat enregistré.</Typography>
@@ -515,16 +625,16 @@ const IngredientDetailPage = () => {
             </Card>
           </Grid>
 
-          {/* Historique du prix de reference */}
+          {/* Historique du prix utilisé */}
           <Grid item xs={12} md={5}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                  Historique du prix de reference
+                  Historique du prix utilisé
                 </Typography>
                 {(ingredient.referencePriceHistory || []).length === 0 && (
                   <Typography color="text.secondary">
-                    Pas encore de changement enregistre.
+                    Pas encore de changement enregistré.
                   </Typography>
                 )}
                 {[...(ingredient.referencePriceHistory || [])]
@@ -719,7 +829,6 @@ const IngredientDetailPage = () => {
                   setPurchaseForm({
                     ...purchaseForm,
                     source: v,
-                    updateSourcePrice: v ? purchaseForm.updateSourcePrice : false,
                   })
                 }
                 getOptionLabel={(s) => s.name}
@@ -737,18 +846,12 @@ const IngredientDetailPage = () => {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            {purchaseForm.source && purchaseForm.unitPrice !== '' && (
+            {purchaseForm.source && (
               <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={purchaseForm.updateSourcePrice}
-                      onChange={(e) =>
-                        setPurchaseForm({ ...purchaseForm, updateSourcePrice: e.target.checked })
-                      }
-                    />
-                  }
-                  label={`Mettre aussi a jour le prix de ${purchaseForm.source.name}`}
+                <PromoPriceCheckbox
+                  checked={purchaseForm.promotion}
+                  onChange={(promotion) => setPurchaseForm({ ...purchaseForm, promotion })}
+                  sourceName={purchaseForm.source.name}
                 />
               </Grid>
             )}
@@ -763,15 +866,21 @@ const IngredientDetailPage = () => {
             />
           </Box>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-            La quantite est ajoutee au stock et les commandes en attente de cet ingredient sont
-            recalculees. Le prix paye ne change pas le prix de reference des recettes.
+            La quantité est ajoutée au stock et les commandes en attente de cet ingrédient sont
+            recalculées. Les commandes déjà enregistrées gardent leur prix.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setPurchaseOpen(false)} size="large">
             Annuler
           </Button>
-          <Button variant="contained" color="success" onClick={savePurchase} size="large" disabled={purchaseOp.busy}>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={savePurchase}
+            size="large"
+            disabled={purchaseOp.busy}
+          >
             Enregistrer l'achat
           </Button>
         </DialogActions>
@@ -785,14 +894,10 @@ const IngredientDetailPage = () => {
         onConfirm={removeOffer}
         onCancel={() => setRemoveTarget(null)}
       />
-      <ConfirmDialog
-        open={averageConfirm}
-        title="Utiliser le prix moyen ?"
-        message={`Le prix de reference passera de ${formatDT(ingredient.pricePerUnit, 3)} a ${formatDT(summary.average, 4)} par ${unit}. Le prix de toutes les recettes qui utilisent ${ingredient.name} sera recalcule. L'ancien prix reste dans l'historique.`}
-        confirmLabel="Utiliser la moyenne"
-        confirmColor="primary"
-        onConfirm={applyAverage}
-        onCancel={() => setAverageConfirm(false)}
+      <StockAdjustDialog
+        target={adjustOpen ? ingredient : null}
+        onClose={() => setAdjustOpen(false)}
+        onSaved={() => load()}
       />
     </Box>
   );

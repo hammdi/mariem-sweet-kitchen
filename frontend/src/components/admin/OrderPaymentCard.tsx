@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
-import { Box, Button, Card, FormControl, InputLabel, MenuItem, Select, TextField, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  Card,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  TextField,
+  Typography,
+} from '@mui/material';
 import { Payments } from '@mui/icons-material';
 import api, { withIdempotency } from '../../services/api';
 import type { CashMovementRow } from '../../types/admin';
@@ -56,7 +66,8 @@ export default function OrderPaymentCard({
 
   if (!state) return null;
   const overpaid = Math.round((state.amountPaid - state.totalPrice) * 1000) / 1000;
-  const paidPct = state.totalPrice > 0 ? Math.min(100, (state.amountPaid / state.totalPrice) * 100) : 0;
+  const paidPct =
+    state.totalPrice > 0 ? Math.min(100, (state.amountPaid / state.totalPrice) * 100) : 0;
 
   const openDialog = (kind: 'payment' | 'refund') => {
     op.reset(); // nouvelle opération : nouvelle clé
@@ -73,7 +84,11 @@ export default function OrderPaymentCard({
     op
       .run(async (key) => {
         if (dialog === 'payment') {
-          await api.post(`/cash/orders/${orderId}/payment`, { amount: parseFloat(amount), method }, withIdempotency(key));
+          await api.post(
+            `/cash/orders/${orderId}/payment`,
+            { amount: parseFloat(amount), method },
+            withIdempotency(key)
+          );
           toast.success('Paiement enregistré en caisse');
         } else {
           await api.post(
@@ -89,12 +104,28 @@ export default function OrderPaymentCard({
       })
       .catch(() => undefined /* toast intercepteur */);
 
-  const Line = ({ label, value, valueColor, strong }: { label: string; value: string; valueColor?: string; strong?: boolean }) => (
+  const Line = ({
+    label,
+    value,
+    valueColor,
+    strong,
+  }: {
+    label: string;
+    value: string;
+    valueColor?: string;
+    strong?: boolean;
+  }) => (
     <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 0.4 }}>
-      <Typography variant="body2" sx={{ color: strong ? color.ink : color.inkSoft, fontWeight: strong ? 700 : 400 }}>
+      <Typography
+        variant="body2"
+        sx={{ color: strong ? color.ink : color.inkSoft, fontWeight: strong ? 700 : 400 }}
+      >
         {label}
       </Typography>
-      <Typography variant="body2" sx={{ fontWeight: 700, color: valueColor, fontVariantNumeric: 'tabular-nums' }}>
+      <Typography
+        variant="body2"
+        sx={{ fontWeight: 700, color: valueColor, fontVariantNumeric: 'tabular-nums' }}
+      >
         {value}
       </Typography>
     </Box>
@@ -116,12 +147,27 @@ export default function OrderPaymentCard({
         </Box>
         <PaymentStatusBadge status={state.paymentStatus} size="medium" />
       </Box>
-      <Box sx={{ height: 8, borderRadius: 4, bgcolor: color.bgSubtle, overflow: 'hidden', mb: 1 }} aria-hidden>
-        <Box sx={{ width: `${paidPct}%`, height: '100%', bgcolor: color.success, transition: 'width 600ms' }} />
+      <Box
+        sx={{ height: 8, borderRadius: 4, bgcolor: color.bgSubtle, overflow: 'hidden', mb: 1 }}
+        aria-hidden
+      >
+        <Box
+          sx={{
+            width: `${paidPct}%`,
+            height: '100%',
+            bgcolor: color.success,
+            transition: 'width 600ms',
+          }}
+        />
       </Box>
       <Line label="Total" value={formatDT(state.totalPrice)} />
       <Line label="Encaissé" value={formatDT(state.amountPaid)} valueColor={color.successDark} />
-      <Line label="Reste à encaisser" value={formatDT(state.remaining)} valueColor={state.remaining > 0 ? color.warningDark : undefined} strong />
+      <Line
+        label="Reste à encaisser"
+        value={formatDT(state.remaining)}
+        valueColor={state.remaining > 0 ? color.warningDark : undefined}
+        strong
+      />
       {overpaid > 0.0005 && (
         <Typography variant="caption" sx={{ color: color.dangerDark }}>
           Trop perçu : {formatDT(overpaid)} (le total a baissé après le paiement)
@@ -130,12 +176,23 @@ export default function OrderPaymentCard({
 
       <Box sx={{ display: 'flex', gap: 1, mt: 1.5, flexWrap: 'wrap' }}>
         {state.remaining > 0 && orderStatus !== 'cancelled' && (
-          <Button variant="contained" color="success" sx={{ flex: 1 }} onClick={() => openDialog('payment')} data-tour="order-collect">
+          <Button
+            variant="contained"
+            color="success"
+            sx={{ flex: 1 }}
+            onClick={() => openDialog('payment')}
+            data-tour="order-collect"
+          >
             Encaisser
           </Button>
         )}
         {state.amountPaid > 0 && (
-          <Button variant="outlined" color="warning" sx={{ flex: 1 }} onClick={() => openDialog('refund')}>
+          <Button
+            variant="outlined"
+            color="warning"
+            sx={{ flex: 1 }}
+            onClick={() => openDialog('refund')}
+          >
             Rembourser
           </Button>
         )}
@@ -145,11 +202,22 @@ export default function OrderPaymentCard({
         <Box sx={{ mt: 1.5, pt: 1.25, borderTop: `1px dashed ${color.borderStrong}` }}>
           {state.movements.map((m) => (
             <Box key={m._id} sx={{ display: 'flex', gap: 1, py: 0.35 }}>
-              <Box sx={{ width: 6, height: 6, mt: '7px', borderRadius: '50%', bgcolor: m.direction === 'in' ? color.success : color.danger, flexShrink: 0 }} />
+              <Box
+                sx={{
+                  width: 6,
+                  height: 6,
+                  mt: '7px',
+                  borderRadius: '50%',
+                  bgcolor: m.direction === 'in' ? color.success : color.danger,
+                  flexShrink: 0,
+                }}
+              />
               <Typography variant="caption" sx={{ color: color.inkSoft }}>
                 {formatDateTimeFr(m.occurredAt)} · {CASH_TYPE_LABELS[m.type]}
                 {m.reversalOf ? ' (correction)' : ''} ·{' '}
-                <strong style={{ color: m.direction === 'in' ? color.successDark : color.dangerDark }}>
+                <strong
+                  style={{ color: m.direction === 'in' ? color.successDark : color.dangerDark }}
+                >
                   {m.direction === 'in' ? '+' : '−'}
                   {formatDT(m.amount)}
                 </strong>{' '}
@@ -165,7 +233,11 @@ export default function OrderPaymentCard({
         onClose={() => setDialog(null)}
         maxWidth="xs"
         title={dialog === 'payment' ? 'Encaisser la commande' : 'Rembourser'}
-        subtitle={dialog === 'payment' ? 'L’argent reçu entre dans la caisse.' : 'L’argent rendu sort de la caisse.'}
+        subtitle={
+          dialog === 'payment'
+            ? 'L’argent reçu entre dans la caisse.'
+            : 'L’argent rendu sort de la caisse.'
+        }
         actions={
           <>
             <Button onClick={() => setDialog(null)}>Annuler</Button>
@@ -189,7 +261,9 @@ export default function OrderPaymentCard({
           onChange={(e) => setAmount(e.target.value)}
           inputProps={{ min: 0, step: 0.001, inputMode: 'decimal' }}
           sx={{ mt: 1, mb: 2 }}
-          helperText={dialog === 'payment' ? `Reste à encaisser : ${formatDT(state.remaining)}` : undefined}
+          helperText={
+            dialog === 'payment' ? `Reste à encaisser : ${formatDT(state.remaining)}` : undefined
+          }
         />
         <FormControl fullWidth sx={{ mb: dialog === 'refund' ? 2 : 0 }}>
           <InputLabel>Mode</InputLabel>
@@ -202,7 +276,12 @@ export default function OrderPaymentCard({
           </Select>
         </FormControl>
         {dialog === 'refund' && (
-          <TextField fullWidth label="Raison" value={reason} onChange={(e) => setReason(e.target.value)} />
+          <TextField
+            fullWidth
+            label="Raison"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
         )}
         <Box sx={{ mt: 2, p: 1.25, borderRadius: `${radius.sm}px`, bgcolor: color.bgSubtle }}>
           <Typography variant="caption" sx={{ color: color.inkSoft }}>

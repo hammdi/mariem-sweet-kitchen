@@ -1,7 +1,21 @@
 import { KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, ButtonBase, ClickAwayListener, InputBase, Paper, Popper, Typography } from '@mui/material';
-import { CakeOutlined, EggOutlined, PersonOutline, ReceiptLongOutlined, Search } from '@mui/icons-material';
+import {
+  Box,
+  ButtonBase,
+  ClickAwayListener,
+  InputBase,
+  Paper,
+  Popper,
+  Typography,
+} from '@mui/material';
+import {
+  CakeOutlined,
+  EggOutlined,
+  PersonOutline,
+  ReceiptLongOutlined,
+  Search,
+} from '@mui/icons-material';
 import api from '../../services/api';
 import { formatDT, orderRef } from '../../utils/format';
 import { color, radius, shadow } from '../../theme/tokens';
@@ -23,17 +37,19 @@ const ICONS = {
   Ingrédients: <EggOutlined fontSize="small" />,
 };
 
-const norm = (s: string) =>
-  s
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '');
+const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 /**
  * Recherche globale (barre du haut) : commandes (CMD-12, nom, téléphone),
  * clients, recettes, ingrédients. Lecture seule.
  */
-export default function GlobalSearch({ autoFocus = false, onDone }: { autoFocus?: boolean; onDone?: () => void }) {
+export default function GlobalSearch({
+  autoFocus = false,
+  onDone,
+}: {
+  autoFocus?: boolean;
+  onDone?: () => void;
+}) {
   const navigate = useNavigate();
   const anchor = useRef<HTMLDivElement>(null);
   const [term, setTerm] = useState('');
@@ -55,8 +71,14 @@ export default function GlobalSearch({ autoFocus = false, onDone }: { autoFocus?
     const t = window.setTimeout(async () => {
       try {
         if (!catalog.current) {
-          const [r, i] = await Promise.all([api.get('/recipes', { params: { limit: 200 } }), api.get('/ingredients', { params: { limit: 500 } })]);
-          catalog.current = { recipes: r.data.data?.recipes || [], ingredients: i.data.data?.ingredients || [] };
+          const [r, i] = await Promise.all([
+            api.get('/recipes', { params: { limit: 200 } }),
+            api.get('/ingredients', { params: { limit: 500 } }),
+          ]);
+          catalog.current = {
+            recipes: r.data.data?.recipes || [],
+            ingredients: i.data.data?.ingredients || [],
+          };
         }
         const [orders, clients] = await Promise.all([
           api.get('/orders', { params: { search: q, limit: 5 } }),
@@ -83,11 +105,23 @@ export default function GlobalSearch({ autoFocus = false, onDone }: { autoFocus?
           ...catalog.current.recipes
             .filter((r) => norm(r.name).includes(n))
             .slice(0, 4)
-            .map((r) => ({ group: 'Recettes' as const, id: r._id, label: r.name, hint: `${r.variants?.length || 0} taille(s)`, to: `/admin/recipes/${r._id}/edit` })),
+            .map((r) => ({
+              group: 'Recettes' as const,
+              id: r._id,
+              label: r.name,
+              hint: `${r.variants?.length || 0} taille(s)`,
+              to: `/admin/recipes/${r._id}/edit`,
+            })),
           ...catalog.current.ingredients
             .filter((i) => norm(i.name).includes(n))
             .slice(0, 4)
-            .map((i) => ({ group: 'Ingrédients' as const, id: i._id, label: i.name, hint: `stock ${i.stockQuantity ?? 0} ${i.unit}`, to: `/admin/ingredients/${i._id}` })),
+            .map((i) => ({
+              group: 'Ingrédients' as const,
+              id: i._id,
+              label: i.name,
+              hint: `${i.kind === 'packaging' ? 'emballage · ' : ''}stock ${i.stockQuantity ?? 0} ${i.unit}`,
+              to: `/admin/${i.kind === 'packaging' ? 'packaging' : 'ingredients'}/${i._id}`,
+            })),
         ];
         setResults(out);
         setActive(0);
@@ -151,13 +185,42 @@ export default function GlobalSearch({ autoFocus = false, onDone }: { autoFocus?
             onFocus={() => results.length && setOpen(true)}
             onKeyDown={onKey}
             placeholder="Rechercher une commande, un client, une recette..."
-            inputProps={{ 'aria-label': 'Rechercher une commande, un client, une recette', role: 'combobox', 'aria-expanded': open }}
-            sx={{ flex: 1, fontSize: '0.95rem', color: color.ink, '& input::placeholder': { color: color.inkMuted, opacity: 1 } }}
+            inputProps={{
+              'aria-label': 'Rechercher une commande, un client, une recette',
+              role: 'combobox',
+              'aria-expanded': open,
+            }}
+            sx={{
+              flex: 1,
+              fontSize: '0.95rem',
+              color: color.ink,
+              '& input::placeholder': { color: color.inkMuted, opacity: 1 },
+            }}
           />
-          {loading && <Typography variant="caption" sx={{ color: color.inkMuted }}>…</Typography>}
+          {loading && (
+            <Typography variant="caption" sx={{ color: color.inkMuted }}>
+              …
+            </Typography>
+          )}
         </Box>
-        <Popper open={open && term.trim().length >= 2} anchorEl={anchor.current} placement="bottom-start" sx={{ zIndex: 1350, width: anchor.current?.offsetWidth }}>
-          <Paper sx={{ mt: 1, borderRadius: `${radius.md}px`, border: `1px solid ${color.border}`, boxShadow: shadow.floating, maxHeight: 420, overflowY: 'auto', py: 0.75 }} role="listbox">
+        <Popper
+          open={open && term.trim().length >= 2}
+          anchorEl={anchor.current}
+          placement="bottom-start"
+          sx={{ zIndex: 1350, width: anchor.current?.offsetWidth }}
+        >
+          <Paper
+            sx={{
+              mt: 1,
+              borderRadius: `${radius.md}px`,
+              border: `1px solid ${color.border}`,
+              boxShadow: shadow.floating,
+              maxHeight: 420,
+              overflowY: 'auto',
+              py: 0.75,
+            }}
+            role="listbox"
+          >
             {results.length === 0 && !loading && (
               <Typography variant="body2" sx={{ px: 2, py: 1.5, color: color.inkSoft }}>
                 Aucun résultat pour « {term} ».
@@ -169,7 +232,16 @@ export default function GlobalSearch({ autoFocus = false, onDone }: { autoFocus?
               return (
                 <Box key={`${r.group}-${r.id}`}>
                   {header && (
-                    <Typography variant="overline" sx={{ display: 'block', px: 2, pt: 1, color: color.inkMuted, fontSize: '0.65rem' }}>
+                    <Typography
+                      variant="overline"
+                      sx={{
+                        display: 'block',
+                        px: 2,
+                        pt: 1,
+                        color: color.inkMuted,
+                        fontSize: '0.65rem',
+                      }}
+                    >
                       {r.group}
                     </Typography>
                   )}
@@ -178,15 +250,30 @@ export default function GlobalSearch({ autoFocus = false, onDone }: { autoFocus?
                     aria-selected={i === active}
                     onMouseEnter={() => setActive(i)}
                     onClick={() => go(r.to)}
-                    sx={{ width: '100%', display: 'flex', gap: 1.25, px: 2, py: 1, justifyContent: 'flex-start', bgcolor: i === active ? color.primarySoft : 'transparent', textAlign: 'left' }}
+                    sx={{
+                      width: '100%',
+                      display: 'flex',
+                      gap: 1.25,
+                      px: 2,
+                      py: 1,
+                      justifyContent: 'flex-start',
+                      bgcolor: i === active ? color.primarySoft : 'transparent',
+                      textAlign: 'left',
+                    }}
                   >
                     <Box sx={{ color: color.inkSoft, display: 'flex' }}>{ICONS[r.group]}</Box>
-                    <Typography sx={{ fontWeight: 600, fontSize: '0.9rem', flex: 1, minWidth: 0 }} noWrap>
+                    <Typography
+                      sx={{ fontWeight: 600, fontSize: '0.9rem', flex: 1, minWidth: 0 }}
+                      noWrap
+                    >
                       {r.label}
                     </Typography>
                     {r.status && <OrderStatusBadge status={r.status} />}
                     {r.hint && (
-                      <Typography variant="caption" sx={{ color: color.inkMuted, whiteSpace: 'nowrap' }}>
+                      <Typography
+                        variant="caption"
+                        sx={{ color: color.inkMuted, whiteSpace: 'nowrap' }}
+                      >
                         {r.hint}
                       </Typography>
                     )}

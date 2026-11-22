@@ -23,10 +23,19 @@ import api from '../../services/api';
 import ClientFormDialog from '../../components/admin/ClientFormDialog';
 import type { Client, ClientType } from '../../types/admin';
 import { CLIENT_TYPE_LABELS, formatDate, formatDT, formatPhone } from '../../utils/format';
-import { EmptyState, FilterChips, KpiCard, PageHeader, SkeletonRows, StatusBadge } from '../../components/ui';
+import {
+  EmptyState,
+  FilterChips,
+  KpiCard,
+  PageHeader,
+  SkeletonRows,
+  StatusBadge,
+} from '../../components/ui';
 import { color } from '../../theme/tokens';
 
-type ClientRow = Client & { stats?: { orderCount: number; revenue: number; lastOrderAt: string | null } };
+type ClientRow = Client & {
+  stats?: { orderCount: number; revenue: number; lastOrderAt: string | null };
+};
 
 const ClientsPage = () => {
   const navigate = useNavigate();
@@ -40,7 +49,9 @@ const ClientsPage = () => {
   useEffect(() => {
     const timer = setTimeout(async () => {
       try {
-        const res = await api.get('/clients', { params: { search: search.trim() || undefined, type: type || undefined, limit: 200 } });
+        const res = await api.get('/clients', {
+          params: { search: search.trim() || undefined, type: type || undefined, limit: 200 },
+        });
         setClients(res.data.data?.clients || []);
       } catch {
         setClients((prev) => prev || []);
@@ -69,20 +80,49 @@ const ClientsPage = () => {
         }
       />
 
-      <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: 'repeat(3, minmax(0,1fr))' }, mb: 2.5 }}>
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 1.5,
+          gridTemplateColumns: { xs: 'repeat(3, minmax(0,1fr))' },
+          mb: 2.5,
+        }}
+      >
         <KpiCard label="Clients" value={list.length} icon={<People />} tone="info" />
         <KpiCard label="Cafés" value={cafes} icon={<Storefront />} tone="violet" />
-        <KpiCard label="CA généré" value={revenue} format={(n) => formatDT(n)} icon={<Person />} tone="primary" hint="Ventes des clients affichés" />
+        <KpiCard
+          label="CA généré"
+          value={revenue}
+          format={(n) => formatDT(n)}
+          icon={<Person />}
+          tone="primary"
+          hint="Ventes des clients affichés"
+        />
       </Box>
 
-      <Card sx={{ p: { xs: 1.5, md: 2 }, mb: 2, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 1.5, alignItems: { md: 'center' } }}>
+      <Card
+        sx={{
+          p: { xs: 1.5, md: 2 },
+          mb: 2,
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          gap: 1.5,
+          alignItems: { md: 'center' },
+        }}
+      >
         <TextField
           size="small"
           placeholder="Rechercher par nom ou téléphone…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           inputProps={{ 'aria-label': 'Rechercher un client' }}
-          InputProps={{ startAdornment: <InputAdornment position="start"><Search /></InputAdornment> }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search />
+              </InputAdornment>
+            ),
+          }}
           sx={{ width: { xs: '100%', md: 320 } }}
         />
         <FilterChips
@@ -116,19 +156,45 @@ const ClientsPage = () => {
       ) : mobile ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           {list.map((c) => (
-            <ButtonBase key={c._id} onClick={() => open(c._id)} sx={{ display: 'flex', gap: 1.5, p: 1.5, borderRadius: '16px', bgcolor: color.surface, border: `1px solid ${color.border}`, textAlign: 'left' }}>
-              <Avatar sx={{ bgcolor: c.type === 'cafe' ? color.violet : color.primary, width: 40, height: 40 }}>{c.name[0]}</Avatar>
+            <ButtonBase
+              key={c._id}
+              onClick={() => open(c._id)}
+              sx={{
+                display: 'flex',
+                gap: 1.5,
+                p: 1.5,
+                borderRadius: '16px',
+                bgcolor: color.surface,
+                border: `1px solid ${color.border}`,
+                textAlign: 'left',
+              }}
+            >
+              <Avatar
+                sx={{
+                  bgcolor: c.type === 'cafe' ? color.violet : color.primary,
+                  width: 40,
+                  height: 40,
+                }}
+              >
+                {c.name[0]}
+              </Avatar>
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography sx={{ fontWeight: 700 }} noWrap>
                   {c.name}
                 </Typography>
                 <Typography variant="caption" sx={{ color: color.inkSoft, display: 'block' }}>
-                  {formatPhone(c.phone)} · {c.stats?.orderCount || 0} commande{(c.stats?.orderCount || 0) > 1 ? 's' : ''}
+                  {formatPhone(c.phone)} · {c.stats?.orderCount || 0} commande
+                  {(c.stats?.orderCount || 0) > 1 ? 's' : ''}
                 </Typography>
               </Box>
               <Box sx={{ textAlign: 'right' }}>
-                <StatusBadge tone={c.type === 'cafe' ? 'violet' : 'neutral'} label={CLIENT_TYPE_LABELS[c.type]} />
-                <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', mt: 0.5 }}>{formatDT(c.stats?.revenue || 0)}</Typography>
+                <StatusBadge
+                  tone={c.type === 'cafe' ? 'violet' : 'neutral'}
+                  label={CLIENT_TYPE_LABELS[c.type]}
+                />
+                <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', mt: 0.5 }}>
+                  {formatDT(c.stats?.revenue || 0)}
+                </Typography>
               </Box>
             </ButtonBase>
           ))}
@@ -148,12 +214,30 @@ const ClientsPage = () => {
             </TableHead>
             <TableBody>
               {list.map((c) => (
-                <TableRow key={c._id} hover tabIndex={0} onClick={() => open(c._id)} onKeyDown={(e) => e.key === 'Enter' && open(c._id)} sx={{ cursor: 'pointer' }}>
+                <TableRow
+                  key={c._id}
+                  hover
+                  tabIndex={0}
+                  onClick={() => open(c._id)}
+                  onKeyDown={(e) => e.key === 'Enter' && open(c._id)}
+                  sx={{ cursor: 'pointer' }}
+                >
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-                      <Avatar sx={{ bgcolor: c.type === 'cafe' ? color.violet : color.primary, width: 34, height: 34, fontSize: '0.9rem' }}>{c.name[0]}</Avatar>
+                      <Avatar
+                        sx={{
+                          bgcolor: c.type === 'cafe' ? color.violet : color.primary,
+                          width: 34,
+                          height: 34,
+                          fontSize: '0.9rem',
+                        }}
+                      >
+                        {c.name[0]}
+                      </Avatar>
                       <Box>
-                        <Typography sx={{ fontWeight: 700, fontSize: '0.92rem' }}>{c.name}</Typography>
+                        <Typography sx={{ fontWeight: 700, fontSize: '0.92rem' }}>
+                          {c.name}
+                        </Typography>
                         {(c.contactPerson || c.address) && (
                           <Typography variant="caption" sx={{ color: color.inkSoft }}>
                             {[c.contactPerson, c.address].filter(Boolean).join(' · ')}
@@ -164,7 +248,10 @@ const ClientsPage = () => {
                   </TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatPhone(c.phone)}</TableCell>
                   <TableCell>
-                    <StatusBadge tone={c.type === 'cafe' ? 'violet' : 'neutral'} label={CLIENT_TYPE_LABELS[c.type]} />
+                    <StatusBadge
+                      tone={c.type === 'cafe' ? 'violet' : 'neutral'}
+                      label={CLIENT_TYPE_LABELS[c.type]}
+                    />
                   </TableCell>
                   <TableCell align="right" sx={{ fontWeight: 700 }}>
                     {c.stats?.orderCount || 0}
@@ -172,7 +259,9 @@ const ClientsPage = () => {
                   <TableCell align="right" sx={{ fontWeight: 800, whiteSpace: 'nowrap' }}>
                     {formatDT(c.stats?.revenue || 0)}
                   </TableCell>
-                  <TableCell sx={{ color: color.inkSoft }}>{c.stats?.lastOrderAt ? formatDate(c.stats.lastOrderAt) : '—'}</TableCell>
+                  <TableCell sx={{ color: color.inkSoft }}>
+                    {c.stats?.lastOrderAt ? formatDate(c.stats.lastOrderAt) : '—'}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

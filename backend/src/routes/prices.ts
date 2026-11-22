@@ -9,13 +9,17 @@ import { Appliance } from '../models/Appliance';
 import { authenticate, authorize } from '../middleware/auth';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { round } from '../services/unitService';
+import { packagingForecastLine, quotePackaging } from '../services/packagingService';
 
 const router = express.Router();
 
-// @desc    Calculer le prix d'un variant (public)
+// @desc    Détail du prix d'un variant (ingrédients, électricité, eau, marge) — admin
 // @route   POST /api/prices/calculate
+// Le détail du calcul est réservé à l'atelier ; le public voit seulement le prix (/api/catalog).
 router.post(
   '/calculate',
+  authenticate,
+  authorize('admin'),
   asyncHandler(async (req: Request, res: Response) => {
     const { recipeId, variantIndex, clientProvidedIngredients } = req.body;
 
@@ -94,6 +98,7 @@ interface QuoteItemInput {
   variantIndex?: number;
   quantity?: number;
   clientProvidedIngredients?: string[];
+  packaging?: { packagingId: string; quantity: number }[];
   custom?: {
     name?: string;
     sizeName?: string;
@@ -122,6 +127,8 @@ router.post(
     const errors: string[] = [];
     const forecast: ForecastLine[] = [];
     let itemsTotalRaw = 0; // même arrondi que Order.pre('save') : sur la somme, pas par ligne
+    let productsTotalRaw = 0;
+    let packagingTotalRaw = 0;
 
     for (const item of items) {
       const quantity = Math.max(1, Math.floor(Number(item.quantity) || 1));
@@ -179,6 +186,8 @@ router.post(
         continue;
       }
 
+      const pack = await quotePackaging(item.packaging);
+
       let breakdown;
       try {
         breakdown = PriceCalculationService.computeVariantPrice(variant, settings, provided);
@@ -191,8 +200,11 @@ router.post(
         label,
         sizeName,
         quantity,
-        unitPrice: breakdown.total,
-        lineTotal: round(breakdown.total * quantity),
+        unitPrice: breakdown.total, // prix du produit (recette), sans emballage
+        packaging: pack.lines, // quantités pour 1 article
+        packagingUnitCost: pack.unitCost,
+        portions: variant.portions || 1,
+        lineTotal: round((breakdown.total + pack.unitCost) * quantity),
         breakdown: {
           ingredientsCost: breakdown.ingredientsCost,
           electricityCost: breakdown.electricityCost,
@@ -201,7 +213,13 @@ router.post(
         },
       });
       forecast.push({ variant, quantity, clientProvidedIngredients: provided, label });
-      itemsTotalRaw += breakdown.total * quantity;
+      const packLine = packagingForecastLine(pack.forecast, quantity, label);
+      if (packLine) {
+        forecast.push(packLine);
+      }
+      productsTotalRaw += breakdown.total * quantity;
+      packagingTotalRaw += pack.unitCost * quantity;
+      itemsTotalRaw += (breakdown.total + pack.unitCost) * quantity;
     }
 
     const itemsTotal = itemsTotalRaw;
@@ -211,7 +229,9 @@ router.post(
       success: true,
       data: {
         lines,
-        itemsTotal: round(itemsTotal),
+        itemsTotal: round(itemsTotal), // produits + emballages
+        productsTotal: round(productsTotalRaw),
+        packagingTotal: round(packagingTotalRaw),
         feesTotal: round(feesTotal),
         total: round(itemsTotal + feesTotal),
         // stock disponible pour cette nouvelle commande, apres les commandes deja prevues avant

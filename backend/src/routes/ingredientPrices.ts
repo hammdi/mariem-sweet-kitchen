@@ -9,7 +9,11 @@ import { asyncHandler, createError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 import { idempotent } from '../middleware/idempotency';
 import { areUnitsCompatible, convertUnitPrice } from '../services/unitService';
-import { summarizeOffers } from '../services/ingredientPriceService';
+import {
+  effectiveOffers,
+  summarizeOffers,
+  syncIngredientPrice,
+} from '../services/ingredientPriceService';
 import { recordStockPurchase } from '../services/stockPurchaseService';
 
 /**
@@ -42,20 +46,6 @@ function parsePrice(input: unknown): number {
   return price;
 }
 
-// Une offre compte dans la moyenne si elle et sa source sont actives
-const effectiveOffers = (offers: IIngredientPrice[]) =>
-  offers.map((o) => {
-    const src = o.sourceId as any;
-    const sourceActive = !src || typeof src !== 'object' || src.isActive !== false;
-    return {
-      _id: o._id,
-      price: o.price,
-      unit: o.unit,
-      isActive: o.isActive && sourceActive,
-      sourceId: o.sourceId,
-    };
-  });
-
 // @desc    Résumé (nb sources, meilleur prix, prix moyen) pour tous les ingrédients
 // @route   GET /api/ingredients/price-summary
 router.get(
@@ -63,7 +53,7 @@ router.get(
   admin,
   asyncHandler(async (_req: Request, res: Response) => {
     const [ingredients, offers, purchases] = await Promise.all([
-      Ingredient.find({ isActive: true }).select('unit'),
+      Ingredient.find({ isActive: true }).select('unit priceBasis pricePerUnit'),
       IngredientPrice.find({ isActive: true }).populate('sourceId', 'name isActive'),
       // dernier prix reellement paye (achat), par ingredient
       StockHistory.aggregate([
@@ -192,6 +182,7 @@ router.post(
     offer.history.push({ price, unit, checkedAt, recordedAt: new Date() });
     await offer.save();
 
+    await syncIngredientPrice(ingredient._id); // prix utilisé = moyenne des sources
     logger.info(`Prix ${ingredient.name} @ ${source.name}: ${price} DT/${unit}`);
     res.status(201).json({ success: true, data: { offer } });
   })
@@ -228,6 +219,7 @@ router.put(
       offer.notes = req.body.notes;
     }
     await offer.save();
+    await syncIngredientPrice(offer.ingredientId);
     res.json({ success: true, data: { offer } });
   })
 );
@@ -247,38 +239,27 @@ router.delete(
     }
     offer.isActive = false;
     await offer.save();
+    await syncIngredientPrice(offer.ingredientId);
     res.json({ success: true, message: 'Source retirée (historique conservé)' });
   })
 );
 
-// @desc    Utiliser le prix moyen des sources comme prix de référence (action explicite)
+// @desc    Recalculer le prix utilisé (moyenne des sources) — normalement automatique
 // @route   POST /api/ingredients/:id/use-average-price
 router.post(
   '/:id/use-average-price',
   admin,
   asyncHandler(async (req: Request, res: Response) => {
-    const ingredient = await Ingredient.findById(req.params.id);
-    if (!ingredient) {
+    const before = await Ingredient.findById(req.params.id);
+    if (!before) {
       throw createError('Ingrédient non trouvé', 404);
     }
-    const offers = await IngredientPrice.find({ ingredientId: ingredient._id }).populate(
-      'sourceId',
-      'name isActive'
-    );
-    const summary = summarizeOffers(effectiveOffers(offers), ingredient.unit);
-    if (summary.average === null) {
+    const previous = before.pricePerUnit;
+    const result = await syncIngredientPrice(before._id);
+    if (!result || result.ingredient.priceBasis !== 'sources') {
       throw createError('Aucun prix de source valide pour calculer une moyenne', 400);
     }
-
-    const previous = ingredient.pricePerUnit;
-    ingredient.pricePerUnit = summary.average;
-    (ingredient as any).$locals.priceChangeReason = 'moyenne des sources';
-    await ingredient.save();
-
-    logger.info(
-      `Prix de reference ${ingredient.name}: ${previous} -> ${summary.average} (moyenne) par ${req.user!.email}`
-    );
-    res.json({ success: true, data: { ingredient, previous, summary } });
+    res.json({ success: true, data: { ingredient: result.ingredient, previous } });
   })
 );
 
@@ -295,7 +276,8 @@ router.post(
           ingredientId: req.params.id,
           quantity: req.body.quantity,
           unitPrice: req.body.unitPrice,
-          updateSourcePrice: req.body.updateSourcePrice === true,
+          updateSourcePrice: req.body.updateSourcePrice,
+          promotion: req.body.promotion,
         },
       ],
       paymentMethod: req.body.paymentMethod,

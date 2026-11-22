@@ -49,7 +49,9 @@ export default function LineChart({
   const ih = height - pad.top - pad.bottom;
   const x = (i: number) => pad.left + (n <= 1 ? iw / 2 : (i / (n - 1)) * iw);
   const y = (v: number) => pad.top + ih - ((v - min) / (top - min || 1)) * ih;
-  const line = values.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+  const line = values
+    .map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`)
+    .join('');
   const area = n ? `${line}L${x(n - 1).toFixed(1)},${y(min)}L${x(0).toFixed(1)},${y(min)}Z` : '';
   const every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(iw / 56))));
   const gradId = `lc-${color.replace('#', '')}`;
@@ -87,15 +89,35 @@ export default function LineChart({
         </defs>
         {ticks.map((t) => (
           <g key={t}>
-            <line x1={pad.left} x2={width - pad.right} y1={y(min + t)} y2={y(min + t)} stroke={CHART.grid} strokeDasharray={t ? '3 4' : undefined} />
-            <text x={pad.left - 8} y={y(min + t) + 4} textAnchor="end" fontSize={11} fill={CHART.muted}>
+            <line
+              x1={pad.left}
+              x2={width - pad.right}
+              y1={y(min + t)}
+              y2={y(min + t)}
+              stroke={CHART.grid}
+              strokeDasharray={t ? '3 4' : undefined}
+            />
+            <text
+              x={pad.left - 8}
+              y={y(min + t) + 4}
+              textAnchor="end"
+              fontSize={11}
+              fill={CHART.muted}
+            >
               {format(min + t).replace(' DT', '')}
             </text>
           </g>
         ))}
         {labels.map((l, i) =>
           i % every === 0 ? (
-            <text key={i} x={x(i)} y={height - 8} textAnchor="middle" fontSize={11} fill={CHART.muted}>
+            <text
+              key={i}
+              x={x(i)}
+              y={height - 8}
+              textAnchor="middle"
+              fontSize={11}
+              fill={CHART.muted}
+            >
               {l}
             </text>
           ) : null
@@ -112,19 +134,43 @@ export default function LineChart({
           style={
             reducedMotion()
               ? undefined
-              : { strokeDasharray: 1, strokeDashoffset: 0, animation: 'lc-draw 900ms cubic-bezier(0.16,1,0.3,1) both' }
+              : {
+                  strokeDasharray: 1,
+                  strokeDashoffset: 0,
+                  animation: 'lc-draw 900ms cubic-bezier(0.16,1,0.3,1) both',
+                }
           }
         />
-        <style>{'@keyframes lc-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }'}</style>
+        <style>
+          {'@keyframes lc-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }'}
+        </style>
         {dots &&
           values.map((v, i) => (
-            <circle key={i} cx={x(i)} cy={y(v)} r={3.5} fill={color} style={reducedMotion() ? undefined : { animation: `lc-dot 400ms ease-out ${300 + i * 25}ms both` }} />
+            <circle
+              key={i}
+              cx={x(i)}
+              cy={y(v)}
+              r={3.5}
+              fill={color}
+              style={
+                reducedMotion()
+                  ? undefined
+                  : { animation: `lc-dot 400ms ease-out ${300 + i * 25}ms both` }
+              }
+            />
           ))}
         <style>{'@keyframes lc-dot { from { opacity: 0; } to { opacity: 1; } }'}</style>
         {hover !== null && (
           <g>
             <line x1={x(hover)} x2={x(hover)} y1={pad.top} y2={pad.top + ih} stroke={CHART.axis} />
-            <circle cx={x(hover)} cy={y(values[hover])} r={5} fill="#fff" stroke={color} strokeWidth={2.5} />
+            <circle
+              cx={x(hover)}
+              cy={y(values[hover])}
+              r={5}
+              fill="#fff"
+              stroke={color}
+              strokeWidth={2.5}
+            />
           </g>
         )}
       </svg>
@@ -146,8 +192,14 @@ export default function LineChart({
           }}
         >
           <Typography sx={{ fontSize: '0.72rem', opacity: 0.8 }}>{longLabels[hover]}</Typography>
-          <Typography sx={{ fontSize: '0.9rem', fontWeight: 700 }}>{format(values[hover])}</Typography>
-          {tooltipExtra?.(hover) && <Typography sx={{ fontSize: '0.72rem', opacity: 0.8 }}>{tooltipExtra(hover)}</Typography>}
+          <Typography sx={{ fontSize: '0.9rem', fontWeight: 700 }}>
+            {format(values[hover])}
+          </Typography>
+          {tooltipExtra?.(hover) && (
+            <Typography sx={{ fontSize: '0.72rem', opacity: 0.8 }}>
+              {tooltipExtra(hover)}
+            </Typography>
+          )}
         </Box>
       )}
     </Box>

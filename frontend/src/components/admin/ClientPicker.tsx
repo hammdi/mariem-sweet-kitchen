@@ -161,7 +161,9 @@ export default function ClientPicker({ value, onChange }: Props) {
         renderInput={(params) => (
           <TextField
             {...params}
-            label={type === 'cafe' ? 'Rechercher un café (nom ou tél.)' : 'Rechercher (nom ou tél.)'}
+            label={
+              type === 'cafe' ? 'Rechercher un café (nom ou tél.)' : 'Rechercher (nom ou tél.)'
+            }
           />
         )}
       />

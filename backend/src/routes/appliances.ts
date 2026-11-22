@@ -8,9 +8,11 @@ const router = express.Router();
 
 // @desc    Récupérer tous les appareils
 // @route   GET /api/appliances
-// @access  Public
+// @access  Admin
 router.get(
   '/',
+  authenticate,
+  authorize('admin'), // machines et puissances : composition des recettes, réservée à l'atelier
   asyncHandler(async (req: Request, res: Response) => {
     const {
       page = 1,
@@ -66,9 +68,11 @@ router.get(
 
 // @desc    Récupérer un appareil par ID
 // @route   GET /api/appliances/:id
-// @access  Public
+// @access  Admin
 router.get(
   '/:id',
+  authenticate,
+  authorize('admin'),
   asyncHandler(async (req: Request, res: Response) => {
     const appliance = await Appliance.findById(req.params.id);
 
@@ -186,7 +190,7 @@ router.delete(
 
 // @desc    Calculer la consommation électrique
 // @route   POST /api/appliances/:id/calculate-consumption
-// @access  Public
+// @access  Admin
 router.post(
   '/:id/calculate-consumption',
   asyncHandler(async (req: Request, res: Response) => {

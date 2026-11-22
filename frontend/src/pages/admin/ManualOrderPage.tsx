@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api, { withIdempotency } from '../../services/api';
 import { useIdempotentAction } from '../../hooks/useIdempotencyKey';
@@ -31,6 +31,9 @@ import type { Client, Quote } from '../../types/admin';
 import { formatDT } from '../../utils/format';
 import { getOrderFormIssues } from '../../utils/orderForm';
 import DateTimeField from '../../components/common/DateTimeField';
+import FeesEditor, { FeeDraft, toFees } from '../../components/admin/FeesEditor';
+import PackagingPicker, { usePackagingOptions } from '../../components/admin/PackagingPicker';
+import type { PackagingChoice } from '../../utils/packaging';
 
 interface CustomIngredient {
   ingredientId: string;
@@ -61,11 +64,7 @@ interface OrderItemForm {
   // Common
   quantity: number;
   clientProvidedIngredients: string[];
-}
-
-interface FeeItem {
-  label: string;
-  amount: number;
+  packaging: PackagingChoice[]; // emballage de CET article (hors prix de la recette)
 }
 
 const emptyItem = (): OrderItemForm => ({
@@ -81,7 +80,17 @@ const emptyItem = (): OrderItemForm => ({
   customAppliances: [],
   quantity: 1,
   clientProvidedIngredients: [],
+  packaging: [],
 });
+
+/** Article prérempli depuis le calculateur de prix (navigation avec state). */
+export interface PrefilledItem {
+  recipeId: string;
+  recipeName: string;
+  variantIndex: number;
+  quantity: number;
+  packaging: PackagingChoice[];
+}
 
 const ManualOrderPage = () => {
   const navigate = useNavigate();
@@ -95,10 +104,16 @@ const ManualOrderPage = () => {
   const [notes, setNotes] = useState('');
 
   // Items
-  const [items, setItems] = useState<OrderItemForm[]>([emptyItem()]);
+  // Articles préremplis depuis « Calculer un prix » (sinon un article vide)
+  const location = useLocation();
+  const [items, setItems] = useState<OrderItemForm[]>(() => {
+    const pre = (location.state as { items?: PrefilledItem[] } | null)?.items;
+    return pre?.length ? pre.map((p) => ({ ...emptyItem(), ...p })) : [emptyItem()];
+  });
 
   // Fees
-  const [fees, setFees] = useState<FeeItem[]>([]);
+  const [fees, setFees] = useState<FeeDraft[]>([]);
+  const packagingOptions = usePackagingOptions();
 
   // Save as recipe
   const [saveAsRecipe, setSaveAsRecipe] = useState(false);
@@ -137,7 +152,7 @@ const ManualOrderPage = () => {
       try {
         const [recRes, ingRes, appRes] = await Promise.all([
           api.get('/recipes?limit=200'),
-          api.get('/ingredients'),
+          api.get('/ingredients?kind=ingredient&limit=500'), // les emballages se choisissent à part
           api.get('/appliances'),
         ]);
         setRecipes(recRes.data.data?.recipes || []);
@@ -150,8 +165,31 @@ const ManualOrderPage = () => {
     load();
   }, []);
 
+  // Nombre de portions d'un article (pour proposer 1 emballage par portion)
+  const portionsOf = (item: OrderItemForm) =>
+    item.mode === 'custom'
+      ? item.customPortions || 1
+      : recipes.find((r) => r._id === item.recipeId)?.variants?.[item.variantIndex]?.portions || 1;
+
   const updateItem = (index: number, updates: Partial<OrderItemForm>) => {
-    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, ...updates } : item)));
+    setItems((prev) =>
+      prev.map((item, i) => {
+        if (i !== index) return item;
+        const next = { ...item, ...updates };
+        // taille ou recette changée : les emballages « par portion » suivent le nombre de portions
+        const before = portionsOf(item);
+        const after = portionsOf(next);
+        if (before !== after && !updates.packaging) {
+          next.packaging = next.packaging.map((c) => {
+            const o = packagingOptions?.find((x) => x._id === c.packagingId);
+            return o?.packagingUse === 'per_portion' && c.quantity === before
+              ? { ...c, quantity: after }
+              : c;
+          });
+        }
+        return next;
+      })
+    );
   };
 
   const removeItem = (index: number) => {
@@ -222,11 +260,13 @@ const ManualOrderPage = () => {
           variantIndex: item.variantIndex,
           quantity: item.quantity,
           clientProvidedIngredients: item.clientProvidedIngredients,
+          packaging: item.packaging.filter((p) => p.quantity > 0),
         };
       }
       return {
         quantity: item.quantity,
         clientProvidedIngredients: item.clientProvidedIngredients,
+        packaging: item.packaging.filter((p) => p.quantity > 0),
         custom: {
           name: item.customName,
           description: item.customDescription,
@@ -249,7 +289,7 @@ const ManualOrderPage = () => {
       };
     });
 
-  const validFees = useMemo(() => fees.filter((f) => f.label && f.amount > 0), [fees]);
+  const validFees = useMemo(() => toFees(fees), [fees]);
 
   // Apercu du prix et du stock AVANT creation (recalcule a chaque modification)
   useEffect(() => {
@@ -283,22 +323,24 @@ const ManualOrderPage = () => {
       return;
     }
 
-    await op.run(async (key) => {
-      const payload = {
-        clientId: client._id,
-        notes,
-        requestedDate: requestedDate || null,
-        saveAsRecipe,
-        additionalFees: validFees,
-        items: buildItemsPayload(items),
-      };
+    await op
+      .run(async (key) => {
+        const payload = {
+          clientId: client._id,
+          notes,
+          requestedDate: requestedDate || null,
+          saveAsRecipe,
+          additionalFees: validFees,
+          items: buildItemsPayload(items),
+        };
 
-      const res = await api.post('/orders/manual', payload, withIdempotency(key));
-      const order = res.data.data.order;
-      toast.success(`Commande CMD-${order.orderNumber} enregistrée`);
-      // Fiche de la commande : ingrédients disponibles / manquants, date du besoin
-      navigate(`/admin/orders/${order._id}`);
-    }).catch(() => undefined /* message du serveur affiché par l'intercepteur */);
+        const res = await api.post('/orders/manual', payload, withIdempotency(key));
+        const order = res.data.data.order;
+        toast.success(`Commande CMD-${order.orderNumber} enregistrée`);
+        // Fiche de la commande : ingrédients disponibles / manquants, date du besoin
+        navigate(`/admin/orders/${order._id}`);
+      })
+      .catch(() => undefined /* message du serveur affiché par l'intercepteur */);
   };
 
   return (
@@ -343,67 +385,13 @@ const ManualOrderPage = () => {
               </CardContent>
             </Card>
 
-            {/* Frais supplementaires */}
+            {/* Frais supplémentaires : transport, emballage… (hors prix des recettes) */}
             <Card sx={{ mt: 2 }}>
               <CardContent>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    mb: 1,
-                  }}
-                >
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    Frais supplementaires
-                  </Typography>
-                  <IconButton
-                    size="small"
-                    onClick={() => setFees([...fees, { label: '', amount: 0 }])}
-                  >
-                    <Add fontSize="small" />
-                  </IconButton>
-                </Box>
-                {fees.length === 0 && (
-                  <Typography variant="body2" color="text.secondary">
-                    Livraison, emballage spécial…
-                  </Typography>
-                )}
-                {fees.map((fee, i) => (
-                  <Box key={i} sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
-                    <TextField
-                      size="small"
-                      label="Libelle"
-                      value={fee.label}
-                      sx={{ flex: 2 }}
-                      onChange={(e) =>
-                        setFees(
-                          fees.map((f, fi) => (fi === i ? { ...f, label: e.target.value } : f))
-                        )
-                      }
-                    />
-                    <TextField
-                      size="small"
-                      label="DT"
-                      type="number"
-                      value={fee.amount}
-                      sx={{ flex: 1 }}
-                      onChange={(e) =>
-                        setFees(
-                          fees.map((f, fi) =>
-                            fi === i ? { ...f, amount: parseFloat(e.target.value) || 0 } : f
-                          )
-                        )
-                      }
-                    />
-                    <IconButton
-                      size="small"
-                      onClick={() => setFees(fees.filter((_, fi) => fi !== i))}
-                    >
-                      <Delete fontSize="small" />
-                    </IconButton>
-                  </Box>
-                ))}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                  Frais supplémentaires
+                </Typography>
+                <FeesEditor value={fees} onChange={setFees} />
               </CardContent>
             </Card>
           </Grid>
@@ -736,13 +724,28 @@ const ManualOrderPage = () => {
                     {quote?.lines[itemIndex] && (
                       <Typography sx={{ fontWeight: 600 }}>
                         {quote.lines[itemIndex]!.quantity} ×{' '}
-                        {formatDT(quote.lines[itemIndex]!.unitPrice)} ={' '}
+                        {formatDT(
+                          quote.lines[itemIndex]!.unitPrice +
+                            (quote.lines[itemIndex]!.packagingUnitCost || 0)
+                        )}{' '}
+                        ={' '}
                         <Box component="span" sx={{ color: 'primary.main' }}>
                           {formatDT(quote.lines[itemIndex]!.lineTotal)}
                         </Box>
                       </Typography>
                     )}
                   </Box>
+                  {(item.mode === 'custom' || item.recipeId) && (
+                    <Box sx={{ mt: 2 }}>
+                      <PackagingPicker
+                        value={item.packaging}
+                        onChange={(packaging) => updateItem(itemIndex, { packaging })}
+                        options={packagingOptions}
+                        portions={portionsOf(item)}
+                        itemQuantity={item.quantity}
+                      />
+                    </Box>
+                  )}
                 </CardContent>
               </Card>
             ))}
@@ -764,7 +767,8 @@ const ManualOrderPage = () => {
                 <CardContent sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
                   <Inventory2 sx={{ color: color.inkMuted }} />
                   <Typography variant="body2" sx={{ color: color.inkSoft }}>
-                    Choisissez un produit : le prix et les ingrédients nécessaires (disponibles ou manquants) s’affichent ici.
+                    Choisissez un produit : le prix et les ingrédients nécessaires (disponibles ou
+                    manquants) s’affichent ici.
                   </Typography>
                 </CardContent>
               </Card>
@@ -782,9 +786,17 @@ const ManualOrderPage = () => {
                           key={i}
                           sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, py: 0.5 }}
                         >
-                          <Typography variant="body2">
-                            {l.label} {l.sizeName} — {l.quantity} × {formatDT(l.unitPrice)}
-                          </Typography>
+                          <Box>
+                            <Typography variant="body2">
+                              {l.label} {l.sizeName} — {l.quantity} × {formatDT(l.unitPrice)}
+                            </Typography>
+                            {(l.packagingUnitCost || 0) > 0 && (
+                              <Typography variant="caption" sx={{ color: color.inkSoft }}>
+                                + emballage {formatDT(l.packagingUnitCost)} × {l.quantity} (
+                                {(l.packaging || []).map((p) => p.name).join(', ')})
+                              </Typography>
+                            )}
+                          </Box>
                           <Typography
                             variant="body2"
                             sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}

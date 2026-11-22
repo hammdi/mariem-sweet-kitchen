@@ -11,8 +11,10 @@ describe('aide interactive — registre', () => {
   it('chaque action référence une visite ou un schéma qui existe', () => {
     for (const page of PAGE_HELP) {
       for (const a of page.actions) {
-        if (a.kind === 'tour') expect([page.id, a.id, TOURS[a.tourId!]?.id]).toEqual([page.id, a.id, a.tourId]);
-        if (a.kind === 'flow') expect([page.id, a.id, FLOWS[a.flowId!]?.id]).toEqual([page.id, a.id, a.flowId]);
+        if (a.kind === 'tour')
+          expect([page.id, a.id, TOURS[a.tourId!]?.id]).toEqual([page.id, a.id, a.tourId]);
+        if (a.kind === 'flow')
+          expect([page.id, a.id, FLOWS[a.flowId!]?.id]).toEqual([page.id, a.id, a.flowId]);
       }
     }
   });
@@ -46,6 +48,9 @@ describe('aide interactive — registre', () => {
       ['/admin/recipes', 'recipes'],
       ['/admin/clients', 'clients'],
       ['/admin/settings', 'settings'],
+      ['/admin/packaging', 'packaging'],
+      ['/admin/packaging/64b0c0ffee', 'ingredient-detail'],
+      ['/admin/calculator', 'calculator'],
     ];
     for (const [path, id] of expected) expect([path, helpForPath(path).id]).toEqual([path, id]);
     expect(helpForPath('/admin/inconnue').id).toBe('default');

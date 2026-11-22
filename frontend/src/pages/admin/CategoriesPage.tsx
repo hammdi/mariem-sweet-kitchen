@@ -167,7 +167,6 @@ const CategorySection = ({ title, storageKey, defaults, labels }: CategorySectio
 
 /** Gestion des catégories (affichée dans Paramètres → Catégories). */
 export const CategoriesContent = () => {
-
   const ingredientLabels: Record<string, string> = {
     base: 'Base',
     sweetener: 'Sucrant',
@@ -186,16 +185,34 @@ export const CategoriesContent = () => {
 
   return (
     <Box>
-      <CategorySection title="Catégories de recettes" storageKey="recipeCategories" defaults={defaultRecipeCategories} />
-      <CategorySection title="Catégories d'ingrédients" storageKey="ingredientCategories" defaults={defaultIngredientCategories} labels={ingredientLabels} />
-      <CategorySection title="Catégories de machines" storageKey="applianceCategories" defaults={defaultApplianceCategories} labels={applianceLabels} />
+      <CategorySection
+        title="Catégories de recettes"
+        storageKey="recipeCategories"
+        defaults={defaultRecipeCategories}
+      />
+      <CategorySection
+        title="Catégories d'ingrédients"
+        storageKey="ingredientCategories"
+        defaults={defaultIngredientCategories}
+        labels={ingredientLabels}
+      />
+      <CategorySection
+        title="Catégories de machines"
+        storageKey="applianceCategories"
+        defaults={defaultApplianceCategories}
+        labels={applianceLabels}
+      />
     </Box>
   );
 };
 
 const CategoriesPage = () => (
   <Box>
-    <PageHeader title="Catégories" subtitle="Classement des recettes, ingrédients et machines." backTo="/admin/settings" />
+    <PageHeader
+      title="Catégories"
+      subtitle="Classement des recettes, ingrédients et machines."
+      backTo="/admin/settings"
+    />
     <CategoriesContent />
   </Box>
 );

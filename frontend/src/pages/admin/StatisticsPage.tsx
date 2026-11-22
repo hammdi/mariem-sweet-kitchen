@@ -24,7 +24,12 @@ import LineChart from '../../components/charts/LineChart';
 import AnimatedNumber from '../../components/charts/AnimatedNumber';
 import { CHART } from '../../components/charts/chartTheme';
 import { useStatistics } from '../../hooks/useStatistics';
-import { CASH_TYPE_LABELS, ORDER_STATUS_LABELS, PURCHASE_PAYMENT_LABELS, formatDT } from '../../utils/format';
+import {
+  CASH_TYPE_LABELS,
+  ORDER_STATUS_LABELS,
+  PURCHASE_PAYMENT_LABELS,
+  formatDT,
+} from '../../utils/format';
 import { bucketEnd } from '../../utils/dateTime';
 import { PageHeader, SkeletonCards, SoftIcon } from '../../components/ui';
 import { color, radius, Tone } from '../../theme/tokens';
@@ -55,7 +60,13 @@ function Metric({
   return (
     <Card
       onClick={onClick}
-      sx={{ p: 2, height: '100%', cursor: onClick ? 'pointer' : 'default', transition: 'box-shadow 200ms, transform 200ms', '&:hover': onClick ? { transform: 'translateY(-2px)' } : {} }}
+      sx={{
+        p: 2,
+        height: '100%',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'box-shadow 200ms, transform 200ms',
+        '&:hover': onClick ? { transform: 'translateY(-2px)' } : {},
+      }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1 }}>
         <SoftIcon tone={tone} size={38}>
@@ -63,12 +74,23 @@ function Metric({
         </SoftIcon>
         <Box sx={{ minWidth: 0 }}>
           <Typography sx={{ fontWeight: 700, fontSize: '0.92rem' }}>{title}</Typography>
-          <Typography variant="caption" sx={{ color: color.inkSoft, display: 'block', lineHeight: 1.3 }}>
+          <Typography
+            variant="caption"
+            sx={{ color: color.inkSoft, display: 'block', lineHeight: 1.3 }}
+          >
             {definition}
           </Typography>
         </Box>
       </Box>
-      <Typography sx={{ fontFamily: '"Plus Jakarta Sans", Inter, sans-serif', fontSize: { xs: '1.45rem', md: '1.65rem' }, fontWeight: 800, lineHeight: 1.2, fontVariantNumeric: 'tabular-nums' }}>
+      <Typography
+        sx={{
+          fontFamily: '"Plus Jakarta Sans", Inter, sans-serif',
+          fontSize: { xs: '1.45rem', md: '1.65rem' },
+          fontWeight: 800,
+          lineHeight: 1.2,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
         <AnimatedNumber value={value} format={format} />
       </Typography>
       {lines?.map((l, i) => (
@@ -80,13 +102,40 @@ function Metric({
   );
 }
 
-function Row({ label, value, strong, valueColor }: { label: string; value: string; strong?: boolean; valueColor?: string }) {
+function Row({
+  label,
+  value,
+  strong,
+  valueColor,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+  valueColor?: string;
+}) {
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, py: 0.8, borderBottom: `1px solid ${color.border}`, '&:last-of-type': { borderBottom: 0 } }}>
+    <Box
+      sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        gap: 1,
+        py: 0.8,
+        borderBottom: `1px solid ${color.border}`,
+        '&:last-of-type': { borderBottom: 0 },
+      }}
+    >
       <Typography variant="body2" sx={{ color: color.inkSoft }}>
         {label}
       </Typography>
-      <Typography variant="body2" sx={{ fontWeight: strong ? 800 : 600, color: valueColor, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+      <Typography
+        variant="body2"
+        sx={{
+          fontWeight: strong ? 800 : 600,
+          color: valueColor,
+          whiteSpace: 'nowrap',
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
         {value}
       </Typography>
     </Box>
@@ -102,11 +151,17 @@ const StatisticsPage = () => {
     s && s.sales.previous.count > 0 && s.sales.previous.revenue > 0
       ? Math.round(((s.sales.revenue - s.sales.previous.revenue) / s.sales.previous.revenue) * 100)
       : null;
-  const linkRange = range ? `?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}` : '';
+  const linkRange = range
+    ? `?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`
+    : '';
   const statusOrder = ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'];
-  const hasOutflows = !!chart && [...chart.purchase, ...chart.expense, ...chart.refund].some((v) => v !== 0);
-  const bucketWord = chart ? { hour: 'heure', day: 'jour', week: 'semaine', month: 'mois' }[chart.bucket] : '';
-  const byStatus = (k: string) => (s ? (s.orders.byStatus[k] || 0) + (k === 'confirmed' ? s.orders.byStatus.paid || 0 : 0) : 0);
+  const hasOutflows =
+    !!chart && [...chart.purchase, ...chart.expense, ...chart.refund].some((v) => v !== 0);
+  const bucketWord = chart
+    ? { hour: 'heure', day: 'jour', week: 'semaine', month: 'mois' }[chart.bucket]
+    : '';
+  const byStatus = (k: string) =>
+    s ? (s.orders.byStatus[k] || 0) + (k === 'confirmed' ? s.orders.byStatus.paid || 0 : 0) : 0;
 
   return (
     <Box>
@@ -128,7 +183,19 @@ const StatisticsPage = () => {
       ) : (
         <Box sx={{ opacity: loading ? 0.55 : 1, transition: 'opacity 200ms' }}>
           {/* 1. Chiffres clés */}
-          <Box data-tour="stats-kpis" sx={{ display: 'grid', gap: 1.75, gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0,1fr))', lg: 'repeat(4, minmax(0,1fr))' }, mb: 2.5 }}>
+          <Box
+            data-tour="stats-kpis"
+            sx={{
+              display: 'grid',
+              gap: 1.75,
+              gridTemplateColumns: {
+                xs: 'minmax(0, 1fr)',
+                sm: 'repeat(2, minmax(0,1fr))',
+                lg: 'repeat(4, minmax(0,1fr))',
+              },
+              mb: 2.5,
+            }}
+          >
             <Metric
               icon={<ShowChart />}
               tone="primary"
@@ -138,8 +205,21 @@ const StatisticsPage = () => {
               lines={[
                 plural(s.sales.count, 'vente'),
                 delta !== null ? (
-                  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, color: delta >= 0 ? color.successDark : color.dangerDark, fontWeight: 600 }}>
-                    {delta >= 0 ? <TrendingUp sx={{ fontSize: 16 }} /> : <TrendingDown sx={{ fontSize: 16 }} />}
+                  <Box
+                    component="span"
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      color: delta >= 0 ? color.successDark : color.dangerDark,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {delta >= 0 ? (
+                      <TrendingUp sx={{ fontSize: 16 }} />
+                    ) : (
+                      <TrendingDown sx={{ fontSize: 16 }} />
+                    )}
                     {delta >= 0 ? '+' : ''}
                     {delta} % vs période précédente
                   </Box>
@@ -148,14 +228,23 @@ const StatisticsPage = () => {
                 ),
               ]}
             />
-            <Metric icon={<Payments />} tone="success" title="Encaissements" definition="Argent déjà reçu sur ces ventes" value={s.sales.collected} lines={[plural(s.sales.paymentsCount, 'paiement')]} />
+            <Metric
+              icon={<Payments />}
+              tone="success"
+              title="Encaissements"
+              definition="Argent déjà reçu sur ces ventes"
+              value={s.sales.collected}
+              lines={[plural(s.sales.paymentsCount, 'paiement')]}
+            />
             <Metric
               icon={<HourglassTop />}
               tone="warning"
               title="À encaisser"
               definition="Vendu mais pas encore payé"
               value={s.sales.remaining}
-              lines={[`${plural(s.sales.remainingCount, 'commande')} concernée${s.sales.remainingCount > 1 ? 's' : ''}`]}
+              lines={[
+                `${plural(s.sales.remainingCount, 'commande')} concernée${s.sales.remainingCount > 1 ? 's' : ''}`,
+              ]}
               onClick={() => navigate('/admin/cash?tab=receivables')}
             />
             <Metric
@@ -167,8 +256,29 @@ const StatisticsPage = () => {
               lines={[`+${dt(s.cash.totalIn)} entrées · −${dt(s.cash.totalOut)} sorties`]}
               onClick={() => navigate(`/admin/cash${linkRange}`)}
             />
-            <Metric icon={<ReceiptLong />} tone="rose" title="Commandes" definition="Prévues sur la période, tous statuts" value={s.orders.total} format={(n) => String(Math.round(n))} lines={[`${plural(byStatus('ready'), 'prête')} · ${plural(byStatus('delivered'), 'remise')} · ${plural(s.orders.cancelled, 'annulée')}`]} />
-            <Metric icon={<EmojiEvents />} tone="info" title="Panier moyen" definition="Chiffre d'affaires ÷ nombre de ventes" value={s.sales.averageBasket ?? 0} lines={[s.sales.averageBasket === null ? 'Aucune vente' : `sur ${plural(s.sales.count, 'vente')}`]} />
+            <Metric
+              icon={<ReceiptLong />}
+              tone="rose"
+              title="Commandes"
+              definition="Prévues sur la période, tous statuts"
+              value={s.orders.total}
+              format={(n) => String(Math.round(n))}
+              lines={[
+                `${plural(byStatus('ready'), 'prête')} · ${plural(byStatus('delivered'), 'remise')} · ${plural(s.orders.cancelled, 'annulée')}`,
+              ]}
+            />
+            <Metric
+              icon={<EmojiEvents />}
+              tone="info"
+              title="Panier moyen"
+              definition="Chiffre d'affaires ÷ nombre de ventes"
+              value={s.sales.averageBasket ?? 0}
+              lines={[
+                s.sales.averageBasket === null
+                  ? 'Aucune vente'
+                  : `sur ${plural(s.sales.count, 'vente')}`,
+              ]}
+            />
             <Metric
               icon={<ShoppingBasket />}
               tone="success"
@@ -176,7 +286,8 @@ const StatisticsPage = () => {
               definition="Ingrédients achetés, tous moyens de paiement"
               value={s.purchases.total}
               lines={[
-                plural(s.purchases.count, 'achat') + (s.purchases.unpriced ? ` (${s.purchases.unpriced} sans prix)` : ''),
+                plural(s.purchases.count, 'achat') +
+                  (s.purchases.unpriced ? ` (${s.purchases.unpriced} sans prix)` : ''),
                 `Caisse ${dt(s.purchases.byMethod.cash_register?.total || 0)} · hors caisse ${dt(s.purchases.total - (s.purchases.byMethod.cash_register?.total || 0))}`,
               ]}
             />
@@ -194,15 +305,35 @@ const StatisticsPage = () => {
           </Box>
 
           {/* Rappel : vendu ≠ caisse */}
-          <Box sx={{ display: 'flex', gap: 1.25, alignItems: 'flex-start', p: 1.75, mb: 2.5, borderRadius: `${radius.md}px`, bgcolor: color.infoSoft, border: `1px solid ${color.infoBorder}` }}>
+          <Box
+            sx={{
+              display: 'flex',
+              gap: 1.25,
+              alignItems: 'flex-start',
+              p: 1.75,
+              mb: 2.5,
+              borderRadius: `${radius.md}px`,
+              bgcolor: color.infoSoft,
+              border: `1px solid ${color.infoBorder}`,
+            }}
+          >
             <InfoOutlined sx={{ color: color.info, mt: '2px' }} />
             <Typography variant="body2" sx={{ color: color.infoDark }}>
-              <strong>Vendu n’est pas encaissé.</strong> Le chiffre d’affaires compte les commandes confirmées, payées ou non. La caisse ne bouge qu’au paiement. Achats et dépenses payés avec votre argent personnel comptent ici, mais ne sortent pas de la caisse.
+              <strong>Vendu n’est pas encaissé.</strong> Le chiffre d’affaires compte les commandes
+              confirmées, payées ou non. La caisse ne bouge qu’au paiement. Achats et dépenses payés
+              avec votre argent personnel comptent ici, mais ne sortent pas de la caisse.
             </Typography>
           </Box>
 
           {/* 2. Graphiques */}
-          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'repeat(2, minmax(0,1fr))' }, mb: 2 }}>
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 2,
+              gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'repeat(2, minmax(0,1fr))' },
+              mb: 2,
+            }}
+          >
             <Box sx={{ gridColumn: { lg: '1 / -1' } }}>
               <ChartCard
                 key={`ca-${range?.from}-${range?.to}`}
@@ -214,17 +345,28 @@ const StatisticsPage = () => {
                 loading={loading}
                 table={{
                   columns: ['Période', "Chiffre d'affaires", 'Ventes'],
-                  rows: chart.buckets.map((_, i) => [chart.longLabels[i], dt(chart.revenue[i]), chart.counts[i]]).filter((r) => r[2] !== 0),
+                  rows: chart.buckets
+                    .map((_, i) => [chart.longLabels[i], dt(chart.revenue[i]), chart.counts[i]])
+                    .filter((r) => r[2] !== 0),
                 }}
               >
                 <ColumnChart
                   labels={chart.labels}
                   longLabels={chart.longLabels}
-                  series={[{ key: 'ca', label: "chiffre d'affaires", color: CHART.sales, values: chart.revenue }]}
+                  series={[
+                    {
+                      key: 'ca',
+                      label: "chiffre d'affaires",
+                      color: CHART.sales,
+                      values: chart.revenue,
+                    },
+                  ]}
                   format={dt}
                   tooltipExtra={(i) => plural(chart.counts[i], 'vente')}
                   onSelect={(i) =>
-                    navigate(`/admin/orders?dateField=scheduled&from=${encodeURIComponent(chart.buckets[i])}&to=${encodeURIComponent(bucketEnd(chart.buckets[i], chart.bucket))}`)
+                    navigate(
+                      `/admin/orders?dateField=scheduled&from=${encodeURIComponent(chart.buckets[i])}&to=${encodeURIComponent(bucketEnd(chart.buckets[i], chart.bucket))}`
+                    )
                   }
                 />
               </ChartCard>
@@ -242,7 +384,9 @@ const StatisticsPage = () => {
               loading={loading}
               table={{
                 columns: ['Période', 'Ventes', 'Encaissé'],
-                rows: chart.buckets.map((_, i) => [chart.longLabels[i], dt(chart.revenue[i]), dt(chart.payments[i])]).filter((_, i) => chart.revenue[i] !== 0 || chart.payments[i] !== 0),
+                rows: chart.buckets
+                  .map((_, i) => [chart.longLabels[i], dt(chart.revenue[i]), dt(chart.payments[i])])
+                  .filter((_, i) => chart.revenue[i] !== 0 || chart.payments[i] !== 0),
               }}
             >
               <ColumnChart
@@ -269,7 +413,14 @@ const StatisticsPage = () => {
                   rows: chart.buckets.map((_, i) => [chart.longLabels[i], dt(chart.balance[i])]),
                 }}
               >
-                <LineChart labels={chart.labels} longLabels={chart.longLabels} values={chart.balance} color={CHART.payments} format={dt} ariaLabel="Évolution de la liquidité de la caisse" />
+                <LineChart
+                  labels={chart.labels}
+                  longLabels={chart.longLabels}
+                  values={chart.balance}
+                  color={CHART.payments}
+                  format={dt}
+                  ariaLabel="Évolution de la liquidité de la caisse"
+                />
               </ChartCard>
             </Box>
             <Box data-tour="stats-purchases">
@@ -288,7 +439,12 @@ const StatisticsPage = () => {
                 table={{
                   columns: ['Période', 'Achats', 'Dépenses', 'Remboursements'],
                   rows: chart.buckets
-                    .map((_, i) => [chart.longLabels[i], dt(chart.purchase[i]), dt(chart.expense[i]), dt(chart.refund[i])])
+                    .map((_, i) => [
+                      chart.longLabels[i],
+                      dt(chart.purchase[i]),
+                      dt(chart.expense[i]),
+                      dt(chart.refund[i]),
+                    ])
                     .filter((_, i) => chart.purchase[i] || chart.expense[i] || chart.refund[i]),
                 }}
               >
@@ -299,20 +455,32 @@ const StatisticsPage = () => {
                   series={[
                     { key: 'p', label: 'achats', color: CHART.purchase, values: chart.purchase },
                     { key: 'x', label: 'dépenses', color: CHART.expense, values: chart.expense },
-                    { key: 'r', label: 'remboursements', color: CHART.refund, values: chart.refund },
+                    {
+                      key: 'r',
+                      label: 'remboursements',
+                      color: CHART.refund,
+                      values: chart.refund,
+                    },
                   ]}
                   format={dt}
                 />
               </ChartCard>
             </Box>
             <Card sx={{ p: 2.5 }}>
-              <Typography sx={{ fontWeight: 700, mb: 0.25 }}>Achats et dépenses par moyen de paiement</Typography>
+              <Typography sx={{ fontWeight: 700, mb: 0.25 }}>
+                Achats et dépenses par moyen de paiement
+              </Typography>
               <Typography variant="caption" sx={{ color: color.inkSoft }}>
                 Seuls ceux payés avec la caisse sont des sorties de caisse
               </Typography>
               <Box sx={{ mt: 1.5 }}>
                 {(['cash_register', 'personal', 'bank', 'other', 'unknown'] as const)
-                  .filter((m) => (s.purchases.byMethod[m]?.total || 0) + (s.expenses?.byMethod[m]?.total || 0) > 0)
+                  .filter(
+                    (m) =>
+                      (s.purchases.byMethod[m]?.total || 0) +
+                        (s.expenses?.byMethod[m]?.total || 0) >
+                      0
+                  )
                   .map((m) => (
                     <Row
                       key={m}
@@ -330,7 +498,15 @@ const StatisticsPage = () => {
           </Box>
 
           {/* 3. Produits, commandes, clients */}
-          <Box data-tour="stats-top" sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'repeat(2, minmax(0,1fr))' }, mb: 2 }}>
+          <Box
+            data-tour="stats-top"
+            sx={{
+              display: 'grid',
+              gap: 2,
+              gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'repeat(2, minmax(0,1fr))' },
+              mb: 2,
+            }}
+          >
             <ChartCard
               key={`prod-${range?.from}-${range?.to}`}
               icon={<EmojiEvents />}
@@ -338,7 +514,10 @@ const StatisticsPage = () => {
               subtitle="Chiffre d'affaires par recette (quantité au survol)"
               empty={s.topProducts.length === 0}
               loading={loading}
-              table={{ columns: ['Produit', 'Quantité', "Chiffre d'affaires"], rows: s.topProducts.map((p) => [p.name, p.quantity, dt(p.revenue)]) }}
+              table={{
+                columns: ['Produit', 'Quantité', "Chiffre d'affaires"],
+                rows: s.topProducts.map((p) => [p.name, p.quantity, dt(p.revenue)]),
+              }}
             >
               <HBarChart
                 color={CHART.sales}
@@ -359,7 +538,10 @@ const StatisticsPage = () => {
               subtitle="Commandes prévues sur la période, par avancement"
               empty={s.orders.total === 0}
               loading={loading}
-              table={{ columns: ['Avancement', 'Commandes'], rows: statusOrder.map((k) => [ORDER_STATUS_LABELS[k].label, byStatus(k)]) }}
+              table={{
+                columns: ['Avancement', 'Commandes'],
+                rows: statusOrder.map((k) => [ORDER_STATUS_LABELS[k].label, byStatus(k)]),
+              }}
             >
               <HBarChart
                 color={CHART.neutral}
@@ -378,11 +560,23 @@ const StatisticsPage = () => {
                 <People sx={{ color: color.primary }} />
                 <Typography sx={{ fontWeight: 700 }}>Activité clients</Typography>
               </Box>
-              <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '5fr 7fr' } }}>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gap: 3,
+                  gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '5fr 7fr' },
+                }}
+              >
                 <Box>
                   <Row label="Clients actifs" value={String(s.clients.active)} strong />
-                  <Row label="Particuliers" value={`${plural(s.clients.individual.count, 'commande')} · ${dt(s.clients.individual.revenue)}`} />
-                  <Row label="Cafés" value={`${plural(s.clients.cafe.count, 'commande')} · ${dt(s.clients.cafe.revenue)}`} />
+                  <Row
+                    label="Particuliers"
+                    value={`${plural(s.clients.individual.count, 'commande')} · ${dt(s.clients.individual.revenue)}`}
+                  />
+                  <Row
+                    label="Cafés"
+                    value={`${plural(s.clients.cafe.count, 'commande')} · ${dt(s.clients.cafe.revenue)}`}
+                  />
                 </Box>
                 <Box>
                   <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
@@ -397,12 +591,24 @@ const StatisticsPage = () => {
                     <Box
                       key={`${c.name}-${i}`}
                       onClick={() => c.clientId && navigate(`/admin/clients/${c.clientId}`)}
-                      sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, py: 0.6, px: 0.75, borderRadius: `${radius.xs}px`, cursor: c.clientId ? 'pointer' : 'default', '&:hover': c.clientId ? { bgcolor: color.surfaceMuted } : {} }}
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: 1,
+                        py: 0.6,
+                        px: 0.75,
+                        borderRadius: `${radius.xs}px`,
+                        cursor: c.clientId ? 'pointer' : 'default',
+                        '&:hover': c.clientId ? { bgcolor: color.surfaceMuted } : {},
+                      }}
                     >
                       <Typography variant="body2" noWrap>
                         {i + 1}. {c.name}
                       </Typography>
-                      <Typography variant="body2" sx={{ color: color.inkSoft, whiteSpace: 'nowrap' }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ color: color.inkSoft, whiteSpace: 'nowrap' }}
+                      >
                         {plural(c.count, 'commande')} · {dt(c.revenue)}
                       </Typography>
                     </Box>
@@ -415,10 +621,18 @@ const StatisticsPage = () => {
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', color: color.inkSoft }}>
             <InfoOutlined sx={{ fontSize: 18, mt: '2px' }} />
             <Typography variant="body2">
-              Pas de « bénéfice » affiché : toutes les charges (électricité réelle, temps…) ne sont pas enregistrées, un tel chiffre serait trompeur. Les prix de vente incluent déjà la marge réglée dans les paramètres.
+              Pas de « bénéfice » affiché : toutes les charges (électricité réelle, temps…) ne sont
+              pas enregistrées, un tel chiffre serait trompeur. Les prix de vente incluent déjà la
+              marge réglée dans les paramètres.
             </Typography>
           </Box>
-          <Button variant="outlined" sx={{ mt: 2 }} onClick={() => navigate(`/admin/orders${linkRange}${linkRange ? '&dateField=scheduled' : ''}`)}>
+          <Button
+            variant="outlined"
+            sx={{ mt: 2 }}
+            onClick={() =>
+              navigate(`/admin/orders${linkRange}${linkRange ? '&dateField=scheduled' : ''}`)
+            }
+          >
             Voir les commandes de la période
           </Button>
         </Box>

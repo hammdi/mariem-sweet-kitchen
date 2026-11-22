@@ -346,7 +346,7 @@ describeDb('statistiques (intégration)', () => {
     expect(r.status).toBe(401);
     const bad = await request(app).get('/api/statistics?from=x&to=y').set(auth);
     expect(bad.status).toBe(400);
-    const pub = JSON.stringify((await request(app).get('/api/recipes')).body);
+    const pub = JSON.stringify((await request(app).get('/api/catalog')).body);
     for (const secret of ['revenue', 'amountPaid', 'totalPrice', 'theoreticalBalance']) {
       expect([secret, pub.includes(`"${secret}"`)]).toEqual([secret, false]);
     }

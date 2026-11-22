@@ -27,7 +27,12 @@ export default function AnimatedFlow({
           {flow.summary}
         </Typography>
       )}
-      <Box key={play} role="list" aria-label={flow.title} sx={{ display: 'flex', flexDirection: 'column' }}>
+      <Box
+        key={play}
+        role="list"
+        aria-label={flow.title}
+        sx={{ display: 'flex', flexDirection: 'column' }}
+      >
         {flow.nodes.map((n, i) => {
           const t = tones[n.tone || 'neutral'];
           const delay = i * stepMs;
@@ -104,11 +109,24 @@ export default function AnimatedFlow({
                   {n.emoji}
                 </Box>
                 <Box sx={{ minWidth: 0 }}>
-                  <Typography sx={{ fontWeight: 700, color: t.fg, fontSize: compact ? '0.85rem' : '0.92rem', lineHeight: 1.25 }}>
+                  <Typography
+                    sx={{
+                      fontWeight: 700,
+                      color: t.fg,
+                      fontSize: compact ? '0.85rem' : '0.92rem',
+                      lineHeight: 1.25,
+                    }}
+                  >
                     {n.label}
                   </Typography>
                   {n.caption && (
-                    <Typography sx={{ color: color.inkSoft, fontSize: compact ? '0.75rem' : '0.8rem', lineHeight: 1.3 }}>
+                    <Typography
+                      sx={{
+                        color: color.inkSoft,
+                        fontSize: compact ? '0.75rem' : '0.8rem',
+                        lineHeight: 1.3,
+                      }}
+                    >
                       {n.caption}
                     </Typography>
                   )}
@@ -121,13 +139,25 @@ export default function AnimatedFlow({
       {flow.note && (
         <Typography
           variant="body2"
-          sx={{ mt: 1.5, p: 1.25, borderRadius: `${radius.sm}px`, bgcolor: color.bgSubtle, color: color.inkSoft, fontSize: compact ? '0.78rem' : undefined }}
+          sx={{
+            mt: 1.5,
+            p: 1.25,
+            borderRadius: `${radius.sm}px`,
+            bgcolor: color.bgSubtle,
+            color: color.inkSoft,
+            fontSize: compact ? '0.78rem' : undefined,
+          }}
         >
           💡 {flow.note}
         </Typography>
       )}
       {!reduced && (
-        <Button size="small" startIcon={<Replay />} onClick={() => setPlay((p) => p + 1)} sx={{ mt: 1 }}>
+        <Button
+          size="small"
+          startIcon={<Replay />}
+          onClick={() => setPlay((p) => p + 1)}
+          sx={{ mt: 1 }}
+        >
           Revoir l’animation
         </Button>
       )}

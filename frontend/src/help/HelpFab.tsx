@@ -33,7 +33,10 @@ export default function HelpFab() {
         sx={{
           position: 'fixed',
           right: { xs: 16, md: 24 },
-          bottom: { xs: `calc(${layout.bottomNavHeight + 16}px + env(safe-area-inset-bottom))`, md: 24 },
+          bottom: {
+            xs: `calc(${layout.bottomNavHeight + 16}px + env(safe-area-inset-bottom))`,
+            md: 24,
+          },
           zIndex: 1250,
         }}
       >
@@ -82,7 +85,9 @@ export default function HelpFab() {
               height: 64,
               border: `4px solid ${color.surface}`,
               color: '#fff',
-              background: open ? '#2A1F17' : `linear-gradient(135deg, #F7931E 0%, ${color.primary} 55%, ${color.primaryDark} 100%)`,
+              background: open
+                ? '#2A1F17'
+                : `linear-gradient(135deg, #F7931E 0%, ${color.primary} 55%, ${color.primaryDark} 100%)`,
               boxShadow: '0 10px 24px rgba(241,119,10,0.35)',
               '&:hover': { background: open ? '#000' : color.primaryDark },
               '& svg': { transition: 'transform 300ms cubic-bezier(0.2,0,0,1)' },
@@ -91,8 +96,14 @@ export default function HelpFab() {
                 ? {
                     animation: 'help-glow 1.8s ease-out 3',
                     '@keyframes help-glow': {
-                      '0%': { boxShadow: '0 0 0 0 rgba(241,119,10,0.45), 0 10px 24px rgba(241,119,10,0.35)' },
-                      '100%': { boxShadow: '0 0 0 18px rgba(241,119,10,0), 0 10px 24px rgba(241,119,10,0.35)' },
+                      '0%': {
+                        boxShadow:
+                          '0 0 0 0 rgba(241,119,10,0.45), 0 10px 24px rgba(241,119,10,0.35)',
+                      },
+                      '100%': {
+                        boxShadow:
+                          '0 0 0 18px rgba(241,119,10,0), 0 10px 24px rgba(241,119,10,0.35)',
+                      },
                     },
                   }
                 : {}),

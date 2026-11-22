@@ -19,9 +19,21 @@ function ChefHat() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <path d="M18 40v11a3 3 0 0 0 3 3h22a3 3 0 0 0 3-3V40" fill="#FFF6EC" stroke="#F1770A" strokeWidth="3.2" strokeLinejoin="round" />
+      <path
+        d="M18 40v11a3 3 0 0 0 3 3h22a3 3 0 0 0 3-3V40"
+        fill="#FFF6EC"
+        stroke="#F1770A"
+        strokeWidth="3.2"
+        strokeLinejoin="round"
+      />
       <path d="M18 46h28" stroke="#F1770A" strokeWidth="3.2" />
-      <path d="M26 30c0-3 1.6-5.5 4-6.5M38 24.5c1.8 1.2 3 3.2 3 5.5" stroke="#F7A65A" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+      <path
+        d="M26 30c0-3 1.6-5.5 4-6.5M38 24.5c1.8 1.2 3 3.2 3 5.5"
+        stroke="#F7A65A"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        fill="none"
+      />
     </svg>
   );
 }
@@ -29,7 +41,13 @@ function ChefHat() {
 function WheatSprig() {
   return (
     <svg viewBox="0 0 40 60" width="100%" height="100%">
-      <path d="M8 56C14 40 22 22 34 4" stroke="#E9B27A" strokeWidth="2" fill="none" strokeLinecap="round" />
+      <path
+        d="M8 56C14 40 22 22 34 4"
+        stroke="#E9B27A"
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
+      />
       {[0, 1, 2, 3].map((i) => (
         <g key={i} transform={`translate(${12 + i * 5.2} ${44 - i * 11}) rotate(-38)`}>
           <ellipse cx="-5" cy="0" rx="5.5" ry="2.4" fill="#F2C48F" />
@@ -59,23 +77,76 @@ function Croissant() {
       </g>
       {/* croissant : 5 lobes */}
       <g stroke="#A9541A" strokeOpacity="0.45" strokeWidth="2">
-        <ellipse cx="48" cy="102" rx="20" ry="15" transform="rotate(-50 48 102)" fill="url(#mk-cr)" />
-        <ellipse cx="176" cy="100" rx="20" ry="15" transform="rotate(50 176 100)" fill="url(#mk-cr)" />
+        <ellipse
+          cx="48"
+          cy="102"
+          rx="20"
+          ry="15"
+          transform="rotate(-50 48 102)"
+          fill="url(#mk-cr)"
+        />
+        <ellipse
+          cx="176"
+          cy="100"
+          rx="20"
+          ry="15"
+          transform="rotate(50 176 100)"
+          fill="url(#mk-cr)"
+        />
         <ellipse cx="78" cy="84" rx="28" ry="24" transform="rotate(-30 78 84)" fill="url(#mk-cr)" />
-        <ellipse cx="146" cy="84" rx="28" ry="24" transform="rotate(30 146 84)" fill="url(#mk-cr)" />
+        <ellipse
+          cx="146"
+          cy="84"
+          rx="28"
+          ry="24"
+          transform="rotate(30 146 84)"
+          fill="url(#mk-cr)"
+        />
         <ellipse cx="112" cy="74" rx="34" ry="32" fill="url(#mk-cr)" />
       </g>
       {/* reflets */}
-      <ellipse cx="102" cy="58" rx="12" ry="6" fill="#FFF3D6" opacity="0.55" transform="rotate(-12 102 58)" />
-      <ellipse cx="70" cy="72" rx="8" ry="4" fill="#FFF3D6" opacity="0.45" transform="rotate(-35 70 72)" />
-      <ellipse cx="150" cy="72" rx="8" ry="4" fill="#FFF3D6" opacity="0.4" transform="rotate(30 150 72)" />
+      <ellipse
+        cx="102"
+        cy="58"
+        rx="12"
+        ry="6"
+        fill="#FFF3D6"
+        opacity="0.55"
+        transform="rotate(-12 102 58)"
+      />
+      <ellipse
+        cx="70"
+        cy="72"
+        rx="8"
+        ry="4"
+        fill="#FFF3D6"
+        opacity="0.45"
+        transform="rotate(-35 70 72)"
+      />
+      <ellipse
+        cx="150"
+        cy="72"
+        rx="8"
+        ry="4"
+        fill="#FFF3D6"
+        opacity="0.4"
+        transform="rotate(30 150 72)"
+      />
       {/* pistaches / éclats */}
       {[
         [96, 46],
         [124, 50],
         [110, 40],
       ].map(([x, y], i) => (
-        <ellipse key={i} cx={x} cy={y} rx="3" ry="1.6" fill="#FBE7C6" transform={`rotate(${i * 30} ${x} ${y})`} />
+        <ellipse
+          key={i}
+          cx={x}
+          cy={y}
+          rx="3"
+          ry="1.6"
+          fill="#FBE7C6"
+          transform={`rotate(${i * 30} ${x} ${y})`}
+        />
       ))}
     </svg>
   );
@@ -132,7 +203,10 @@ function ChocolateCake() {
       <path d="M28 54h104v38c0 6-23 10-52 10s-52-4-52-10z" fill="#7A4326" />
       <path d="M28 70h104" stroke="#5E301A" strokeWidth="3" opacity="0.6" />
       <ellipse cx="80" cy="54" rx="52" ry="11" fill="#9B5A34" />
-      <path d="M28 54c0 8 8 12 10 4s8 10 12 2 10 8 14 2 8 10 14 2 10 8 14 0 8 10 14 2 6 6 6-10" fill="#9B5A34" />
+      <path
+        d="M28 54c0 8 8 12 10 4s8 10 12 2 10 8 14 2 8 10 14 2 10 8 14 0 8 10 14 2 6 6 6-10"
+        fill="#9B5A34"
+      />
       {[50, 66, 80, 94, 110].map((x, i) => (
         <g key={i}>
           <ellipse cx={x} cy={i % 2 ? 48 : 46} rx="7" ry="5" fill="#FFF7EC" />
@@ -140,7 +214,13 @@ function ChocolateCake() {
         </g>
       ))}
       <circle cx="80" cy="34" r="6" fill="#C8203A" />
-      <path d="M80 28c2-8 6-12 12-14" stroke="#5E8C3A" strokeWidth="2" fill="none" strokeLinecap="round" />
+      <path
+        d="M80 28c2-8 6-12 12-14"
+        stroke="#5E8C3A"
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
+      />
       <path d="M134 24l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z" fill="#F7B85C" opacity="0.8" />
       <path d="M22 30l2 4.5 4.5 2-4.5 2-2 4.5-2-4.5-4.5-2 4.5-2z" fill="#F7B85C" opacity="0.7" />
     </svg>
@@ -152,7 +232,13 @@ function Cloche() {
     <svg viewBox="0 0 80 64" width="100%" height="100%">
       <ellipse cx="40" cy="54" rx="32" ry="5" fill="#E6DED4" />
       <path d="M12 50a28 26 0 0 1 56 0z" fill="#CFC5B9" />
-      <path d="M20 44a20 18 0 0 1 14-16" stroke="#F1ECE6" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <path
+        d="M20 44a20 18 0 0 1 14-16"
+        stroke="#F1ECE6"
+        strokeWidth="3"
+        fill="none"
+        strokeLinecap="round"
+      />
       <circle cx="40" cy="20" r="4" fill="#BDB2A5" />
       <rect x="8" y="49" width="64" height="4" rx="2" fill="#B9AEA1" />
     </svg>
@@ -174,7 +260,10 @@ export type IllustrationName = keyof typeof ILLUSTRATIONS;
 export default function Illustration({ name, sx }: { name: IllustrationName; sx?: SxProps }) {
   const Art = ILLUSTRATIONS[name];
   return (
-    <Box aria-hidden sx={{ pointerEvents: 'none', userSelect: 'none', lineHeight: 0, flexShrink: 0, ...sx }}>
+    <Box
+      aria-hidden
+      sx={{ pointerEvents: 'none', userSelect: 'none', lineHeight: 0, flexShrink: 0, ...sx }}
+    >
       <Art />
     </Box>
   );

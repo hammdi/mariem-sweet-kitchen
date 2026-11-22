@@ -8,12 +8,23 @@ import { color, motion, radius, shadow, Tone } from '../../theme/tokens';
 import SoftIcon from '../ui/SoftIcon';
 import AnimatedNumber from '../charts/AnimatedNumber';
 
-const Row = ({ label, value, valueColor }: { label: string; value: ReactNode; valueColor?: string }) => (
+const Row = ({
+  label,
+  value,
+  valueColor,
+}: {
+  label: string;
+  value: ReactNode;
+  valueColor?: string;
+}) => (
   <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 3, py: 0.3 }}>
     <Typography variant="body2" sx={{ color: color.inkSoft }}>
       {label}
     </Typography>
-    <Typography variant="body2" sx={{ fontWeight: 700, color: valueColor || color.ink, whiteSpace: 'nowrap' }}>
+    <Typography
+      variant="body2"
+      sx={{ fontWeight: 700, color: valueColor || color.ink, whiteSpace: 'nowrap' }}
+    >
       {value}
     </Typography>
   </Box>
@@ -107,7 +118,11 @@ function Kpi({
           boxShadow: shadow.card,
           textAlign: 'left',
           transition: `box-shadow ${motion.base}ms ${motion.ease}, transform ${motion.base}ms ${motion.ease}, border-color ${motion.base}ms`,
-          '&:hover': { boxShadow: shadow.raised, transform: 'translateY(-1px)', borderColor: color.borderStrong },
+          '&:hover': {
+            boxShadow: shadow.raised,
+            transform: 'translateY(-1px)',
+            borderColor: color.borderStrong,
+          },
           '&.Mui-focusVisible': { boxShadow: shadow.focus },
         }}
       >
@@ -117,11 +132,25 @@ function Kpi({
           </SoftIcon>
         )}
         <Box sx={{ minWidth: 0 }}>
-          <Typography sx={{ fontSize: compact ? '0.72rem' : '0.82rem', color: color.inkSoft, fontWeight: 600, lineHeight: 1.25 }} noWrap>
+          <Typography
+            sx={{
+              fontSize: compact ? '0.72rem' : '0.82rem',
+              color: color.inkSoft,
+              fontWeight: 600,
+              lineHeight: 1.25,
+            }}
+            noWrap
+          >
             {label}
           </Typography>
           <Typography
-            sx={{ fontWeight: 800, fontSize: compact ? '0.86rem' : '1.2rem', lineHeight: 1.3, fontVariantNumeric: 'tabular-nums', color: valueColor || color.ink }}
+            sx={{
+              fontWeight: 800,
+              fontSize: compact ? '0.86rem' : '1.2rem',
+              lineHeight: 1.3,
+              fontVariantNumeric: 'tabular-nums',
+              color: valueColor || color.ink,
+            }}
             style={{ fontFamily: '"Plus Jakarta Sans", Inter, sans-serif' }}
             noWrap={!compact}
           >
@@ -150,7 +179,13 @@ const variation = (now: number, before: number | undefined, unit: 'DT' | 'cmd') 
 };
 
 /** CA du jour · Commandes · Stock — avec contexte (vs hier) et détail au survol. */
-export default function TopbarKpis({ dense = false, compact = false }: { dense?: boolean; compact?: boolean }) {
+export default function TopbarKpis({
+  dense = false,
+  compact = false,
+}: {
+  dense?: boolean;
+  compact?: boolean;
+}) {
   const { summary: s } = useAdminData();
   if (!s) {
     return (
@@ -188,9 +223,21 @@ export default function TopbarKpis({ dense = false, compact = false }: { dense?:
         details={
           <>
             <Row label="Chiffre d'affaires (ventes)" value={formatDT(s.today.revenue)} />
-            <Row label="Encaissé aujourd'hui" value={formatDT(s.today.collected)} valueColor={color.successDark} />
-            <Row label="Sorties de caisse" value={formatDT(s.today.outflows)} valueColor={color.dangerDark} />
-            <Row label="Reste à encaisser (tout)" value={formatDT(s.outstanding)} valueColor={color.warningDark} />
+            <Row
+              label="Encaissé aujourd'hui"
+              value={formatDT(s.today.collected)}
+              valueColor={color.successDark}
+            />
+            <Row
+              label="Sorties de caisse"
+              value={formatDT(s.today.outflows)}
+              valueColor={color.dangerDark}
+            />
+            <Row
+              label="Reste à encaisser (tout)"
+              value={formatDT(s.outstanding)}
+              valueColor={color.warningDark}
+            />
             <Row label="Liquidité de la caisse" value={formatDT(s.cashBalance)} />
           </>
         }
@@ -200,8 +247,12 @@ export default function TopbarKpis({ dense = false, compact = false }: { dense?:
         icon={<ReceiptLong />}
         tone={urgent ? 'danger' : 'rose'}
         label="Commandes"
-        value={urgent ? `${urgent} urgente${urgent > 1 ? 's' : ''}` : `${s.orders.today} aujourd'hui`}
-        context={urgent ? 'ingrédients manquants' : variation(s.orders.today, s.yesterday?.orders, 'cmd')}
+        value={
+          urgent ? `${urgent} urgente${urgent > 1 ? 's' : ''}` : `${s.orders.today} aujourd'hui`
+        }
+        context={
+          urgent ? 'ingrédients manquants' : variation(s.orders.today, s.yesterday?.orders, 'cmd')
+        }
         title="Commandes"
         path="/admin/orders"
         details={

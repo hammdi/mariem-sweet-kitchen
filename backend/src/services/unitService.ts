@@ -5,10 +5,10 @@
  * unites. Utilise par : cout des recettes / prix, prevision de stock, deduction
  * reelle du stock, ingredients manquants, liste de courses, prix par source.
  *
- * Conversions supportees (strictement physiques) :
- *   g ↔ kg, ml ↔ l, et chaque unite vers elle-meme (piece ↔ piece,
- *   cuillere ↔ cuillere, tasse ↔ tasse).
- * Tout le reste (g → piece, kg → l, ...) est refuse.
+ * Conversions supportees :
+ *   g ↔ kg, ml ↔ l, et chaque unite vers elle-meme (piece ↔ piece, tasse ↔ tasse) ;
+ *   cuillere ↔ g/kg (1 cuillère = 10 g) et cuillere ↔ ml/l (1 cuillère = 10 ml).
+ * Tout le reste (g → piece, kg → l, tasse → g, ...) est refuse.
  */
 
 export const SUPPORTED_UNITS = ['kg', 'g', 'l', 'ml', 'piece', 'cuillere', 'tasse'] as const;
@@ -20,6 +20,10 @@ const FACTORS: Record<string, { family: string; toBase: number }> = {
   l: { family: 'volume', toBase: 1000 },
   ml: { family: 'volume', toBase: 1 },
 };
+
+/** Contenance d'une cuillère (décision de l'atelier) : 10 g pour un solide, 10 ml pour un liquide. */
+export const SPOON_GRAMS = 10;
+export const SPOON_ML = 10;
 
 /** Conversion impossible — statusCode 400 pour le gestionnaire d'erreurs Express. */
 export class UnitConversionError extends Error {
@@ -44,6 +48,19 @@ export class UnitConversionError extends Error {
 export function convertQuantity(quantity: number, from: string, to: string): number | null {
   if (from === to) {
     return quantity;
+  }
+  // cuillère : 10 g (masse) ou 10 ml (volume), selon l'autre unité
+  if (from === 'cuillere' || to === 'cuillere') {
+    const other = from === 'cuillere' ? to : from;
+    const family = FACTORS[other]?.family;
+    if (!family) {
+      return null;
+    }
+    const base = family === 'mass' ? 'g' : 'ml';
+    const perSpoon = family === 'mass' ? SPOON_GRAMS : SPOON_ML;
+    return from === 'cuillere'
+      ? convertQuantity(quantity * perSpoon, base, to)
+      : (convertQuantity(quantity, from, base) as number) / perSpoon;
   }
   const a = FACTORS[from];
   const b = FACTORS[to];

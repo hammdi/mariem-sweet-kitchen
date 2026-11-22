@@ -32,6 +32,7 @@ export interface PurchaseSource {
   notes?: string;
   isActive: boolean;
   ingredientCount?: number;
+  location?: { lat: number; lng: number } | null; // position sur la carte
 }
 
 export interface PriceHistoryEntry {
@@ -61,6 +62,8 @@ export interface PriceSummary {
   average: number | null;
   best: { price: number; offerId: string | null; sourceName: string | null } | null;
   incomparableCount: number;
+  /** Prix comptés dans la moyenne mais non revérifiés depuis 3 mois. */
+  staleCount?: number;
 }
 
 export interface StockNeed {
@@ -81,13 +84,30 @@ export interface QuoteLine {
   label: string;
   sizeName: string;
   quantity: number;
-  unitPrice: number;
-  lineTotal: number;
+  unitPrice: number; // prix du produit seul (recette)
+  lineTotal: number; // (produit + emballage) × quantité
+  portions?: number;
+  packaging?: {
+    packagingId: string;
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+  }[];
+  packagingUnitCost?: number; // emballage pour 1 article
+  breakdown?: {
+    ingredientsCost: number;
+    electricityCost: number;
+    waterCost: number;
+    margin: number;
+  };
 }
 
 export interface Quote {
   lines: (QuoteLine | null)[];
-  itemsTotal: number;
+  itemsTotal: number; // produits + emballages
+  productsTotal?: number;
+  packagingTotal?: number;
   feesTotal: number;
   total: number;
   stockNeeds: StockNeed[];

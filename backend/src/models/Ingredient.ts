@@ -1,5 +1,21 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export const INGREDIENT_KINDS = ['ingredient', 'packaging'] as const;
+export type IngredientKind = (typeof INGREDIENT_KINDS)[number];
+export const PACKAGING_TYPES = [
+  'box',
+  'bag',
+  'case',
+  'tray',
+  'paper',
+  'ribbon',
+  'label',
+  'other',
+] as const;
+export type PackagingType = (typeof PACKAGING_TYPES)[number];
+export const PACKAGING_USES = ['per_item', 'per_portion'] as const;
+export type PackagingUse = (typeof PACKAGING_USES)[number];
+
 export interface IIngredient extends Document {
   _id: string;
   name: string;
@@ -13,6 +29,14 @@ export interface IIngredient extends Document {
   description?: string;
   supplier?: string;
   lastPriceUpdate?: Date;
+  // 'sources' : prix = moyenne des prix des sources d'achat (calculé) ; 'manual' : saisi (aucune source)
+  priceBasis: 'sources' | 'manual';
+  // 'packaging' : boîte, sachet, caissette… (géré comme un ingrédient : sources,
+  // prix moyen, stock, achats) mais choisi dans la COMMANDE, jamais dans une recette.
+  kind: IngredientKind;
+  packagingType?: PackagingType;
+  // quantité proposée dans une commande : 1 par article, ou 1 par portion
+  packagingUse?: PackagingUse;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -67,6 +91,25 @@ const ingredientSchema = new Schema<IIngredient>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    priceBasis: {
+      type: String,
+      enum: ['sources', 'manual'],
+      default: 'manual',
+    },
+    kind: {
+      type: String,
+      enum: INGREDIENT_KINDS,
+      default: 'ingredient',
+      index: true,
+    },
+    packagingType: {
+      type: String,
+      enum: PACKAGING_TYPES,
+    },
+    packagingUse: {
+      type: String,
+      enum: PACKAGING_USES,
     },
     description: {
       type: String,

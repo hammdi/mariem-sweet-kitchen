@@ -16,6 +16,7 @@ import { logger } from './utils/logger';
 // Routes
 import authRoutes from './routes/auth';
 import recipeRoutes from './routes/recipes';
+import catalogRoutes from './routes/catalog';
 import ingredientRoutes from './routes/ingredients';
 import orderRoutes from './routes/orders';
 import applianceRoutes from './routes/appliances';
@@ -87,6 +88,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // Routes de l'API (authLimiter appliqué avant le routeur d'auth)
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/recipes', recipeRoutes);
+app.use('/api/catalog', catalogRoutes); // vitrine publique, sans composition
 // ingredientPriceRoutes avant ingredientRoutes : '/price-summary' ne doit pas etre pris pour un '/:id'
 app.use('/api/ingredients', ingredientPriceRoutes);
 app.use('/api/ingredients', ingredientRoutes);

@@ -42,7 +42,11 @@ export default function KpiCard({
         </Box>
       )}
       <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, fontSize: { xs: '0.78rem', sm: '0.875rem' }, lineHeight: 1.3 }}>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ fontWeight: 600, fontSize: { xs: '0.78rem', sm: '0.875rem' }, lineHeight: 1.3 }}
+        >
           {label}
         </Typography>
         <Typography
@@ -62,7 +66,11 @@ export default function KpiCard({
         </Typography>
         {delta && <Delta {...delta} />}
         {hint && (
-          <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' }, mt: 0.25 }}>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: { xs: 'none', sm: 'block' }, mt: 0.25 }}
+          >
             {hint}
           </Typography>
         )}
@@ -76,13 +84,21 @@ export default function KpiCard({
         p: 0,
         height: '100%',
         transition: `box-shadow ${motion.base}ms ${motion.ease}, transform ${motion.base}ms ${motion.ease}`,
-        ...(onClick ? { '&:hover': { boxShadow: shadow.raised, transform: 'translateY(-2px)' } } : {}),
+        ...(onClick
+          ? { '&:hover': { boxShadow: shadow.raised, transform: 'translateY(-2px)' } }
+          : {}),
       }}
     >
       {onClick ? (
         <ButtonBase
           onClick={onClick}
-          sx={{ p: { xs: 1.5, sm: 2 }, width: '100%', height: '100%', textAlign: 'left', alignItems: 'flex-start' }}
+          sx={{
+            p: { xs: 1.5, sm: 2 },
+            width: '100%',
+            height: '100%',
+            textAlign: 'left',
+            alignItems: 'flex-start',
+          }}
         >
           {content}
         </ButtonBase>

@@ -6,6 +6,7 @@ import { createError } from '../middleware/errorHandler';
 import { PopulatedVariant } from './priceCalculationService';
 import { computeConsumption, ConsumptionItem, ForecastLine } from './stockForecastService';
 import { roundQty } from './unitService';
+import { packagingForecastLine } from './packagingService';
 
 /**
  * Mouvements de stock liés aux commandes — seul endroit qui modifie le stock
@@ -19,28 +20,36 @@ import { roundQty } from './unitService';
  *  - les quantités viennent de computeConsumption, exactement comme la prévision.
  */
 
-const POPULATE_STOCK = {
-  path: 'items.recipeId',
-  populate: [{ path: 'variants.ingredients.ingredientId' }],
-};
+const POPULATE_STOCK = [
+  {
+    path: 'items.recipeId',
+    populate: [{ path: 'variants.ingredients.ingredientId' }],
+  },
+  { path: 'items.packaging.packagingId' }, // emballages : même stock que les ingrédients
+];
 
 /** Lignes de consommation d'une commande déjà chargée avec POPULATE_STOCK. */
 export function orderLines(order: IOrder): ForecastLine[] {
-  return order.items
-    .map((item) => {
-      const recipe = item.recipeId as any;
-      const variant = recipe?.variants?.[item.variantIndex];
-      if (!variant) {
-        return null;
-      }
-      return {
-        variant: variant as PopulatedVariant,
-        quantity: item.quantity,
-        clientProvidedIngredients: item.clientProvidedIngredients.map((id: any) => id.toString()),
-        label: recipe.name,
-      };
-    })
-    .filter((l): l is NonNullable<typeof l> => l !== null);
+  const lines: ForecastLine[] = [];
+  for (const item of order.items) {
+    const recipe = item.recipeId as any;
+    const variant = recipe?.variants?.[item.variantIndex];
+    if (!variant) {
+      continue;
+    }
+    lines.push({
+      variant: variant as PopulatedVariant,
+      quantity: item.quantity,
+      clientProvidedIngredients: item.clientProvidedIngredients.map((id: any) => id.toString()),
+      label: recipe.name,
+    });
+    // emballages de l'article (si chargés) : consomment le stock comme un ingrédient
+    const pack = packagingForecastLine(item.packaging || [], item.quantity, recipe.name);
+    if (pack) {
+      lines.push(pack);
+    }
+  }
+  return lines;
 }
 
 export async function loadOrderForStock(orderId: string | Types.ObjectId) {

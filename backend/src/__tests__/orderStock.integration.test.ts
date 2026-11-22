@@ -153,6 +153,7 @@ describeDb('commandes et stock (intégration)', () => {
   it('prix : 250 g de farine à 0,80 DT/kg coûtent 0,20 DT', async () => {
     const res = await request(app)
       .post('/api/prices/calculate')
+      .set(auth)
       .send({ recipeId: ids.cake, variantIndex: 0 });
     expect(res.status).toBe(200);
     const farine = res.body.data.ingredientsDetail.find((d: any) => d.name === 'Farine');
@@ -376,6 +377,31 @@ describeDb('commandes et stock (intégration)', () => {
     expect(await Recipe.countDocuments({ name: 'Mauvaise' })).toBe(0);
   });
 
+  it('accepte une cuillère pour un ingrédient au kg (1 cuillère = 10 g) et la chiffre', async () => {
+    const res = await request(app)
+      .post('/api/recipes')
+      .set(auth)
+      .send({
+        name: 'Cuillere',
+        variants: [
+          {
+            sizeName: 'Petit',
+            portions: 6,
+            ingredients: [{ ingredientId: ids.farine, quantity: 5, unit: 'cuillere' }],
+            appliances: [],
+          },
+        ],
+      });
+    expect(res.status).toBe(201);
+    const price = await request(app)
+      .post('/api/prices/calculate')
+      .set(auth)
+      .send({ recipeId: res.body.data.recipe._id, variantIndex: 0 });
+    // 5 cuillères = 50 g de farine à 0,80 DT/kg = 0,04 DT
+    expect(price.body.data.ingredientsCost).toBe(0.04);
+    await Recipe.deleteOne({ _id: res.body.data.recipe._id });
+  });
+
   it('seuil : alerte seulement si un seuil est défini', async () => {
     // isoler ce cas : les autres commandes actives se reservent sinon le stock
     await Order.updateMany(
@@ -411,16 +437,21 @@ describeDb('commandes et stock (intégration)', () => {
     expect((await request(app).post('/api/prices/quote').send({ items: [] })).status).toBe(401);
     expect((await request(app).post('/api/auth/register').send({})).status).toBe(401);
 
-    const publicResponses: [string, request.Response][] = [
-      ['/api/recipes', await request(app).get('/api/recipes')],
-      ['/api/recipes/:id', await request(app).get(`/api/recipes/${ids.cake}`)],
-      [
-        '/api/prices/calculate',
+    // composition et détail du calcul : réservés à l'atelier
+    expect((await request(app).get('/api/recipes')).status).toBe(401);
+    expect((await request(app).get('/api/appliances')).status).toBe(401);
+    expect((await request(app).get(`/api/recipes/${ids.cake}`)).status).toBe(401);
+    expect(
+      (
         await request(app)
           .post('/api/prices/calculate')
-          .send({ recipeId: ids.cake, variantIndex: 0 }),
-      ],
-      ['/api/appliances', await request(app).get('/api/appliances')],
+          .send({ recipeId: ids.cake, variantIndex: 0 })
+      ).status
+    ).toBe(401);
+
+    const publicResponses: [string, request.Response][] = [
+      ['/api/catalog', await request(app).get('/api/catalog')],
+      ['/api/catalog/:id', await request(app).get(`/api/catalog/${ids.cake}`)],
       ['/api/availability/blocks', await request(app).get('/api/availability/blocks')],
     ];
     for (const [url, r] of publicResponses) {
@@ -433,6 +464,14 @@ describeDb('commandes et stock (intégration)', () => {
         'referencePriceHistory',
         'sourceId',
         'clientPhone',
+        // catalogue : jamais la composition ni le détail du calcul
+        'ingredients',
+        'ingredientId',
+        'pricePerUnit',
+        'appliances',
+        'ingredientsCost',
+        'electricityCost',
+        'margin',
       ]) {
         expect([url, secret, body.includes(`"${secret}"`)]).toEqual([url, secret, false]);
       }

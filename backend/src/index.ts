@@ -11,6 +11,7 @@ import mongoose from 'mongoose';
 import app from './app';
 import { connectDatabase } from './config/database';
 import { logger } from './utils/logger';
+import { syncAllIngredientPrices } from './services/ingredientPriceService';
 
 // Fail-fast: refuser de démarrer sans un JWT_SECRET fort.
 // Sans ça, n'importe qui peut forger un token si la valeur d'exemple reste en place.
@@ -34,6 +35,16 @@ async function startServer() {
   try {
     await connectDatabase();
     logger.info('✅ Connexion à la base de données établie');
+
+    // Prix utilisé des ingrédients = moyenne des prix de leurs sources (idempotent)
+    try {
+      const sync = await syncAllIngredientPrices();
+      logger.info(
+        `💰 Prix ingrédients (moyenne des sources): ${sync.changed}/${sync.checked} mis à jour`
+      );
+    } catch (err) {
+      logger.error('Synchronisation des prix ingrédients impossible:', err);
+    }
 
     server = app.listen(PORT, () => {
       logger.info(`🚀 Serveur démarré sur le port ${PORT}`);

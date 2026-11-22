@@ -133,24 +133,64 @@ const kebab = (k: string) => k.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
 
 /** Variables CSS d'un thème (à poser sur :root ou [data-mk-theme]). */
 export const cssVars = (mode: ThemeMode) =>
-  Object.fromEntries(Object.entries(palettes[mode]).map(([k, v]) => [`--mk-${kebab(k)}`, v])) as Record<string, string>;
+  Object.fromEntries(
+    Object.entries(palettes[mode]).map(([k, v]) => [`--mk-${kebab(k)}`, v])
+  ) as Record<string, string>;
 
 /** Couleurs utilisables partout (sx, SVG, CSS) : elles suivent le thème actif. */
 export const color = Object.fromEntries(
   Object.keys(light).map((k) => [k, `var(--mk-${kebab(k)})`])
 ) as Record<keyof Palette, string>;
 
-export type Tone = 'neutral' | 'primary' | 'success' | 'danger' | 'warning' | 'info' | 'violet' | 'rose';
+export type Tone =
+  | 'neutral'
+  | 'primary'
+  | 'success'
+  | 'danger'
+  | 'warning'
+  | 'info'
+  | 'violet'
+  | 'rose';
 
 /** Couleurs d'un « ton » : texte fort, fond doux, accent, bordure. */
 export const tone: Record<Tone, { fg: string; bg: string; accent: string; border: string }> = {
-  neutral: { fg: color.inkSoft, bg: color.neutralSoft, accent: color.inkMuted, border: color.border },
-  primary: { fg: color.primaryDark, bg: color.primarySoft, accent: color.primary, border: color.primaryBorder },
-  success: { fg: color.successDark, bg: color.successSoft, accent: color.success, border: color.successBorder },
-  danger: { fg: color.dangerDark, bg: color.dangerSoft, accent: color.danger, border: color.dangerBorder },
-  warning: { fg: color.warningDark, bg: color.warningSoft, accent: color.warning, border: color.warningBorder },
+  neutral: {
+    fg: color.inkSoft,
+    bg: color.neutralSoft,
+    accent: color.inkMuted,
+    border: color.border,
+  },
+  primary: {
+    fg: color.primaryDark,
+    bg: color.primarySoft,
+    accent: color.primary,
+    border: color.primaryBorder,
+  },
+  success: {
+    fg: color.successDark,
+    bg: color.successSoft,
+    accent: color.success,
+    border: color.successBorder,
+  },
+  danger: {
+    fg: color.dangerDark,
+    bg: color.dangerSoft,
+    accent: color.danger,
+    border: color.dangerBorder,
+  },
+  warning: {
+    fg: color.warningDark,
+    bg: color.warningSoft,
+    accent: color.warning,
+    border: color.warningBorder,
+  },
   info: { fg: color.infoDark, bg: color.infoSoft, accent: color.info, border: color.infoBorder },
-  violet: { fg: color.violetDark, bg: color.violetSoft, accent: color.violet, border: color.violetBorder },
+  violet: {
+    fg: color.violetDark,
+    bg: color.violetSoft,
+    accent: color.violet,
+    border: color.violetBorder,
+  },
   rose: { fg: color.roseDark, bg: color.roseSoft, accent: color.rose, border: color.roseBorder },
 };
 

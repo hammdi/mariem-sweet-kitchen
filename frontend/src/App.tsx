@@ -26,6 +26,7 @@ import ClientsPage from './pages/admin/ClientsPage';
 import ClientDetailPage from './pages/admin/ClientDetailPage';
 import PurchaseSourcesPage from './pages/admin/PurchaseSourcesPage';
 import IngredientDetailPage from './pages/admin/IngredientDetailPage';
+import PriceCalculatorPage from './pages/admin/PriceCalculatorPage';
 import CashPage from './pages/admin/CashPage';
 import StatisticsPage from './pages/admin/StatisticsPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -53,15 +54,21 @@ function App() {
           <Route path="recipes" element={<AdminRecipesPage />} />
           <Route path="recipes/new" element={<RecipeFormPage />} />
           <Route path="recipes/:id/edit" element={<RecipeFormPage />} />
-          <Route path="ingredients" element={<IngredientsPage />} />
+          <Route path="ingredients" element={<IngredientsPage key="ingredient" />} />
           <Route path="ingredients/:id" element={<IngredientDetailPage />} />
+          <Route path="packaging" element={<IngredientsPage key="packaging" kind="packaging" />} />
+          <Route path="packaging/:id" element={<IngredientDetailPage />} />
+          <Route path="calculator" element={<PriceCalculatorPage />} />
           <Route path="appliances" element={<AppliancesPage />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="orders/new" element={<ManualOrderPage />} />
           <Route path="orders/:id" element={<OrderDetailPage />} />
           <Route path="stock" element={<StockPage />} />
           {/* Catégories : gérées dans Paramètres */}
-          <Route path="categories" element={<Navigate to="/admin/settings?tab=categories" replace />} />
+          <Route
+            path="categories"
+            element={<Navigate to="/admin/settings?tab=categories" replace />}
+          />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="shopping-list" element={<ShoppingListPage />} />

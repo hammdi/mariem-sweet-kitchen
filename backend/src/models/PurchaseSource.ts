@@ -18,6 +18,8 @@ export interface IPurchaseSource extends Document {
   openingHours?: string;
   delivers: boolean;
   notes?: string;
+  // Position sur la carte (distance et coût du trajet depuis le domicile)
+  location?: { lat: number; lng: number } | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -45,6 +47,16 @@ const purchaseSourceSchema = new Schema<IPurchaseSource>(
     openingHours: { type: String, trim: true, maxlength: 200 },
     delivers: { type: Boolean, default: false },
     notes: { type: String, trim: true, maxlength: 1000 },
+    location: {
+      type: new Schema(
+        {
+          lat: { type: Number, required: true, min: -90, max: 90 },
+          lng: { type: Number, required: true, min: -180, max: 180 },
+        },
+        { _id: false }
+      ),
+      default: null,
+    },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

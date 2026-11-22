@@ -121,7 +121,13 @@ const AppliancesPage = () => {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               inputProps={{ 'aria-label': 'Rechercher une machine' }}
-              InputProps={{ startAdornment: <InputAdornment position="start"><Search /></InputAdornment> }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
               sx={{ width: { xs: '100%', sm: 220 } }}
             />
             <Button variant="contained" startIcon={<Add />} onClick={openAdd}>

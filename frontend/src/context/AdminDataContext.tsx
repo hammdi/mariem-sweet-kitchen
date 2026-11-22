@@ -1,4 +1,12 @@
-import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useLocation } from 'react-router-dom';
 import api from '../services/api';
 import { periodRange } from '../utils/dateTime';
@@ -48,7 +56,13 @@ export interface DashboardSummary {
     lowStock: number;
     purchasesNeeded: number;
     purchasesEstimatedCost: number;
-    lowStockItems?: { _id: string; name: string; unit: string; stockQuantity: number; minStock: number }[];
+    lowStockItems?: {
+      _id: string;
+      name: string;
+      unit: string;
+      stockQuantity: number;
+      minStock: number;
+    }[];
   };
 }
 

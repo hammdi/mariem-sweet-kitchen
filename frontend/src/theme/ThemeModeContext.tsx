@@ -1,4 +1,12 @@
-import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { ThemeProvider } from '@mui/material/styles';
 import { createAppTheme } from './theme';
 import { ThemeMode } from './tokens';
@@ -8,7 +16,10 @@ import { ThemeMode } from './tokens';
  * Le choix est mémorisé sur cet appareil. Le site public reste en clair.
  */
 const KEY = 'mariem.theme';
-const Ctx = createContext<{ mode: ThemeMode; toggle: () => void }>({ mode: 'light', toggle: () => undefined });
+const Ctx = createContext<{ mode: ThemeMode; toggle: () => void }>({
+  mode: 'light',
+  toggle: () => undefined,
+});
 
 const readMode = (): ThemeMode => {
   try {

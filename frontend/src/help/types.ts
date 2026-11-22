@@ -23,7 +23,8 @@ export type FlowId =
   | 'stock'
   | 'stats'
   | 'recipe'
-  | 'shopping';
+  | 'shopping'
+  | 'packaging';
 
 export interface FlowNode {
   emoji: string;

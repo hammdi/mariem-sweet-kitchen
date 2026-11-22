@@ -8,10 +8,25 @@ import { syncPurchaseNeedsSafe } from '../services/purchaseNeedService';
 
 const router = express.Router();
 
-// @desc    Liste des recettes (public)
+/** Recommandations client : lignes non vides, 8 maximum. */
+function cleanRecommendations(input: unknown): string[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+  return input
+    .filter((r): r is string => typeof r === 'string')
+    .map((r) => r.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
+// @desc    Liste des recettes avec ingrédients et machines (admin)
 // @route   GET /api/recipes
+// Le public utilise /api/catalog : photos, description, tailles, prix — jamais la composition.
 router.get(
   '/',
+  authenticate,
+  authorize('admin'),
   asyncHandler(async (req: Request, res: Response) => {
     const { page = 1, limit = 10, search, category } = req.query;
 
@@ -49,10 +64,12 @@ router.get(
   })
 );
 
-// @desc    Détail d'une recette (public)
+// @desc    Détail d'une recette avec sa composition (admin)
 // @route   GET /api/recipes/:id
 router.get(
   '/:id',
+  authenticate,
+  authorize('admin'),
   asyncHandler(async (req: Request, res: Response) => {
     const recipe = await Recipe.findById(req.params.id)
       .populate('variants.ingredients.ingredientId', 'name pricePerUnit unit category')
@@ -73,14 +90,15 @@ router.post(
   authenticate,
   authorize('admin'),
   asyncHandler(async (req: Request, res: Response) => {
-    const { name, description, categories, variants } = req.body;
+    const { name, description, categories, variants, images } = req.body;
+    const recommendations = cleanRecommendations(req.body.recommendations);
 
     if (!variants || !Array.isArray(variants) || variants.length === 0) {
       throw createError('Au moins un variant (taille) est requis', 400);
     }
 
     await assertRecipeUnits(variants);
-    const recipe = new Recipe({ name, description, categories, variants });
+    const recipe = new Recipe({ name, description, categories, variants, images, recommendations });
     await recipe.save();
 
     await recipe.populate([
@@ -114,9 +132,13 @@ router.post(
       description: original.description,
       images: [...original.images],
       categories: [...(original.categories || [])],
+      recommendations: [...(original.recommendations || [])],
       variants: original.variants.map((v) => ({
         sizeName: v.sizeName,
         portions: v.portions,
+        weightGrams: v.weightGrams,
+        dimensions: v.dimensions,
+        saleMode: v.saleMode,
         ingredients: v.ingredients.map((i) => ({
           ingredientId: i.ingredientId,
           quantity: i.quantity,
@@ -168,6 +190,9 @@ router.put(
     }
     if (images !== undefined) {
       recipe.images = images;
+    }
+    if (req.body.recommendations !== undefined) {
+      recipe.recommendations = cleanRecommendations(req.body.recommendations);
     }
 
     await recipe.save();

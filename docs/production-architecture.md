@@ -16,16 +16,16 @@ Une production interne (« je fais 10 muffins pour la vitrine ») change trois c
 
 ### `Production` (lot produit)
 
-| Champ | Rôle |
-|---|---|
-| `recipeId`, `variantIndex` | ce qui est produit |
-| `quantity` | nombre d'unités produites (ex : 10 muffins) |
-| `producedAt`, `createdBy` | quand / qui |
-| `status` | `planned` → `in_progress` → `done` / `cancelled` |
-| `stockDeducted`, `stockDeductedAt` | même verrou atomique que les commandes |
-| `consumption` | instantané des quantités consommées (traçabilité) |
-| `orderId?` | si la production sert une commande précise |
-| `loss` | unités ratées / jetées (raison obligatoire) |
+| Champ                              | Rôle                                              |
+| ---------------------------------- | ------------------------------------------------- |
+| `recipeId`, `variantIndex`         | ce qui est produit                                |
+| `quantity`                         | nombre d'unités produites (ex : 10 muffins)       |
+| `producedAt`, `createdBy`          | quand / qui                                       |
+| `status`                           | `planned` → `in_progress` → `done` / `cancelled`  |
+| `stockDeducted`, `stockDeductedAt` | même verrou atomique que les commandes            |
+| `consumption`                      | instantané des quantités consommées (traçabilité) |
+| `orderId?`                         | si la production sert une commande précise        |
+| `loss`                             | unités ratées / jetées (raison obligatoire)       |
 
 ### `FinishedProduct` (stock de produits finis)
 

@@ -1,6 +1,15 @@
 import { ReactNode, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, IconButton, ListItemIcon, Menu, MenuItem, Tooltip, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  IconButton,
+  ListItemIcon,
+  Menu,
+  MenuItem,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import { ArrowBack, AutoAwesome, HelpOutline, PlayCircleOutline } from '@mui/icons-material';
 import { color, Tone } from '../../theme/tokens';
 import { useHelp } from '../../help/HelpContext';
@@ -46,13 +55,24 @@ export default function PageHeader({
           size="small"
           data-testid="page-help"
           startIcon={<HelpOutline />}
-          onClick={(e) => (helpTour && helpFlow ? setAnchor(e.currentTarget) : helpTour ? help.startTour(helpTour) : (help.openPanel(), help.showFlow(helpFlow!)))}
+          onClick={(e) =>
+            helpTour && helpFlow
+              ? setAnchor(e.currentTarget)
+              : helpTour
+                ? help.startTour(helpTour)
+                : (help.openPanel(), help.showFlow(helpFlow!))
+          }
           sx={{ color: color.primaryDark, flex: '0 0 auto !important', whiteSpace: 'nowrap' }}
         >
           Comment ça marche ?
         </Button>
       </Tooltip>
-      <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}>
+      <Menu
+        anchorEl={anchor}
+        open={!!anchor}
+        onClose={() => setAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      >
         {helpFlow && (
           <MenuItem
             onClick={() => {
@@ -116,7 +136,11 @@ export default function PageHeader({
           </Box>
         )}
         <Box sx={{ minWidth: 0 }}>
-          <Typography variant="h4" component="h1" sx={{ fontSize: { xs: '1.45rem', md: '1.75rem' }, lineHeight: 1.2 }}>
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{ fontSize: { xs: '1.45rem', md: '1.75rem' }, lineHeight: 1.2 }}
+          >
             {title}
           </Typography>
           {subtitle && (

@@ -8,7 +8,10 @@ import { formatDate, formatQty } from '../../utils/format';
 import { color, radius, Tone, tone as tones } from '../../theme/tokens';
 import { EmptyState, OrderStatusBadge, StatusBadge } from '../ui';
 
-const URGENCY: Record<ActionRequiredOrder['urgency'], { label: (o: ActionRequiredOrder) => string; tone: Tone }> = {
+const URGENCY: Record<
+  ActionRequiredOrder['urgency'],
+  { label: (o: ActionRequiredOrder) => string; tone: Tone }
+> = {
   overdue: { label: () => 'Date dépassée', tone: 'danger' },
   urgent: { label: (o) => `Dans ${Math.max(0, o.hoursLeft || 0)} h`, tone: 'danger' },
   upcoming: { label: (o) => `Dans ${Math.round((o.hoursLeft || 0) / 24)} j`, tone: 'warning' },
@@ -19,7 +22,13 @@ const URGENCY: Record<ActionRequiredOrder['urgency'], { label: (o: ActionRequire
  * Commandes enregistrées dont il manque des ingrédients (les plus urgentes en haut).
  * Information seulement : aucune action automatique (pas d'achat, pas d'annulation).
  */
-export default function ActionRequiredSection({ limit, empty }: { limit?: number; empty?: React.ReactNode }) {
+export default function ActionRequiredSection({
+  limit,
+  empty,
+}: {
+  limit?: number;
+  empty?: React.ReactNode;
+}) {
   const navigate = useNavigate();
   const [orders, setOrders] = useState<ActionRequiredOrder[] | null>(null);
 
@@ -75,14 +84,21 @@ export default function ActionRequiredSection({ limit, empty }: { limit?: number
             </Box>
             <Typography variant="caption" sx={{ color: color.inkSoft, display: 'block', mt: 0.25 }}>
               {o.date ? `Prévue le ${formatDate(o.date, true)} · ` : ''}
-              {o.items.map((i) => `${i.recipeName}${i.sizeName ? ` ${i.sizeName}` : ''} ×${i.quantity}`).join(', ')}
+              {o.items
+                .map((i) => `${i.recipeName}${i.sizeName ? ` ${i.sizeName}` : ''} ×${i.quantity}`)
+                .join(', ')}
             </Typography>
             {o.missing.map((m) => (
-              <Typography key={m.ingredientId} variant="body2" sx={{ mt: 0.25, fontSize: '0.84rem' }}>
+              <Typography
+                key={m.ingredientId}
+                variant="body2"
+                sx={{ mt: 0.25, fontSize: '0.84rem' }}
+              >
                 ⚠️ <strong>{m.name}</strong> : manque {formatQty(m.missing)} {m.unit}
                 <Box component="span" sx={{ color: color.inkSoft }}>
                   {' '}
-                  · achat : {m.purchaseStatus.replace('a acheter', 'à acheter').replace('achete', 'acheté')}
+                  · achat :{' '}
+                  {m.purchaseStatus.replace('a acheter', 'à acheter').replace('achete', 'acheté')}
                 </Box>
               </Typography>
             ))}

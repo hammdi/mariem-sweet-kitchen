@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PageHeader } from '../../components/ui';
+import { convertQuantity, recipeUnitsFor, UNIT_LABELS } from '../../utils/units';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../../services/api';
@@ -34,7 +35,19 @@ const emptyVariant = () => ({
   portions: 1,
   ingredients: [] as any[],
   appliances: [] as any[],
+  // vitrine client (catalogue) : jamais la composition
+  weightGrams: '' as number | '',
+  dimensions: '',
+  saleMode: '',
 });
+
+const SALE_MODES = ['À la pièce', 'À la part', 'Au kg', 'Boîte de 6', 'Boîte de 12'];
+const RECOMMENDATION_IDEAS = [
+  'À conserver au frais',
+  'À consommer dans les 3 jours',
+  'Se sert à température ambiante',
+  'Idéal pour un anniversaire',
+];
 
 const RecipeFormPage = () => {
   const { id } = useParams();
@@ -64,6 +77,7 @@ const RecipeFormPage = () => {
   const [categories, setCategories] = useState<string[]>([]);
   const [variants, setVariants] = useState([emptyVariant()]);
   const [images, setImages] = useState<string[]>([]);
+  const [recommendations, setRecommendations] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
 
   const [allIngredients, setAllIngredients] = useState<any[]>([]);
@@ -75,7 +89,7 @@ const RecipeFormPage = () => {
     const load = async () => {
       try {
         const [ingRes, appRes] = await Promise.all([
-          api.get('/ingredients'),
+          api.get('/ingredients?kind=ingredient&limit=500'), // pas d'emballage dans une recette
           api.get('/appliances'),
         ]);
         setAllIngredients(ingRes.data.data?.ingredients || ingRes.data.data || []);
@@ -98,10 +112,14 @@ const RecipeFormPage = () => {
         setDescription(r.description);
         setCategories(r.categories || []);
         setImages(r.images || []);
+        setRecommendations(r.recommendations || []);
         setVariants(
           r.variants.map((v: any) => ({
             sizeName: v.sizeName,
             portions: v.portions,
+            weightGrams: v.weightGrams ?? '',
+            dimensions: v.dimensions || '',
+            saleMode: v.saleMode || '',
             ingredients: v.ingredients.map((i: any) => ({
               ingredientId:
                 typeof i.ingredientId === 'object' ? i.ingredientId._id : i.ingredientId,
@@ -133,8 +151,9 @@ const RecipeFormPage = () => {
     setVariants([
       ...variants,
       {
-        sizeName: '',
+        ...emptyVariant(),
         portions: last.portions,
+        saleMode: last.saleMode,
         ingredients: last.ingredients.map((i) => ({ ...i })),
         appliances: last.appliances.map((a) => ({ ...a })),
       },
@@ -155,7 +174,15 @@ const RecipeFormPage = () => {
 
   const updateIngredient = (vIdx: number, iIdx: number, field: string, value: any) => {
     const newVars = [...variants];
-    newVars[vIdx].ingredients[iIdx] = { ...newVars[vIdx].ingredients[iIdx], [field]: value };
+    const next = { ...newVars[vIdx].ingredients[iIdx], [field]: value };
+    // nouvel ingrédient : garder une unité convertible vers son unité de stock
+    if (field === 'ingredientId') {
+      const stockUnit = allIngredients.find((i) => i._id === value)?.unit;
+      if (stockUnit && !recipeUnitsFor(stockUnit).includes(next.unit)) {
+        next.unit = recipeUnitsFor(stockUnit)[0];
+      }
+    }
+    newVars[vIdx].ingredients[iIdx] = next;
     setVariants(newVars);
   };
 
@@ -218,17 +245,29 @@ const RecipeFormPage = () => {
 
     setSaving(true);
     try {
-      const body = { name, description, categories, variants, images };
+      const body = {
+        name,
+        description,
+        categories,
+        images,
+        recommendations: recommendations.map((x) => x.trim()).filter(Boolean),
+        variants: variants.map((v) => ({
+          ...v,
+          weightGrams: v.weightGrams === '' ? undefined : Number(v.weightGrams),
+          dimensions: v.dimensions.trim(),
+          saleMode: v.saleMode.trim(),
+        })),
+      };
       if (isEdit) {
         await api.put(`/recipes/${id}`, body);
-        toast.success('Recette modifiee');
+        toast.success('Recette modifiée');
       } else {
         await api.post('/recipes', body);
-        toast.success('Recette creee');
+        toast.success('Recette créée');
       }
       navigate('/admin/recipes');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Erreur lors de la sauvegarde');
+    } catch {
+      /* le message du serveur est déjà affiché (une seule fois) par l'intercepteur */
     }
     setSaving(false);
   };
@@ -251,7 +290,7 @@ const RecipeFormPage = () => {
         <Card sx={{ mb: 3 }}>
           <CardContent>
             <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-              Informations generales
+              Informations générales
             </Typography>
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
@@ -342,7 +381,66 @@ const RecipeFormPage = () => {
                   label="Description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                  helperText="Affichée dans le catalogue client, avec les photos"
                 />
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Conseils pour le client
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: 'block', mb: 1 }}
+                >
+                  Affichés dans le catalogue (conservation, occasion…). 8 maximum.
+                </Typography>
+                {recommendations.map((rec, i) => (
+                  <Box key={i} sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      value={rec}
+                      inputProps={{ maxLength: 140, 'aria-label': `Conseil ${i + 1}` }}
+                      onChange={(e) =>
+                        setRecommendations(
+                          recommendations.map((x, j) => (j === i ? e.target.value : x))
+                        )
+                      }
+                    />
+                    <IconButton
+                      size="small"
+                      aria-label={`Retirer le conseil ${i + 1}`}
+                      onClick={() => setRecommendations(recommendations.filter((_, j) => j !== i))}
+                    >
+                      <Close fontSize="small" />
+                    </IconButton>
+                  </Box>
+                ))}
+                {recommendations.length < 8 && (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                    {RECOMMENDATION_IDEAS.filter((idea) => !recommendations.includes(idea)).map(
+                      (idea) => (
+                        <Chip
+                          key={idea}
+                          size="small"
+                          variant="outlined"
+                          icon={<Add />}
+                          label={idea}
+                          onClick={() => setRecommendations([...recommendations, idea])}
+                        />
+                      )
+                    )}
+                    <Chip
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      icon={<Add />}
+                      label="Autre conseil"
+                      onClick={() => setRecommendations([...recommendations, ''])}
+                    />
+                  </Box>
+                )}
               </Grid>
               <Grid item xs={12}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
@@ -465,11 +563,63 @@ const RecipeFormPage = () => {
                     onChange={(e) => updateVariant(vIdx, 'portions', parseInt(e.target.value) || 1)}
                   />
                 </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" sx={{ mt: 0.5 }}>
+                    Pour le catalogue client
+                  </Typography>
+                </Grid>
+                <Grid item xs={6} md={3}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Poids (g)"
+                    value={variant.weightGrams}
+                    inputProps={{ inputMode: 'numeric' }}
+                    onChange={(e) => {
+                      const n = parseInt(e.target.value.replace(/\D/g, ''));
+                      updateVariant(vIdx, 'weightGrams', Number.isFinite(n) ? n : '');
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={6} md={3}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Taille / dimensions"
+                    placeholder="Ø 20 cm"
+                    value={variant.dimensions}
+                    inputProps={{ maxLength: 40 }}
+                    onChange={(e) => updateVariant(vIdx, 'dimensions', e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Façon de vente"
+                    placeholder="À la pièce, Boîte de 6…"
+                    value={variant.saleMode}
+                    inputProps={{ maxLength: 40 }}
+                    onChange={(e) => updateVariant(vIdx, 'saleMode', e.target.value)}
+                  />
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.75 }}>
+                    {SALE_MODES.map((m) => (
+                      <Chip
+                        key={m}
+                        size="small"
+                        label={m}
+                        variant={variant.saleMode === m ? 'filled' : 'outlined'}
+                        color={variant.saleMode === m ? 'primary' : 'default'}
+                        onClick={() => updateVariant(vIdx, 'saleMode', m)}
+                      />
+                    ))}
+                  </Box>
+                </Grid>
               </Grid>
 
               {/* Ingredients */}
               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                Ingredients
+                Ingrédients
               </Typography>
               {variant.ingredients.map((ing: any, iIdx: number) => (
                 <Grid container spacing={1} key={iIdx} sx={{ mb: 1 }} alignItems="center">
@@ -492,16 +642,35 @@ const RecipeFormPage = () => {
                     </FormControl>
                   </Grid>
                   <Grid item xs={6} md={3}>
-                    <TextField
-                      fullWidth
-                      size="small"
-                      type="number"
-                      label="Quantité"
-                      value={ing.quantity}
-                      onChange={(e) =>
-                        updateIngredient(vIdx, iIdx, 'quantity', parseFloat(e.target.value) || 0)
-                      }
-                    />
+                    {(() => {
+                      // aperçu du calcul : quantité dans l'unité du stock et coût (mêmes règles que le serveur)
+                      const stockIng = allIngredients.find((i) => i._id === ing.ingredientId);
+                      const inStock = stockIng
+                        ? convertQuantity(ing.quantity || 0, ing.unit, stockIng.unit)
+                        : null;
+                      const hint =
+                        stockIng && inStock !== null && ing.quantity > 0
+                          ? `${ing.unit === stockIng.unit ? '' : `= ${parseFloat(inStock.toFixed(4))} ${stockIng.unit} · `}${(inStock * (stockIng.pricePerUnit || 0)).toFixed(3)} DT`
+                          : undefined;
+                      return (
+                        <TextField
+                          fullWidth
+                          size="small"
+                          type="number"
+                          label="Quantité"
+                          value={ing.quantity}
+                          helperText={hint}
+                          onChange={(e) =>
+                            updateIngredient(
+                              vIdx,
+                              iIdx,
+                              'quantity',
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
+                        />
+                      );
+                    })()}
                   </Grid>
                   <Grid item xs={4} md={3}>
                     <FormControl fullWidth size="small">
@@ -511,11 +680,22 @@ const RecipeFormPage = () => {
                         label="Unité"
                         onChange={(e) => updateIngredient(vIdx, iIdx, 'unit', e.target.value)}
                       >
-                        {['kg', 'g', 'l', 'ml', 'piece', 'cuillere', 'tasse'].map((u) => (
-                          <MenuItem key={u} value={u}>
-                            {u}
-                          </MenuItem>
-                        ))}
+                        {(() => {
+                          const stockUnit = allIngredients.find(
+                            (i) => i._id === ing.ingredientId
+                          )?.unit;
+                          const units = stockUnit
+                            ? recipeUnitsFor(stockUnit)
+                            : ['kg', 'g', 'l', 'ml', 'piece', 'cuillere', 'tasse'];
+                          // une ancienne recette peut contenir une unité devenue invalide : on l'affiche quand même
+                          return (units.includes(ing.unit) ? units : [...units, ing.unit]).map(
+                            (u) => (
+                              <MenuItem key={u} value={u}>
+                                {UNIT_LABELS[u] || u}
+                              </MenuItem>
+                            )
+                          );
+                        })()}
                       </Select>
                     </FormControl>
                   </Grid>
@@ -536,7 +716,7 @@ const RecipeFormPage = () => {
                 onClick={() => addIngredient(vIdx)}
                 sx={{ mb: 2 }}
               >
-                Ajouter ingredient
+                Ajouter un ingrédient
               </Button>
 
               <Divider sx={{ my: 2 }} />
@@ -587,7 +767,7 @@ const RecipeFormPage = () => {
                 </Grid>
               ))}
               <Button size="small" startIcon={<Add />} onClick={() => addAppliance(vIdx)}>
-                Ajouter machine
+                Ajouter une machine
               </Button>
             </CardContent>
           </Card>

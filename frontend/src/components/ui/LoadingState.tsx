@@ -7,7 +7,11 @@ export function SkeletonCards({ count = 3, height = 96 }: { count?: number; heig
       sx={{
         display: 'grid',
         gap: 2,
-        gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, 1fr)', lg: `repeat(${count}, 1fr)` },
+        gridTemplateColumns: {
+          xs: 'minmax(0, 1fr)',
+          sm: 'repeat(2, 1fr)',
+          lg: `repeat(${count}, 1fr)`,
+        },
       }}
       aria-busy
       aria-label="Chargement"
@@ -23,7 +27,11 @@ export function SkeletonCards({ count = 3, height = 96 }: { count?: number; heig
 
 export function SkeletonRows({ rows = 5 }: { rows?: number }) {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }} aria-busy aria-label="Chargement">
+    <Box
+      sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
+      aria-busy
+      aria-label="Chargement"
+    >
       {Array.from({ length: rows }).map((_, i) => (
         <Skeleton key={i} variant="rounded" height={44} />
       ))}

@@ -19,6 +19,7 @@ import {
   restoreStockForOrder,
 } from '../services/stockMovementService';
 import { assertRecipeUnits } from '../services/recipeUnitValidation';
+import { resolvePackaging } from '../services/packagingService';
 import { roundQty } from '../services/unitService';
 import {
   buildActionRequired,
@@ -38,6 +39,31 @@ import { changeOrderStatus, PREPARATION_STARTED } from '../services/orderWorkflo
 import { idempotent } from '../middleware/idempotency';
 
 const router = express.Router();
+
+/**
+ * Frais supplémentaires d'une commande (transport, emballage, livraison…).
+ * Estimés par l'atelier commande par commande : ils s'ajoutent au total
+ * mais ne font pas partie du coût des produits.
+ */
+function parseAdditionalFees(input: unknown): { label: string; amount: number }[] {
+  if (input === undefined || input === null) {
+    return [];
+  }
+  if (!Array.isArray(input) || input.length > 20) {
+    throw createError('Frais invalides', 400);
+  }
+  return input.map((fee: any) => {
+    const label = typeof fee?.label === 'string' ? fee.label.trim() : '';
+    const amount = typeof fee?.amount === 'string' ? parseFloat(fee.amount) : fee?.amount;
+    if (!label || label.length > 60) {
+      throw createError('Chaque frais doit avoir un libellé (60 caractères max)', 400);
+    }
+    if (typeof amount !== 'number' || !Number.isFinite(amount) || amount < 0 || amount > 100000) {
+      throw createError(`Montant invalide pour « ${label} »`, 400);
+    }
+    return { label, amount: Math.round(amount * 1000) / 1000 };
+  });
+}
 
 // @desc    Créer une commande (public — pas besoin d'auth)
 // @route   POST /api/orders
@@ -134,7 +160,7 @@ router.post(
     });
 
     await order.save();
-    await order.populate('items.recipeId', 'name images');
+    await order.populate('items.recipeId', 'name images variants.sizeName');
 
     logger.info(`Nouvelle commande ${order._id} de ${clientName} (${clientPhone})`);
 
@@ -162,10 +188,25 @@ router.post(
     // Le manque de stock n'empeche jamais l'enregistrement : il cree des besoins d'achat
     await syncPurchaseNeedsSafe();
 
+    // Réponse publique : un résumé, jamais le détail du calcul ni la composition
     res.status(201).json({
       success: true,
       message: 'Commande envoyee, Mariem vous contactera',
-      data: { order },
+      data: {
+        order: {
+          _id: order._id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          totalPrice: order.totalPrice,
+          requestedDate: order.requestedDate,
+          items: order.items.map((item: any) => ({
+            name: item.recipeId?.name || 'Création',
+            sizeName: item.recipeId?.variants?.[item.variantIndex]?.sizeName || '',
+            quantity: item.quantity,
+            price: item.calculatedPrice?.total || 0,
+          })),
+        },
+      },
     });
   })
 );
@@ -199,8 +240,15 @@ router.post(
       throw createError('Au moins un article est requis', 400);
     }
 
-    const orderItems = [];
+    // Emballages validés AVANT toute création (recette spéciale comprise)
+    const packagings = [];
     for (const item of items) {
+      packagings.push(await resolvePackaging(item.packaging));
+    }
+
+    const orderItems = [];
+    for (const [itemIndex, item] of items.entries()) {
+      const packaging = packagings[itemIndex];
       // Mode 1 : recette existante
       if (item.recipeId) {
         const recipe = await Recipe.findById(item.recipeId);
@@ -231,6 +279,7 @@ router.post(
             total: price.total,
           },
           priceSnapshot: PriceCalculationService.snapshotOf(price),
+          packaging,
         });
       }
       // Mode 2 : recette custom (créée à la volée)
@@ -282,6 +331,7 @@ router.post(
             total: price.total,
           },
           priceSnapshot: PriceCalculationService.snapshotOf(price),
+          packaging,
         });
       }
     }
@@ -293,7 +343,7 @@ router.post(
       items: orderItems,
       requestedDate: requestedDate ? new Date(requestedDate) : null,
       confirmedDate: requestedDate ? new Date(requestedDate) : null, // Mariem confirme directement
-      additionalFees: additionalFees || [],
+      additionalFees: parseAdditionalFees(additionalFees),
       source: 'manual',
       notes: notes || '',
     });
@@ -467,12 +517,15 @@ router.get(
   authorize('admin'),
   asyncHandler(async (_req: Request, res: Response) => {
     const orders = await Order.find({ status: { $in: ['pending', 'confirmed', 'paid'] } }).populate(
-      {
-        path: 'items.recipeId',
-        populate: [
-          { path: 'variants.ingredients.ingredientId', select: 'name stockQuantity unit' },
-        ],
-      }
+      [
+        {
+          path: 'items.recipeId',
+          populate: [
+            { path: 'variants.ingredients.ingredientId', select: 'name stockQuantity unit' },
+          ],
+        },
+        { path: 'items.packaging.packagingId', select: 'name stockQuantity unit' },
+      ]
     );
 
     const result = orders.map((order) => {
@@ -617,6 +670,72 @@ router.get(
     }
 
     res.json({ success: true, data: { order } });
+  })
+);
+
+// @desc    Remplacer les frais supplémentaires (transport, emballage…) après création
+// @route   PUT /api/orders/:id/fees   { additionalFees: [{ label, amount }] }
+router.put(
+  '/:id/fees',
+  authenticate,
+  authorize('admin'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      throw createError('Commande non trouvee', 404);
+    }
+    if (order.status === 'cancelled') {
+      throw createError('Commande annulée : les frais ne sont plus modifiables', 400);
+    }
+    order.additionalFees = parseAdditionalFees(req.body.additionalFees) as any;
+    await order.save(); // total recalculé (hook pre-save)
+    const payment = await refreshOrderPayment(order._id); // reste à encaisser à jour
+    const result = (await Order.findById(order._id))!;
+    await result.populate('items.recipeId', 'name images');
+    logger.info(
+      `Frais commande ${order._id}: ${result.additionalFees.length} ligne(s), total ${result.totalPrice} DT par ${req.user!.email}`
+    );
+    res.json({ success: true, data: { order: result, payment } });
+  })
+);
+
+// @desc    Choisir / modifier l'emballage des articles (avant la préparation)
+// @route   PUT /api/orders/:id/packaging   { items: [{ index, packaging: [{ packagingId, quantity }] }] }
+router.put(
+  '/:id/packaging',
+  authenticate,
+  authorize('admin'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      throw createError('Commande non trouvee', 404);
+    }
+    // le stock des emballages est déduit au début de la préparation, comme les ingrédients
+    if (!['pending', 'confirmed', 'paid'].includes(order.status) || order.stockDeducted) {
+      throw createError(
+        'La préparation a commencé : l’emballage ne peut plus être modifié (frais possibles dans « Frais »)',
+        400
+      );
+    }
+    const updates = Array.isArray(req.body.items) ? req.body.items : null;
+    if (!updates || updates.length === 0) {
+      throw createError('Aucun article à modifier', 400);
+    }
+    for (const u of updates) {
+      const item = order.items[Number(u?.index)];
+      if (!Number.isInteger(Number(u?.index)) || !item) {
+        throw createError('Article introuvable', 400);
+      }
+      item.packaging = await resolvePackaging(u.packaging, item.packaging || []);
+    }
+    order.markModified('items');
+    await order.save(); // total recalculé (hook pre-save)
+    await refreshOrderPayment(order._id);
+    await syncPurchaseNeedsSafe(); // les emballages manquants vont dans la liste de courses
+    const result = (await Order.findById(order._id))!;
+    await result.populate('items.recipeId', 'name images');
+    logger.info(`Emballage commande ${order._id} modifie par ${req.user!.email}`);
+    res.json({ success: true, data: { order: result } });
   })
 );
 

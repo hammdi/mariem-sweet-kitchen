@@ -4,14 +4,34 @@ import { buildChart, Stats } from '../statsChart';
 const base = (over: Partial<Stats> = {}): Stats =>
   ({
     period: { from: '2026-10-01T23:00:00.000Z', to: '2026-10-04T23:00:00.000Z', bucket: 'day' },
-    sales: { revenue: 0, count: 0, collected: 0, paymentsCount: 0, remaining: 0, remainingCount: 0, averageBasket: null, previous: { revenue: 0, count: 0 } },
-    cash: { openingBalance: 100, totalIn: 0, totalOut: 0, theoreticalBalance: 100, movementsCount: 0 },
+    sales: {
+      revenue: 0,
+      count: 0,
+      collected: 0,
+      paymentsCount: 0,
+      remaining: 0,
+      remainingCount: 0,
+      averageBasket: null,
+      previous: { revenue: 0, count: 0 },
+    },
+    cash: {
+      openingBalance: 100,
+      totalIn: 0,
+      totalOut: 0,
+      theoreticalBalance: 100,
+      movementsCount: 0,
+    },
     purchases: { total: 0, count: 0, unpriced: 0, byMethod: {} },
     expenses: { total: 0, count: 0, byMethod: {} },
     orders: { total: 0, byStatus: {}, ready: 0, delivered: 0, cancelled: 0 },
     series: { sales: [], payments: [], cashNet: [], outflows: [] },
     topProducts: [],
-    clients: { active: 0, individual: { count: 0, revenue: 0 }, cafe: { count: 0, revenue: 0 }, top: [] },
+    clients: {
+      active: 0,
+      individual: { count: 0, revenue: 0 },
+      cafe: { count: 0, revenue: 0 },
+      top: [],
+    },
     ...over,
   }) as Stats;
 

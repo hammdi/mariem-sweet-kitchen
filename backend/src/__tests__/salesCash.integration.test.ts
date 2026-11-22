@@ -422,7 +422,7 @@ describeDb('ventes et caisse (intégration)', () => {
       const r = await (request(app) as any)[method](url).send({});
       expect([url, r.status]).toEqual([url, 401]);
     }
-    const pub = JSON.stringify((await request(app).get('/api/recipes')).body);
+    const pub = JSON.stringify((await request(app).get('/api/catalog')).body);
     for (const secret of [
       'amountPaid',
       'paymentStatus',

@@ -80,14 +80,33 @@ function Brand({ compact = false }: { compact?: boolean }) {
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
       <Illustration name="chefHat" sx={{ width: compact ? 36 : 56, height: compact ? 36 : 56 }} />
       <Box sx={{ minWidth: 0 }}>
-        <Typography sx={{ fontFamily: font.brand, fontWeight: 700, color: color.primary, lineHeight: 1.05, fontSize: compact ? '1rem' : '1.22rem' }}>
+        <Typography
+          sx={{
+            fontFamily: font.brand,
+            fontWeight: 700,
+            color: color.primary,
+            lineHeight: 1.05,
+            fontSize: compact ? '1rem' : '1.22rem',
+          }}
+        >
           Mariem&apos;s
         </Typography>
-        <Typography sx={{ fontFamily: font.brand, fontWeight: 700, color: color.primary, lineHeight: 1.05, fontSize: compact ? '1rem' : '1.22rem', whiteSpace: 'nowrap' }}>
+        <Typography
+          sx={{
+            fontFamily: font.brand,
+            fontWeight: 700,
+            color: color.primary,
+            lineHeight: 1.05,
+            fontSize: compact ? '1rem' : '1.22rem',
+            whiteSpace: 'nowrap',
+          }}
+        >
           Sweet Kitchen
         </Typography>
       </Box>
-      {!compact && <Illustration name="wheat" sx={{ width: 20, height: 34, ml: -0.75, mt: -1.5 }} />}
+      {!compact && (
+        <Illustration name="wheat" sx={{ width: 20, height: 34, ml: -0.75, mt: -1.5 }} />
+      )}
     </Box>
   );
 }
@@ -120,7 +139,12 @@ function NavLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void 
   const { pathname } = useLocation();
   const { summary } = useAdminData();
   const active = isActive(item, pathname);
-  const count = item.badge === 'pendingOrders' ? summary?.orders.pending || 0 : item.badge === 'purchasesNeeded' ? summary?.stock.purchasesNeeded || 0 : 0;
+  const count =
+    item.badge === 'pendingOrders'
+      ? summary?.orders.pending || 0
+      : item.badge === 'purchasesNeeded'
+        ? summary?.stock.purchasesNeeded || 0
+        : 0;
 
   const row = {
     position: 'relative',
@@ -139,8 +163,21 @@ function NavLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void 
       <Tooltip title="Pas encore disponible : lots produits et vitrine (prévu)" placement="right">
         <Box aria-disabled sx={{ ...row, color: color.inkMuted, cursor: 'default' }}>
           <Box sx={{ display: 'flex', '& svg': { fontSize: 23 } }}>{item.icon}</Box>
-          <Typography sx={{ fontWeight: 500, fontSize: '0.95rem', flex: 1 }}>{item.label}</Typography>
-          <Box component="span" sx={{ fontSize: '0.62rem', fontWeight: 700, px: 0.75, py: 0.2, borderRadius: `${radius.pill}px`, bgcolor: color.bgSubtle, color: color.inkSoft }}>
+          <Typography sx={{ fontWeight: 500, fontSize: '0.95rem', flex: 1 }}>
+            {item.label}
+          </Typography>
+          <Box
+            component="span"
+            sx={{
+              fontSize: '0.62rem',
+              fontWeight: 700,
+              px: 0.75,
+              py: 0.2,
+              borderRadius: `${radius.pill}px`,
+              bgcolor: color.bgSubtle,
+              color: color.inkSoft,
+            }}
+          >
             À venir
           </Box>
         </Box>
@@ -163,25 +200,42 @@ function NavLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void 
         '&:hover': { bgcolor: active ? color.primarySoft : color.bgSubtle },
         '& svg': { color: active ? color.primary : color.ink },
         '&::before': active
-          ? { content: '""', position: 'absolute', left: 0, top: 6, bottom: 6, width: 4, borderRadius: 4, bgcolor: color.primary }
+          ? {
+              content: '""',
+              position: 'absolute',
+              left: 0,
+              top: 6,
+              bottom: 6,
+              width: 4,
+              borderRadius: 4,
+              bgcolor: color.primary,
+            }
           : {},
       }}
     >
       <Box sx={{ display: 'flex', '& svg': { fontSize: 23 } }}>{item.icon}</Box>
-      <Typography sx={{ fontWeight: active ? 700 : 500, fontSize: '0.95rem', flex: 1, textAlign: 'left' }}>{item.label}</Typography>
+      <Typography
+        sx={{ fontWeight: active ? 700 : 500, fontSize: '0.95rem', flex: 1, textAlign: 'left' }}
+      >
+        {item.label}
+      </Typography>
       {count > 0 && <Count n={count} />}
     </ButtonBase>
   );
 }
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
-  const { openPanel } = useHelp();
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Box sx={{ px: 2.5, pt: 2.75, pb: 2.25 }}>
         <Brand />
       </Box>
-      <Box component="nav" aria-label="Navigation principale" data-tour="nav-main" sx={{ px: 1.75, flex: 1, overflowY: 'auto', minHeight: 0 }}>
+      <Box
+        component="nav"
+        aria-label="Navigation principale"
+        data-tour="nav-main"
+        sx={{ px: 1.75, flex: 1, overflowY: 'auto', minHeight: 0 }}
+      >
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
           {MAIN_NAV.map((item) => (
             <NavLink key={item.id} item={item} onNavigate={onNavigate} />
@@ -189,25 +243,6 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
         </Box>
         <Divider sx={{ my: 1.5, mx: 1 }} />
         <NavLink item={SETTINGS_NAV} onNavigate={onNavigate} />
-        <ButtonBase
-          onClick={() => {
-            onNavigate?.();
-            openPanel();
-          }}
-          sx={{ width: '100%', display: 'flex', gap: 1.25, px: 1.75, py: 1.1, borderRadius: `${radius.md}px`, justifyContent: 'flex-start', color: color.ink, '&:hover': { bgcolor: color.bgSubtle } }}
-        >
-          <Box
-            sx={{ width: 23, height: 23, borderRadius: '50%', background: `linear-gradient(135deg, #5AC8FA, ${color.info})`, display: 'grid', placeItems: 'center', color: '#fff', '& svg': { fontSize: 14 } }}
-          >
-            <AutoAwesome />
-          </Box>
-          <Typography sx={{ fontWeight: 500, fontSize: '0.95rem', textAlign: 'left', whiteSpace: 'nowrap', ml: 0.5 }}>Aide interactive</Typography>
-          <AutoAwesome sx={{ fontSize: 16, color: color.warning }} />
-          <Box sx={{ flex: 1 }} />
-          <Box component="span" sx={{ fontSize: '0.62rem', fontWeight: 700, px: 0.7, py: 0.25, borderRadius: `${radius.pill}px`, bgcolor: color.butter, color: color.warningDark }}>
-            Nouveau
-          </Box>
-        </ButtonBase>
       </Box>
       {/* Bas du menu : illustration pâtisserie décorative (comme la référence) */}
       <Box
@@ -222,10 +257,26 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
           flexShrink: 0,
         }}
       >
-        <Typography sx={{ position: 'absolute', right: 18, top: 26, width: 128, textAlign: 'right', fontFamily: font.brand, fontStyle: 'italic', color: color.primaryDark, fontSize: '1.02rem', lineHeight: 1.3 }}>
+        <Typography
+          sx={{
+            position: 'absolute',
+            right: 18,
+            top: 26,
+            width: 128,
+            textAlign: 'right',
+            fontFamily: font.brand,
+            fontStyle: 'italic',
+            color: color.primaryDark,
+            fontSize: '1.02rem',
+            lineHeight: 1.3,
+          }}
+        >
           De bons gâteaux font de beaux moments <span style={{ color: '#D9364F' }}>♥</span>
         </Typography>
-        <Illustration name="layerCake" sx={{ position: 'absolute', left: -28, bottom: -6, width: 190 }} />
+        <Illustration
+          name="layerCake"
+          sx={{ position: 'absolute', left: -28, bottom: -6, width: 190 }}
+        />
       </Box>
     </Box>
   );
@@ -235,7 +286,11 @@ function ThemeToggle() {
   const { mode, toggle } = useThemeMode();
   return (
     <Tooltip title={mode === 'dark' ? 'Thème clair' : 'Thème sombre'}>
-      <IconButton onClick={toggle} aria-label={mode === 'dark' ? 'Passer au thème clair' : 'Passer au thème sombre'} sx={{ color: color.warning }}>
+      <IconButton
+        onClick={toggle}
+        aria-label={mode === 'dark' ? 'Passer au thème clair' : 'Passer au thème sombre'}
+        sx={{ color: color.warning }}
+      >
         {mode === 'dark' ? <DarkModeOutlined /> : <LightModeOutlined />}
       </IconButton>
     </Tooltip>
@@ -246,12 +301,33 @@ function LanguageMenu() {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   return (
     <>
-      <ButtonBase onClick={(e) => setAnchor(e.currentTarget)} aria-label="Langue" sx={{ gap: 0.75, px: 1, py: 0.75, borderRadius: `${radius.sm}px`, color: color.ink, '&:hover': { bgcolor: color.bgSubtle } }}>
+      <ButtonBase
+        onClick={(e) => setAnchor(e.currentTarget)}
+        aria-label="Langue"
+        sx={{
+          gap: 0.75,
+          px: 1,
+          py: 0.75,
+          borderRadius: `${radius.sm}px`,
+          color: color.ink,
+          '&:hover': { bgcolor: color.bgSubtle },
+        }}
+      >
         <Language sx={{ fontSize: 22 }} />
-        <Typography sx={{ fontSize: '0.92rem', fontWeight: 500, display: { xs: 'none', xl: 'block' } }}>Français</Typography>
+        <Typography
+          sx={{ fontSize: '0.92rem', fontWeight: 500, display: { xs: 'none', xl: 'block' } }}
+        >
+          Français
+        </Typography>
         <KeyboardArrowDown sx={{ fontSize: 18, display: { xs: 'none', xl: 'block' } }} />
       </ButtonBase>
-      <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}>
+      <Menu
+        anchorEl={anchor}
+        open={!!anchor}
+        onClose={() => setAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
         <MenuItem selected onClick={() => setAnchor(null)}>
           <ListItemIcon>
             <Check fontSize="small" />
@@ -273,7 +349,12 @@ function CalendarButton() {
   const navigate = useNavigate();
   return (
     <Tooltip title="Calendrier des commandes">
-      <IconButton onClick={() => navigate('/admin/calendar')} aria-label="Ouvrir le calendrier" data-tour="header-calendar" sx={{ color: color.ink }}>
+      <IconButton
+        onClick={() => navigate('/admin/calendar')}
+        aria-label="Ouvrir le calendrier"
+        data-tour="header-calendar"
+        sx={{ color: color.ink }}
+      >
         <CalendarMonthOutlined />
       </IconButton>
     </Tooltip>
@@ -287,19 +368,47 @@ function Notifications() {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const items = s
     ? [
-        s.orders.actionRequired > 0 && { emoji: '⛔', text: `${s.orders.actionRequired} commande(s) urgente(s) bloquée(s) par un ingrédient`, to: '/admin' },
-        (s.orders.pending || 0) > 0 && { emoji: '📝', text: `${s.orders.pending} commande(s) en attente de confirmation`, to: '/admin/orders?status=pending' },
-        s.stock.purchasesNeeded > 0 && { emoji: '🛒', text: `${s.stock.purchasesNeeded} ingrédient(s) à acheter (≈ ${formatDT(s.stock.purchasesEstimatedCost)})`, to: '/admin/shopping-list' },
-        s.stock.lowStock > 0 && { emoji: '📦', text: `${s.stock.lowStock} ingrédient(s) sous le seuil d’alerte`, to: '/admin/stock' },
-        (s.orders.ready || 0) > 0 && { emoji: '🎂', text: `${s.orders.ready} commande(s) prête(s) à remettre`, to: '/admin/orders?status=ready' },
-        s.outstanding > 0 && { emoji: '⏳', text: `${formatDT(s.outstanding)} à encaisser`, to: '/admin/cash?tab=receivables' },
+        s.orders.actionRequired > 0 && {
+          emoji: '⛔',
+          text: `${s.orders.actionRequired} commande(s) urgente(s) bloquée(s) par un ingrédient`,
+          to: '/admin',
+        },
+        (s.orders.pending || 0) > 0 && {
+          emoji: '📝',
+          text: `${s.orders.pending} commande(s) en attente de confirmation`,
+          to: '/admin/orders?status=pending',
+        },
+        s.stock.purchasesNeeded > 0 && {
+          emoji: '🛒',
+          text: `${s.stock.purchasesNeeded} ingrédient(s) à acheter (≈ ${formatDT(s.stock.purchasesEstimatedCost)})`,
+          to: '/admin/shopping-list',
+        },
+        s.stock.lowStock > 0 && {
+          emoji: '📦',
+          text: `${s.stock.lowStock} ingrédient(s) sous le seuil d’alerte`,
+          to: '/admin/stock',
+        },
+        (s.orders.ready || 0) > 0 && {
+          emoji: '🎂',
+          text: `${s.orders.ready} commande(s) prête(s) à remettre`,
+          to: '/admin/orders?status=ready',
+        },
+        s.outstanding > 0 && {
+          emoji: '⏳',
+          text: `${formatDT(s.outstanding)} à encaisser`,
+          to: '/admin/cash?tab=receivables',
+        },
       ].filter(Boolean)
     : [];
   const list = items as { emoji: string; text: string; to: string }[];
   return (
     <>
       <Tooltip title="Notifications">
-        <IconButton onClick={(e) => setAnchor(e.currentTarget)} aria-label={`Notifications (${list.length})`} sx={{ color: color.ink }}>
+        <IconButton
+          onClick={(e) => setAnchor(e.currentTarget)}
+          aria-label={`Notifications (${list.length})`}
+          sx={{ color: color.ink }}
+        >
           <Badge badgeContent={list.length} color="error" max={9}>
             <NotificationsNoneOutlined />
           </Badge>
@@ -314,7 +423,11 @@ function Notifications() {
         PaperProps={{ sx: { width: 340, maxWidth: 'calc(100vw - 24px)' } }}
       >
         <Typography sx={{ px: 2, py: 1, fontWeight: 700 }}>Notifications</Typography>
-        {list.length === 0 && <Typography sx={{ px: 2, pb: 1.5, color: color.inkSoft, fontSize: '0.9rem' }}>Rien à signaler pour le moment 🎉</Typography>}
+        {list.length === 0 && (
+          <Typography sx={{ px: 2, pb: 1.5, color: color.inkSoft, fontSize: '0.9rem' }}>
+            Rien à signaler pour le moment 🎉
+          </Typography>
+        )}
         {list.map((n) => (
           <MenuItem
             key={n.text}
@@ -344,18 +457,44 @@ function UserMenu({ compact = false }: { compact?: boolean }) {
       <ButtonBase
         onClick={(e) => setAnchor(e.currentTarget)}
         aria-label="Menu du compte"
-        sx={{ display: 'flex', alignItems: 'center', gap: 1.25, p: 0.5, pr: compact ? 0.5 : 1, borderRadius: `${radius.pill}px`, '&:hover': { bgcolor: color.bgSubtle } }}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.25,
+          p: 0.5,
+          pr: compact ? 0.5 : 1,
+          borderRadius: `${radius.pill}px`,
+          '&:hover': { bgcolor: color.bgSubtle },
+        }}
       >
-        <Avatar sx={{ width: 42, height: 42, bgcolor: '#7A4A2E', fontWeight: 700, fontSize: '1.05rem' }}>{name[0]}</Avatar>
+        <Avatar
+          sx={{ width: 42, height: 42, bgcolor: '#7A4A2E', fontWeight: 700, fontSize: '1.05rem' }}
+        >
+          {name[0]}
+        </Avatar>
         {!compact && (
           <Box sx={{ display: { xs: 'none', lg: 'block' }, textAlign: 'left' }}>
-            <Typography sx={{ fontWeight: 700, fontSize: '0.92rem', lineHeight: 1.2, color: color.ink }}>{name}</Typography>
-            <Typography sx={{ fontSize: '0.8rem', color: color.inkSoft }}>Administratrice</Typography>
+            <Typography
+              sx={{ fontWeight: 700, fontSize: '0.92rem', lineHeight: 1.2, color: color.ink }}
+            >
+              {name}
+            </Typography>
+            <Typography sx={{ fontSize: '0.8rem', color: color.inkSoft }}>
+              Administratrice
+            </Typography>
           </Box>
         )}
-        {!compact && <KeyboardArrowDown sx={{ color: color.ink, display: { xs: 'none', lg: 'block' } }} />}
+        {!compact && (
+          <KeyboardArrowDown sx={{ color: color.ink, display: { xs: 'none', lg: 'block' } }} />
+        )}
       </ButtonBase>
-      <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}>
+      <Menu
+        anchorEl={anchor}
+        open={!!anchor}
+        onClose={() => setAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
         <MenuItem
           onClick={() => {
             setAnchor(null);
@@ -415,7 +554,14 @@ function DateCard() {
     const t = window.setInterval(() => setNow(new Date()), 30000);
     return () => window.clearInterval(t);
   }, []);
-  const day = now.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).replace('.', '');
+  const day = now
+    .toLocaleDateString('fr-FR', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+    .replace('.', '');
   return (
     <ButtonBase
       onClick={() => navigate('/admin/calendar')}
@@ -439,8 +585,20 @@ function DateCard() {
     >
       <CalendarMonthOutlined sx={{ color: color.primary, fontSize: 28 }} />
       <Box sx={{ textAlign: 'left' }}>
-        <Typography sx={{ fontSize: '0.92rem', fontWeight: 600, lineHeight: 1.25, textTransform: 'capitalize', color: color.ink }}>{day}</Typography>
-        <Typography sx={{ fontSize: '0.92rem', fontWeight: 600, color: color.ink }}>{now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</Typography>
+        <Typography
+          sx={{
+            fontSize: '0.92rem',
+            fontWeight: 600,
+            lineHeight: 1.25,
+            textTransform: 'capitalize',
+            color: color.ink,
+          }}
+        >
+          {day}
+        </Typography>
+        <Typography sx={{ fontSize: '0.92rem', fontWeight: 600, color: color.ink }}>
+          {now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+        </Typography>
       </Box>
     </ButtonBase>
   );
@@ -501,7 +659,11 @@ function MobileBottomNav({ onMenu }: { onMenu: () => void }) {
           bgcolor: color.surface,
           '& .MuiBottomNavigationAction-root': { minWidth: 0, px: 0.5, color: color.inkSoft },
           '& .Mui-selected': { color: color.primaryDark },
-          '& .MuiBottomNavigationAction-label': { fontSize: '0.7rem', fontWeight: 600, '&.Mui-selected': { fontSize: '0.7rem' } },
+          '& .MuiBottomNavigationAction-label': {
+            fontSize: '0.7rem',
+            fontWeight: 600,
+            '&.Mui-selected': { fontSize: '0.7rem' },
+          },
         }}
       >
         {items.map((i) => (
@@ -517,10 +679,31 @@ function MobileBottomNav({ onMenu }: { onMenu: () => void }) {
 function Footer() {
   const navigate = useNavigate();
   const { openPanel } = useHelp();
-  const link = { fontSize: '0.8rem', color: color.inkSoft, fontWeight: 600, '&:hover': { color: color.primaryDark } } as const;
+  const link = {
+    fontSize: '0.8rem',
+    color: color.inkSoft,
+    fontWeight: 600,
+    '&:hover': { color: color.primaryDark },
+  } as const;
   return (
-    <Box component="footer" sx={{ mt: 4, pt: 2, borderTop: `1px solid ${color.border}`, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: { xs: 1, sm: 2 }, color: color.inkMuted }}>
-      <Typography sx={{ fontFamily: font.brand, fontWeight: 700, color: color.primary, fontSize: '0.92rem' }}>🧁 Mariem&apos;s Sweet Kitchen</Typography>
+    <Box
+      component="footer"
+      sx={{
+        mt: 4,
+        pt: 2,
+        borderTop: `1px solid ${color.border}`,
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: { xs: 1, sm: 2 },
+        color: color.inkMuted,
+      }}
+    >
+      <Typography
+        sx={{ fontFamily: font.brand, fontWeight: 700, color: color.primary, fontSize: '0.92rem' }}
+      >
+        🧁 Mariem&apos;s Sweet Kitchen
+      </Typography>
       <Box sx={{ flex: 1 }} />
       <ButtonBase onClick={openPanel} sx={link}>
         Aide interactive
@@ -554,7 +737,14 @@ function Shell() {
     <Box sx={{ minHeight: '100vh', bgcolor: color.bg, display: 'flex' }}>
       {/* Menu latéral (ordinateur) */}
       {desktop && (
-        <Box sx={{ width: layout.sidebarWidth, flexShrink: 0, bgcolor: color.surface, borderRight: `1px solid ${color.border}` }}>
+        <Box
+          sx={{
+            width: layout.sidebarWidth,
+            flexShrink: 0,
+            bgcolor: color.surface,
+            borderRight: `1px solid ${color.border}`,
+          }}
+        >
           <Box component="aside" sx={{ position: 'sticky', top: 0, height: '100vh' }}>
             <NavContent />
           </Box>
@@ -562,15 +752,37 @@ function Shell() {
       )}
 
       {/* Menu mobile */}
-      <Drawer open={drawer} onClose={() => setDrawer(false)} PaperProps={{ sx: { width: 'min(300px, 86vw)', bgcolor: color.surface } }}>
+      <Drawer
+        open={drawer}
+        onClose={() => setDrawer(false)}
+        PaperProps={{ sx: { width: 'min(300px, 86vw)', bgcolor: color.surface } }}
+      >
         <NavContent onNavigate={() => setDrawer(false)} />
       </Drawer>
 
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         {/* Barre du haut */}
-        <Box component="header" sx={{ position: 'sticky', top: 0, zIndex: 1100, bgcolor: color.headerGlass, backdropFilter: 'saturate(1.4) blur(10px)', borderBottom: `1px solid ${color.border}` }}>
+        <Box
+          component="header"
+          sx={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 1100,
+            bgcolor: color.headerGlass,
+            backdropFilter: 'saturate(1.4) blur(10px)',
+            borderBottom: `1px solid ${color.border}`,
+          }}
+        >
           {desktop ? (
-            <Box sx={{ height: layout.topbarHeight, display: 'flex', alignItems: 'center', gap: 1.5, px: { md: 3, lg: 3.5 } }}>
+            <Box
+              sx={{
+                height: layout.topbarHeight,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+                px: { md: 3, lg: 3.5 },
+              }}
+            >
               <Box sx={{ flex: '1 1 680px', maxWidth: 680, minWidth: 260 }}>
                 <GlobalSearch />
               </Box>
@@ -582,14 +794,36 @@ function Shell() {
               <UserMenu />
             </Box>
           ) : (
-            <Box sx={{ height: layout.mobileTopbarHeight, display: 'flex', alignItems: 'center', gap: 0.25, px: 1 }}>
+            <Box
+              sx={{
+                height: layout.mobileTopbarHeight,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.25,
+                px: 1,
+              }}
+            >
               <IconButton onClick={() => setDrawer(true)} aria-label="Ouvrir le menu">
                 <MenuIcon />
               </IconButton>
-              <Typography sx={{ flex: 1, fontFamily: font.heading, fontWeight: 700, fontSize: '1.02rem', color: color.ink, minWidth: 0 }} noWrap>
+              <Typography
+                sx={{
+                  flex: 1,
+                  fontFamily: font.heading,
+                  fontWeight: 700,
+                  fontSize: '1.02rem',
+                  color: color.ink,
+                  minWidth: 0,
+                }}
+                noWrap
+              >
                 {pageTitle(pathname)}
               </Typography>
-              <IconButton onClick={() => setSearchOpen(true)} aria-label="Rechercher" sx={{ color: color.ink }}>
+              <IconButton
+                onClick={() => setSearchOpen(true)}
+                aria-label="Rechercher"
+                sx={{ color: color.ink }}
+              >
                 <Search />
               </IconButton>
               <CalendarButton />
@@ -603,12 +837,29 @@ function Shell() {
 
         {/* Indicateurs du jour + carte date + illustration (comme la référence) */}
         {desktop && (
-          <Box sx={{ position: 'relative', px: { md: 3, lg: 3.5 }, pt: 2.5, pr: { xl: 24 }, display: 'flex', alignItems: 'center', gap: 2.5, overflow: 'hidden', minHeight: 108 }}>
+          <Box
+            sx={{
+              position: 'relative',
+              px: { md: 3, lg: 3.5 },
+              pt: 2.5,
+              pr: { xl: 24 },
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2.5,
+              overflow: 'hidden',
+              minHeight: 108,
+            }}
+          >
             <Box sx={{ flex: '0 1 820px', minWidth: 0 }}>
               <TopbarKpis />
             </Box>
             {wide && <DateCard />}
-            {xwide && <Illustration name="croissant" sx={{ position: 'absolute', right: -6, top: 0, width: 176, opacity: 0.97 }} />}
+            {xwide && (
+              <Illustration
+                name="croissant"
+                sx={{ position: 'absolute', right: -6, top: 0, width: 176, opacity: 0.97 }}
+              />
+            )}
           </Box>
         )}
 
@@ -625,7 +876,10 @@ function Shell() {
             // espace en bas : le bouton d'aide (et la barre mobile) ne cachent jamais un bouton
             pb: { xs: `${FAB_CLEARANCE.xs}px`, md: `${FAB_CLEARANCE.md}px` },
             animation: `page-in ${motion.slow}ms ${motion.easeOut} both`,
-            '@keyframes page-in': { from: { opacity: 0, transform: 'translateY(6px)' }, to: { opacity: 1, transform: 'none' } },
+            '@keyframes page-in': {
+              from: { opacity: 0, transform: 'translateY(6px)' },
+              to: { opacity: 1, transform: 'none' },
+            },
           }}
         >
           <Outlet />
@@ -634,7 +888,13 @@ function Shell() {
       </Box>
 
       {/* Recherche plein écran sur téléphone */}
-      <Dialog open={searchOpen} onClose={() => setSearchOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { alignSelf: 'flex-start', mt: 2, p: 1.5, overflow: 'visible' } }}>
+      <Dialog
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{ sx: { alignSelf: 'flex-start', mt: 2, p: 1.5, overflow: 'visible' } }}
+      >
         <GlobalSearch autoFocus onDone={() => setSearchOpen(false)} />
       </Dialog>
 

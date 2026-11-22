@@ -20,6 +20,11 @@ const settingSchema = new Schema<ISetting>(
         'marginPercent',
         'orderMinLeadHours',
         'actionAlertHours',
+        'catalogShowPrices',
+        'homeLat',
+        'homeLng',
+        'fuelConsumption',
+        'fuelPrice',
       ],
     },
     value: {

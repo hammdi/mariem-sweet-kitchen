@@ -20,7 +20,11 @@ export default function FilterChips({
   ariaLabel: string;
 }) {
   return (
-    <Box role="radiogroup" aria-label={ariaLabel} sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+    <Box
+      role="radiogroup"
+      aria-label={ariaLabel}
+      sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}
+    >
       {options.map((o) => {
         const active = o.value === value;
         return (

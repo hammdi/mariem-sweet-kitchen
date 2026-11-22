@@ -30,15 +30,31 @@ import {
   Block,
 } from '@mui/icons-material';
 import type { PurchaseRecord, Sale, CashMovementRow, CashSummary } from '../../types/admin';
-import PurchasePaymentSelect, { PurchasePaymentMethod } from '../../components/admin/PurchasePaymentSelect';
-import { CASH_TYPE_LABELS, PAYMENT_METHOD_LABELS, PURCHASE_PAYMENT_LABELS, formatDT } from '../../utils/format';
+import PurchasePaymentSelect, {
+  PurchasePaymentMethod,
+} from '../../components/admin/PurchasePaymentSelect';
+import PromoPriceCheckbox from '../../components/admin/PromoPriceCheckbox';
+import {
+  CASH_TYPE_LABELS,
+  PAYMENT_METHOD_LABELS,
+  PURCHASE_PAYMENT_LABELS,
+  formatDT,
+} from '../../utils/format';
 import api, { withIdempotency } from '../../services/api';
 import PeriodFilter, { Range } from '../../components/admin/PeriodFilter';
 import DateTimeField from '../../components/common/DateTimeField';
 import { formatDateTimeFr } from '../../utils/dateTime';
 import { useIdempotentAction } from '../../hooks/useIdempotencyKey';
 import { useAdminData } from '../../context/AdminDataContext';
-import { EmptyState, KpiCard, OrderStatusBadge, PageHeader, PaymentStatusBadge, ResponsiveDialog, StatusBadge } from '../../components/ui';
+import {
+  EmptyState,
+  KpiCard,
+  OrderStatusBadge,
+  PageHeader,
+  PaymentStatusBadge,
+  ResponsiveDialog,
+  StatusBadge,
+} from '../../components/ui';
 import { color } from '../../theme/tokens';
 
 type IncomeType = 'other_income' | 'opening_balance';
@@ -73,8 +89,14 @@ function MoneyRow({
   chips?: ReactNode;
   action?: ReactNode;
 }) {
-  const c = direction === 'in' ? color.success : direction === 'out' ? color.danger : color.inkMuted;
-  const bg = direction === 'in' ? color.successSoft : direction === 'out' ? color.dangerSoft : color.bgSubtle;
+  const c =
+    direction === 'in' ? color.success : direction === 'out' ? color.danger : color.inkMuted;
+  const bg =
+    direction === 'in'
+      ? color.successSoft
+      : direction === 'out'
+        ? color.dangerSoft
+        : color.bgSubtle;
   return (
     <Box
       sx={{
@@ -88,20 +110,60 @@ function MoneyRow({
         '&:last-of-type': { borderBottom: 0 },
       }}
     >
-      <Box sx={{ width: 36, height: 36, borderRadius: '50%', bgcolor: bg, color: c, display: 'grid', placeItems: 'center', flexShrink: 0, mt: 0.25 }}>
-        {direction === 'in' ? <ArrowDownward fontSize="small" /> : direction === 'out' ? <ArrowUpward fontSize="small" /> : <Inventory2 fontSize="small" />}
+      <Box
+        sx={{
+          width: 36,
+          height: 36,
+          borderRadius: '50%',
+          bgcolor: bg,
+          color: c,
+          display: 'grid',
+          placeItems: 'center',
+          flexShrink: 0,
+          mt: 0.25,
+        }}
+      >
+        {direction === 'in' ? (
+          <ArrowDownward fontSize="small" />
+        ) : direction === 'out' ? (
+          <ArrowUpward fontSize="small" />
+        ) : (
+          <Inventory2 fontSize="small" />
+        )}
       </Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography sx={{ fontWeight: 700, fontSize: '0.92rem', textDecoration: muted ? 'line-through' : 'none', overflowWrap: 'anywhere' }}>{title}</Typography>
+        <Typography
+          sx={{
+            fontWeight: 700,
+            fontSize: '0.92rem',
+            textDecoration: muted ? 'line-through' : 'none',
+            overflowWrap: 'anywhere',
+          }}
+        >
+          {title}
+        </Typography>
         {lines?.filter(Boolean).map((l, i) => (
-          <Typography key={i} variant="caption" sx={{ color: color.inkSoft, display: 'block', overflowWrap: 'anywhere' }}>
+          <Typography
+            key={i}
+            variant="caption"
+            sx={{ color: color.inkSoft, display: 'block', overflowWrap: 'anywhere' }}
+          >
             {l}
           </Typography>
         ))}
         {chips && <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>{chips}</Box>}
       </Box>
       <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
-        <Typography sx={{ fontWeight: 800, color: c, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{amount}</Typography>
+        <Typography
+          sx={{
+            fontWeight: 800,
+            color: c,
+            whiteSpace: 'nowrap',
+            fontVariantNumeric: 'tabular-nums',
+          }}
+        >
+          {amount}
+        </Typography>
         {action}
       </Box>
     </Box>
@@ -117,12 +179,22 @@ const CashPage = () => {
   const navigate = useNavigate();
   const { refresh } = useAdminData();
   const [searchParams, setSearchParams] = useSearchParams();
-  const urlRange = searchParams.get('from') && searchParams.get('to') ? { from: searchParams.get('from')!, to: searchParams.get('to')! } : null;
+  const urlRange =
+    searchParams.get('from') && searchParams.get('to')
+      ? { from: searchParams.get('from')!, to: searchParams.get('to')! }
+      : null;
   const [range, setRange] = useState<Range | null>(null);
   const [tab, setTab] = useState(searchParams.get('tab') === 'receivables' ? 1 : 0);
-  const [receivables, setReceivables] = useState<{ orders: Sale[]; total: number }>({ orders: [], total: 0 });
+  const [receivables, setReceivables] = useState<{ orders: Sale[]; total: number }>({
+    orders: [],
+    total: 0,
+  });
   const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
-  const [expenses, setExpenses] = useState<{ expenses: ExpenseRow[]; total: number; byMethod: Record<string, { total: number }> }>({
+  const [expenses, setExpenses] = useState<{
+    expenses: ExpenseRow[];
+    total: number;
+    byMethod: Record<string, { total: number }>;
+  }>({
     expenses: [],
     total: 0,
     byMethod: {},
@@ -133,7 +205,14 @@ const CashPage = () => {
   const [sources, setSources] = useState<{ _id: string; name: string }[]>([]);
 
   // Formulaires : chaque opération a sa propre clé d'idempotence
-  const [income, setIncome] = useState<{ open: boolean; type: IncomeType; amount: string; description: string; method: string; occurredAt: string | null }>({
+  const [income, setIncome] = useState<{
+    open: boolean;
+    type: IncomeType;
+    amount: string;
+    description: string;
+    method: string;
+    occurredAt: string | null;
+  }>({
     open: false,
     type: 'other_income',
     amount: '',
@@ -141,19 +220,34 @@ const CashPage = () => {
     method: 'cash',
     occurredAt: null,
   });
-  const [expense, setExpense] = useState<{ open: boolean; amount: string; description: string; paymentMethod: PurchasePaymentMethod; occurredAt: string | null }>({
+  const [expense, setExpense] = useState<{
+    open: boolean;
+    amount: string;
+    description: string;
+    paymentMethod: PurchasePaymentMethod;
+    occurredAt: string | null;
+  }>({
     open: false,
     amount: '',
     description: '',
     paymentMethod: 'cash_register',
     occurredAt: null,
   });
-  const [purchase, setPurchase] = useState<{ open: boolean; ingredient: any | null; quantity: string; unitPrice: string; sourceId: string; paymentMethod: PurchasePaymentMethod }>({
+  const [purchase, setPurchase] = useState<{
+    open: boolean;
+    ingredient: any | null;
+    quantity: string;
+    unitPrice: string;
+    sourceId: string;
+    promotion: boolean;
+    paymentMethod: PurchasePaymentMethod;
+  }>({
     open: false,
     ingredient: null,
     quantity: '',
     unitPrice: '',
     sourceId: '',
+    promotion: false,
     paymentMethod: 'cash_register',
   });
   const [methodTarget, setMethodTarget] = useState<PurchaseRecord | null>(null);
@@ -204,14 +298,31 @@ const CashPage = () => {
   };
   const openExpense = () => {
     expenseOp.reset();
-    setExpense({ open: true, amount: '', description: '', paymentMethod: 'cash_register', occurredAt: null });
+    setExpense({
+      open: true,
+      amount: '',
+      description: '',
+      paymentMethod: 'cash_register',
+      occurredAt: null,
+    });
   };
   const openPurchase = async () => {
     purchaseOp.reset();
-    setPurchase({ open: true, ingredient: null, quantity: '', unitPrice: '', sourceId: '', paymentMethod: 'cash_register' });
+    setPurchase({
+      open: true,
+      ingredient: null,
+      quantity: '',
+      unitPrice: '',
+      sourceId: '',
+      promotion: false,
+      paymentMethod: 'cash_register',
+    });
     if (ingredients.length === 0) {
       try {
-        const [ing, src] = await Promise.all([api.get('/ingredients?limit=500'), api.get('/purchase-sources')]);
+        const [ing, src] = await Promise.all([
+          api.get('/ingredients?limit=500'),
+          api.get('/purchase-sources'),
+        ]);
         setIngredients(ing.data.data?.ingredients || []);
         setSources(src.data.data?.sources || []);
       } catch {
@@ -238,10 +349,18 @@ const CashPage = () => {
       .run(async (key) => {
         await api.post(
           '/cash',
-          { type: income.type, amount: parseFloat(income.amount), description: income.description, method: income.method, occurredAt: income.occurredAt || undefined },
+          {
+            type: income.type,
+            amount: parseFloat(income.amount),
+            description: income.description,
+            method: income.method,
+            occurredAt: income.occurredAt || undefined,
+          },
           withIdempotency(key)
         );
-        toast.success(income.type === 'opening_balance' ? 'Fonds de caisse enregistré' : 'Entrée enregistrée');
+        toast.success(
+          income.type === 'opening_balance' ? 'Fonds de caisse enregistré' : 'Entrée enregistrée'
+        );
         setIncome({ ...income, open: false });
         await after();
       })
@@ -252,10 +371,19 @@ const CashPage = () => {
       .run(async (key) => {
         await api.post(
           '/expenses',
-          { amount: parseFloat(expense.amount), description: expense.description, paymentMethod: expense.paymentMethod, occurredAt: expense.occurredAt || undefined },
+          {
+            amount: parseFloat(expense.amount),
+            description: expense.description,
+            paymentMethod: expense.paymentMethod,
+            occurredAt: expense.occurredAt || undefined,
+          },
           withIdempotency(key)
         );
-        toast.success(expense.paymentMethod === 'cash_register' ? 'Dépense enregistrée · caisse mise à jour' : 'Dépense enregistrée · caisse inchangée');
+        toast.success(
+          expense.paymentMethod === 'cash_register'
+            ? 'Dépense enregistrée · caisse mise à jour'
+            : 'Dépense enregistrée · caisse inchangée'
+        );
         setExpense({ ...expense, open: false });
         await after();
       })
@@ -270,6 +398,7 @@ const CashPage = () => {
             quantity: parseFloat(purchase.quantity),
             unitPrice: parseFloat(purchase.unitPrice),
             sourceId: purchase.sourceId || undefined,
+            promotion: purchase.promotion,
             paymentMethod: purchase.paymentMethod,
           },
           withIdempotency(key)
@@ -277,7 +406,9 @@ const CashPage = () => {
         const unblocked = res.data.data.unblockedOrders || [];
         toast.success(
           `Stock +${purchase.quantity} ${purchase.ingredient.unit} ${purchase.ingredient.name} · ` +
-            (res.data.data.cashMovement ? `caisse −${formatDT(res.data.data.cashMovement.amount)}` : `${PURCHASE_PAYMENT_LABELS[purchase.paymentMethod]} : caisse inchangée`) +
+            (res.data.data.cashMovement
+              ? `caisse −${formatDT(res.data.data.cashMovement.amount)}`
+              : `${PURCHASE_PAYMENT_LABELS[purchase.paymentMethod]} : caisse inchangée`) +
             (unblocked.length
               ? ` · ${unblocked.map((u: any) => `CMD-${u.orderNumber}`).join(', ')} ${unblocked.every((u: any) => u.fully) ? 'débloquée(s)' : 'mise(s) à jour'}`
               : '')
@@ -290,8 +421,14 @@ const CashPage = () => {
   const changeMethod = () =>
     methodOp
       .run(async (key) => {
-        await api.put(`/purchases/${methodTarget!.purchaseId}/payment-method`, { paymentMethod: newMethod }, withIdempotency(key));
-        toast.success(`Moyen de paiement : ${PURCHASE_PAYMENT_LABELS[newMethod]} (caisse mise à jour)`);
+        await api.put(
+          `/purchases/${methodTarget!.purchaseId}/payment-method`,
+          { paymentMethod: newMethod },
+          withIdempotency(key)
+        );
+        toast.success(
+          `Moyen de paiement : ${PURCHASE_PAYMENT_LABELS[newMethod]} (caisse mise à jour)`
+        );
         setMethodTarget(null);
         await after();
       })
@@ -301,7 +438,11 @@ const CashPage = () => {
     collectOp.reset(); // une clé par encaissement
     return collectOp
       .run(async (key) => {
-        await api.post(`/cash/orders/${sale._id}/payment`, { method: 'cash' }, withIdempotency(key));
+        await api.post(
+          `/cash/orders/${sale._id}/payment`,
+          { method: 'cash' },
+          withIdempotency(key)
+        );
         toast.success(`${sale.orderRef} : ${formatDT(sale.remaining)} encaissés`);
         await after();
       })
@@ -313,7 +454,10 @@ const CashPage = () => {
       .run(async (key) => {
         await api.post(
           `/cash/${correcting!._id}/correct`,
-          { amount: correction.amount === '' ? undefined : parseFloat(correction.amount), reason: correction.reason },
+          {
+            amount: correction.amount === '' ? undefined : parseFloat(correction.amount),
+            reason: correction.reason,
+          },
           withIdempotency(key)
         );
         toast.success('Correction enregistrée (le mouvement d’origine reste visible)');
@@ -325,7 +469,11 @@ const CashPage = () => {
   const cancelExpense = () =>
     cancelOp
       .run(async (key) => {
-        await api.post(`/expenses/${cancelTarget!._id}/cancel`, { reason: cancelReason }, withIdempotency(key));
+        await api.post(
+          `/expenses/${cancelTarget!._id}/cancel`,
+          { reason: cancelReason },
+          withIdempotency(key)
+        );
         toast.success('Dépense annulée');
         setCancelTarget(null);
         await after();
@@ -347,13 +495,30 @@ const CashPage = () => {
         helpFlow="cash"
         actions={
           <>
-            <Button data-tour="cash-add-income" variant="outlined" color="success" startIcon={<Add />} onClick={() => openIncome()}>
+            <Button
+              data-tour="cash-add-income"
+              variant="outlined"
+              color="success"
+              startIcon={<Add />}
+              onClick={() => openIncome()}
+            >
               Entrée
             </Button>
-            <Button data-tour="cash-add-expense" variant="outlined" color="error" startIcon={<Remove />} onClick={openExpense}>
+            <Button
+              data-tour="cash-add-expense"
+              variant="outlined"
+              color="error"
+              startIcon={<Remove />}
+              onClick={openExpense}
+            >
               Dépense
             </Button>
-            <Button data-tour="cash-add-purchase" variant="contained" startIcon={<Inventory2 />} onClick={openPurchase}>
+            <Button
+              data-tour="cash-add-purchase"
+              variant="contained"
+              startIcon={<Inventory2 />}
+              onClick={openPurchase}
+            >
               Achat de stock
             </Button>
           </>
@@ -364,10 +529,41 @@ const CashPage = () => {
         <PeriodFilter onChange={setRange} initialRange={urlRange} />
       </Card>
 
-      <Box data-tour="cash-tiles" sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: 'repeat(2, minmax(0,1fr))', lg: 'repeat(4, minmax(0,1fr))' }, mb: 1 }}>
-        <KpiCard label="Liquidité" value={summary?.theoreticalBalance ?? 0} format={(n) => formatDT(n)} icon={<Savings />} tone="violet" hint="Solde de caisse en fin de période" />
-        <KpiCard label="Entrées" value={summary?.totalIn ?? 0} format={(n) => (n > 0 ? `+${formatDT(n)}` : formatDT(n))} icon={<ArrowDownward />} tone="success" valueColor={color.successDark} hint="Paiements, autres entrées" />
-        <KpiCard label="Sorties" value={summary?.totalOut ?? 0} format={(n) => (n > 0 ? `−${formatDT(n)}` : formatDT(n))} icon={<ArrowUpward />} tone="danger" valueColor={color.dangerDark} hint="Achats, dépenses, remboursements" />
+      <Box
+        data-tour="cash-tiles"
+        sx={{
+          display: 'grid',
+          gap: 1.5,
+          gridTemplateColumns: { xs: 'repeat(2, minmax(0,1fr))', lg: 'repeat(4, minmax(0,1fr))' },
+          mb: 1,
+        }}
+      >
+        <KpiCard
+          label="Liquidité"
+          value={summary?.theoreticalBalance ?? 0}
+          format={(n) => formatDT(n)}
+          icon={<Savings />}
+          tone="violet"
+          hint="Solde de caisse en fin de période"
+        />
+        <KpiCard
+          label="Entrées"
+          value={summary?.totalIn ?? 0}
+          format={(n) => (n > 0 ? `+${formatDT(n)}` : formatDT(n))}
+          icon={<ArrowDownward />}
+          tone="success"
+          valueColor={color.successDark}
+          hint="Paiements, autres entrées"
+        />
+        <KpiCard
+          label="Sorties"
+          value={summary?.totalOut ?? 0}
+          format={(n) => (n > 0 ? `−${formatDT(n)}` : formatDT(n))}
+          icon={<ArrowUpward />}
+          tone="danger"
+          valueColor={color.dangerDark}
+          hint="Achats, dépenses, remboursements"
+        />
         <KpiCard
           label="À encaisser"
           value={summary?.outstanding ?? 0}
@@ -381,7 +577,15 @@ const CashPage = () => {
       </Box>
       <Typography variant="caption" sx={{ display: 'block', color: color.inkSoft, mb: 2 }}>
         {summary ? `Solde au début de la période : ${formatDT(summary.openingBalance)}. ` : ''}
-        <ButtonBase onClick={() => openIncome('opening_balance')} sx={{ color: color.primaryDark, fontWeight: 700, fontSize: 'inherit', verticalAlign: 'baseline' }}>
+        <ButtonBase
+          onClick={() => openIncome('opening_balance')}
+          sx={{
+            color: color.primaryDark,
+            fontWeight: 700,
+            fontSize: 'inherit',
+            verticalAlign: 'baseline',
+          }}
+        >
           Saisir le fonds de caisse
         </ButtonBase>
       </Typography>
@@ -395,7 +599,10 @@ const CashPage = () => {
         sx={{ mb: 2, borderBottom: `1px solid ${color.border}` }}
       >
         <Tab label="Mouvements d’argent" />
-        <Tab data-tour="cash-receivables-tab" label={`Commandes à encaisser (${receivables.orders.length})`} />
+        <Tab
+          data-tour="cash-receivables-tab"
+          label={`Commandes à encaisser (${receivables.orders.length})`}
+        />
         <Tab label={`Achats de stock (${purchases.length})`} />
         <Tab label={`Dépenses (${expenses.expenses.length})`} />
       </Tabs>
@@ -403,7 +610,11 @@ const CashPage = () => {
       {tab === 0 && (
         <Card sx={{ overflow: 'hidden' }}>
           {movements.length === 0 ? (
-            <EmptyState icon={<AccountBalanceWallet />} title="Aucun mouvement sur cette période" description="Les paiements, entrées, dépenses et achats payés avec la caisse apparaîtront ici." />
+            <EmptyState
+              icon={<AccountBalanceWallet />}
+              title="Aucun mouvement sur cette période"
+              description="Les paiements, entrées, dépenses et achats payés avec la caisse apparaîtront ici."
+            />
           ) : (
             movements.map((m) => {
               const corrected = !!m.reversedBy;
@@ -416,12 +627,16 @@ const CashPage = () => {
                     <>
                       {m.reversalOf ? 'Correction · ' : ''}
                       {CASH_TYPE_LABELS[m.type]}
-                      {m.description && m.description !== CASH_TYPE_LABELS[m.type] ? ` — ${m.description}` : ''}
+                      {m.description && m.description !== CASH_TYPE_LABELS[m.type]
+                        ? ` — ${m.description}`
+                        : ''}
                     </>
                   }
                   lines={[
                     `${formatDateTimeFr(m.occurredAt)} · ${PAYMENT_METHOD_LABELS[m.method]}${m.sourceName ? ` · ${m.sourceName}` : ''} · ${m.createdBy?.email || ''}`,
-                    m.stockItems?.length ? `Stock ${m.stockItems.map((it) => `+${it.quantity} ${it.unit} ${it.name}`).join(', ')}` : '',
+                    m.stockItems?.length
+                      ? `Stock ${m.stockItems.map((it) => `+${it.quantity} ${it.unit} ${it.name}`).join(', ')}`
+                      : '',
                     m.correctionReason ? `Raison : ${m.correctionReason}` : '',
                   ]}
                   chips={
@@ -430,12 +645,21 @@ const CashPage = () => {
                       {corrected && <StatusBadge tone="neutral" label="Corrigé" />}
                       {m.orderId && (
                         <ButtonBase onClick={() => navigate(`/admin/orders/${m.orderId}`)}>
-                          <StatusBadge tone="primary" label={m.orderNumber ? `CMD-${m.orderNumber}` : 'Commande'} />
+                          <StatusBadge
+                            tone="primary"
+                            label={m.orderNumber ? `CMD-${m.orderNumber}` : 'Commande'}
+                          />
                         </ButtonBase>
                       )}
                       {m.unblockedOrders?.map((u) => (
-                        <ButtonBase key={u.orderId} onClick={() => navigate(`/admin/orders/${u.orderId}`)}>
-                          <StatusBadge tone={u.fully ? 'success' : 'neutral'} label={`${u.fully ? 'Débloque' : 'Aide'} CMD-${u.orderNumber}`} />
+                        <ButtonBase
+                          key={u.orderId}
+                          onClick={() => navigate(`/admin/orders/${u.orderId}`)}
+                        >
+                          <StatusBadge
+                            tone={u.fully ? 'success' : 'neutral'}
+                            label={`${u.fully ? 'Débloque' : 'Aide'} CMD-${u.orderNumber}`}
+                          />
                         </ButtonBase>
                       ))}
                     </>
@@ -468,18 +692,28 @@ const CashPage = () => {
       {tab === 1 && (
         <Card sx={{ overflow: 'hidden' }}>
           {receivables.orders.length === 0 ? (
-            <EmptyState tone="success" icon={<ReceiptLong />} title="Tout est encaissé" description="Les ventes pas encore payées apparaîtront ici." />
+            <EmptyState
+              tone="success"
+              icon={<ReceiptLong />}
+              title="Tout est encaissé"
+              description="Les ventes pas encore payées apparaîtront ici."
+            />
           ) : (
             receivables.orders.map((s) => (
               <MoneyRow
                 key={s._id}
                 direction="neutral"
                 title={
-                  <ButtonBase onClick={() => navigate(`/admin/orders/${s._id}`)} sx={{ fontWeight: 700, fontSize: 'inherit', textAlign: 'left' }}>
+                  <ButtonBase
+                    onClick={() => navigate(`/admin/orders/${s._id}`)}
+                    sx={{ fontWeight: 700, fontSize: 'inherit', textAlign: 'left' }}
+                  >
                     {s.orderRef} · {s.clientName}
                   </ButtonBase>
                 }
-                lines={[`${formatDateTimeFr(s.date)} · ${s.items.map((i) => `${i.recipeName}${i.sizeName ? ` ${i.sizeName}` : ''} ×${i.quantity}`).join(', ')}`]}
+                lines={[
+                  `${formatDateTimeFr(s.date)} · ${s.items.map((i) => `${i.recipeName}${i.sizeName ? ` ${i.sizeName}` : ''} ×${i.quantity}`).join(', ')}`,
+                ]}
                 chips={
                   <>
                     <OrderStatusBadge status={s.status} />
@@ -487,13 +721,22 @@ const CashPage = () => {
                     {s.clientType === 'cafe' && <StatusBadge tone="info" label="Café" />}
                   </>
                 }
-                amount={<span style={{ color: color.warningDark }}>reste {formatDT(s.remaining)}</span>}
+                amount={
+                  <span style={{ color: color.warningDark }}>reste {formatDT(s.remaining)}</span>
+                }
                 action={
                   <Box>
                     <Typography variant="caption" sx={{ color: color.inkMuted, display: 'block' }}>
                       sur {formatDT(s.totalPrice)}
                     </Typography>
-                    <Button size="small" variant="contained" color="success" sx={{ mt: 0.5 }} disabled={collectOp.busy} onClick={() => collectRemaining(s)}>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color="success"
+                      sx={{ mt: 0.5 }}
+                      disabled={collectOp.busy}
+                      onClick={() => collectRemaining(s)}
+                    >
                       Encaisser
                     </Button>
                   </Box>
@@ -507,24 +750,40 @@ const CashPage = () => {
       {tab === 2 && (
         <>
           <Typography variant="caption" sx={{ display: 'block', color: color.inkSoft, mb: 1 }}>
-            Tous les achats de la période, quel que soit le moyen de paiement. Seuls ceux payés avec la caisse sont des sorties de caisse.
+            Tous les achats de la période, quel que soit le moyen de paiement. Seuls ceux payés avec
+            la caisse sont des sorties de caisse.
           </Typography>
           <Card sx={{ overflow: 'hidden' }}>
             {purchases.length === 0 ? (
-              <EmptyState icon={<Inventory2 />} title="Aucun achat sur cette période" description="Les achats d’ingrédients (caisse, argent personnel, banque…) apparaîtront ici." />
+              <EmptyState
+                icon={<Inventory2 />}
+                title="Aucun achat sur cette période"
+                description="Les achats d’ingrédients (caisse, argent personnel, banque…) apparaîtront ici."
+              />
             ) : (
               purchases.map((pu) => (
                 <MoneyRow
                   key={pu.purchaseId}
                   direction={pu.cashOut ? 'out' : 'neutral'}
                   title={`Stock ${pu.items.map((it) => `+${it.quantity} ${it.unit} ${it.name}`).join(', ')}`}
-                  lines={[`${formatDateTimeFr(pu.date)}${pu.sourceName ? ` · ${pu.sourceName}` : ''}${pu.createdBy ? ` · ${pu.createdBy}` : ''}${pu.note ? ` · ${pu.note}` : ''}`]}
+                  lines={[
+                    `${formatDateTimeFr(pu.date)}${pu.sourceName ? ` · ${pu.sourceName}` : ''}${pu.createdBy ? ` · ${pu.createdBy}` : ''}${pu.note ? ` · ${pu.note}` : ''}`,
+                  ]}
                   chips={
                     <>
-                      <StatusBadge tone={pu.cashOut ? 'primary' : 'neutral'} label={PURCHASE_PAYMENT_LABELS[pu.paymentMethod]} />
+                      <StatusBadge
+                        tone={pu.cashOut ? 'primary' : 'neutral'}
+                        label={PURCHASE_PAYMENT_LABELS[pu.paymentMethod]}
+                      />
                       {pu.unblockedOrders.map((u) => (
-                        <ButtonBase key={u.orderId} onClick={() => navigate(`/admin/orders/${u.orderId}`)}>
-                          <StatusBadge tone={u.fully ? 'success' : 'neutral'} label={`${u.fully ? 'Débloque' : 'Aide'} CMD-${u.orderNumber}`} />
+                        <ButtonBase
+                          key={u.orderId}
+                          onClick={() => navigate(`/admin/orders/${u.orderId}`)}
+                        >
+                          <StatusBadge
+                            tone={u.fully ? 'success' : 'neutral'}
+                            label={`${u.fully ? 'Débloque' : 'Aide'} CMD-${u.orderNumber}`}
+                          />
                         </ButtonBase>
                       ))}
                     </>
@@ -532,14 +791,22 @@ const CashPage = () => {
                   amount={formatDT(pu.total)}
                   action={
                     <Box>
-                      <Typography variant="caption" sx={{ display: 'block', color: pu.cashOut ? color.dangerDark : color.inkMuted }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: 'block',
+                          color: pu.cashOut ? color.dangerDark : color.inkMuted,
+                        }}
+                      >
                         {pu.cashOut ? `Caisse −${formatDT(pu.cashOut)}` : 'Caisse inchangée'}
                       </Typography>
                       <Button
                         size="small"
                         onClick={() => {
                           methodOp.reset();
-                          setNewMethod(pu.paymentMethod === 'unknown' ? 'cash_register' : pu.paymentMethod);
+                          setNewMethod(
+                            pu.paymentMethod === 'unknown' ? 'cash_register' : pu.paymentMethod
+                          );
                           setMethodTarget(pu);
                         }}
                       >
@@ -558,7 +825,8 @@ const CashPage = () => {
         <>
           <Typography variant="caption" sx={{ display: 'block', color: color.inkSoft, mb: 1 }}>
             Dépenses de l’activité (hors ingrédients). Total {formatDT(expenses.total)}
-            {outside > 0 ? ` · dont ${formatDT(outside)} payés hors caisse (caisse inchangée)` : ''}.
+            {outside > 0 ? ` · dont ${formatDT(outside)} payés hors caisse (caisse inchangée)` : ''}
+            .
           </Typography>
           <Card sx={{ overflow: 'hidden' }}>
             {expenses.expenses.length === 0 ? (
@@ -567,7 +835,12 @@ const CashPage = () => {
                 title="Aucune dépense sur cette période"
                 description="Emballages, gaz, transport… payés avec la caisse ou votre argent personnel."
                 action={
-                  <Button variant="outlined" color="error" startIcon={<Remove />} onClick={openExpense}>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<Remove />}
+                    onClick={openExpense}
+                  >
                     Ajouter une dépense
                   </Button>
                 }
@@ -579,10 +852,16 @@ const CashPage = () => {
                   direction={e.paymentMethod === 'cash_register' ? 'out' : 'neutral'}
                   muted={e.status === 'cancelled'}
                   title={e.description}
-                  lines={[`${formatDateTimeFr(e.occurredAt)}${e.createdBy?.email ? ` · ${e.createdBy.email}` : ''}`, e.status === 'cancelled' ? `Annulée : ${e.cancelReason}` : '']}
+                  lines={[
+                    `${formatDateTimeFr(e.occurredAt)}${e.createdBy?.email ? ` · ${e.createdBy.email}` : ''}`,
+                    e.status === 'cancelled' ? `Annulée : ${e.cancelReason}` : '',
+                  ]}
                   chips={
                     <>
-                      <StatusBadge tone={e.paymentMethod === 'cash_register' ? 'danger' : 'neutral'} label={PURCHASE_PAYMENT_LABELS[e.paymentMethod]} />
+                      <StatusBadge
+                        tone={e.paymentMethod === 'cash_register' ? 'danger' : 'neutral'}
+                        label={PURCHASE_PAYMENT_LABELS[e.paymentMethod]}
+                      />
                       {e.status === 'cancelled' && <StatusBadge tone="neutral" label="Annulée" />}
                     </>
                   }
@@ -620,13 +899,26 @@ const CashPage = () => {
         actions={
           <>
             <Button onClick={() => setIncome({ ...income, open: false })}>Annuler</Button>
-            <Button variant="contained" color="success" onClick={saveIncome} disabled={!(parseFloat(income.amount) > 0) || incomeOp.busy}>
+            <Button
+              variant="contained"
+              color="success"
+              onClick={saveIncome}
+              disabled={!(parseFloat(income.amount) > 0) || incomeOp.busy}
+            >
               {incomeOp.busy ? 'Enregistrement…' : 'Enregistrer l’entrée'}
             </Button>
           </>
         }
       >
-        <TextField select fullWidth size="small" label="Type" value={income.type} onChange={(e) => setIncome({ ...income, type: e.target.value as IncomeType })} sx={{ mt: 1, mb: 2 }}>
+        <TextField
+          select
+          fullWidth
+          size="small"
+          label="Type"
+          value={income.type}
+          onChange={(e) => setIncome({ ...income, type: e.target.value as IncomeType })}
+          sx={{ mt: 1, mb: 2 }}
+        >
           <MenuItem value="other_income">Autre entrée</MenuItem>
           <MenuItem value="opening_balance">Fonds de caisse (départ)</MenuItem>
         </TextField>
@@ -641,15 +933,34 @@ const CashPage = () => {
           inputProps={{ min: 0, step: 0.001, inputMode: 'decimal' }}
           sx={{ mb: 2 }}
         />
-        <TextField fullWidth size="small" label="Description" value={income.description} onChange={(e) => setIncome({ ...income, description: e.target.value })} sx={{ mb: 2 }} />
-        <TextField select fullWidth size="small" label="Mode" value={income.method} onChange={(e) => setIncome({ ...income, method: e.target.value })} sx={{ mb: 2 }}>
+        <TextField
+          fullWidth
+          size="small"
+          label="Description"
+          value={income.description}
+          onChange={(e) => setIncome({ ...income, description: e.target.value })}
+          sx={{ mb: 2 }}
+        />
+        <TextField
+          select
+          fullWidth
+          size="small"
+          label="Mode"
+          value={income.method}
+          onChange={(e) => setIncome({ ...income, method: e.target.value })}
+          sx={{ mb: 2 }}
+        >
           {Object.entries(PAYMENT_METHOD_LABELS).map(([k, v]) => (
             <MenuItem key={k} value={k}>
               {v}
             </MenuItem>
           ))}
         </TextField>
-        <DateTimeField label="Date (vide = maintenant)" value={income.occurredAt} onChange={(v) => setIncome({ ...income, occurredAt: v })} />
+        <DateTimeField
+          label="Date (vide = maintenant)"
+          value={income.occurredAt}
+          onChange={(v) => setIncome({ ...income, occurredAt: v })}
+        />
       </ResponsiveDialog>
 
       {/* − Dépense (caisse ou hors caisse) */}
@@ -662,7 +973,14 @@ const CashPage = () => {
         actions={
           <>
             <Button onClick={() => setExpense({ ...expense, open: false })}>Annuler</Button>
-            <Button variant="contained" color="error" onClick={saveExpense} disabled={!(parseFloat(expense.amount) > 0) || !expense.description.trim() || expenseOp.busy}>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={saveExpense}
+              disabled={
+                !(parseFloat(expense.amount) > 0) || !expense.description.trim() || expenseOp.busy
+              }
+            >
               {expenseOp.busy ? 'Enregistrement…' : 'Enregistrer la dépense'}
             </Button>
           </>
@@ -689,9 +1007,17 @@ const CashPage = () => {
           onChange={(e) => setExpense({ ...expense, description: e.target.value })}
           sx={{ mb: 2 }}
         />
-        <PurchasePaymentSelect value={expense.paymentMethod} onChange={(v) => setExpense({ ...expense, paymentMethod: v })} amount={parseFloat(expense.amount) || 0} />
+        <PurchasePaymentSelect
+          value={expense.paymentMethod}
+          onChange={(v) => setExpense({ ...expense, paymentMethod: v })}
+          amount={parseFloat(expense.amount) || 0}
+        />
         <Box sx={{ mt: 2 }}>
-          <DateTimeField label="Date (vide = maintenant)" value={expense.occurredAt} onChange={(v) => setExpense({ ...expense, occurredAt: v })} />
+          <DateTimeField
+            label="Date (vide = maintenant)"
+            value={expense.occurredAt}
+            onChange={(v) => setExpense({ ...expense, occurredAt: v })}
+          />
         </Box>
       </ResponsiveDialog>
 
@@ -708,7 +1034,12 @@ const CashPage = () => {
             <Button
               variant="contained"
               onClick={savePurchase}
-              disabled={!purchase.ingredient || !(parseFloat(purchase.quantity) > 0) || !(parseFloat(purchase.unitPrice) > 0) || purchaseOp.busy}
+              disabled={
+                !purchase.ingredient ||
+                !(parseFloat(purchase.quantity) > 0) ||
+                !(parseFloat(purchase.unitPrice) > 0) ||
+                purchaseOp.busy
+              }
             >
               {purchaseOp.busy ? 'Enregistrement…' : 'Enregistrer l’achat'}
             </Button>
@@ -744,7 +1075,14 @@ const CashPage = () => {
             fullWidth
           />
         </Box>
-        <TextField select size="small" fullWidth label="Acheté chez" value={purchase.sourceId} onChange={(e) => setPurchase({ ...purchase, sourceId: e.target.value })}>
+        <TextField
+          select
+          size="small"
+          fullWidth
+          label="Acheté chez"
+          value={purchase.sourceId}
+          onChange={(e) => setPurchase({ ...purchase, sourceId: e.target.value })}
+        >
           <MenuItem value="">Non précisé</MenuItem>
           {sources.map((src) => (
             <MenuItem key={src._id} value={src._id}>
@@ -752,6 +1090,15 @@ const CashPage = () => {
             </MenuItem>
           ))}
         </TextField>
+        {purchase.sourceId && (
+          <Box sx={{ mt: 1 }}>
+            <PromoPriceCheckbox
+              checked={purchase.promotion}
+              onChange={(promotion) => setPurchase({ ...purchase, promotion })}
+              sourceName={sources.find((x) => x._id === purchase.sourceId)?.name || 'la source'}
+            />
+          </Box>
+        )}
         <Box sx={{ mt: 2 }}>
           <PurchasePaymentSelect
             value={purchase.paymentMethod}
@@ -777,7 +1124,11 @@ const CashPage = () => {
           </>
         }
       >
-        <PurchasePaymentSelect value={newMethod} onChange={setNewMethod} amount={methodTarget?.total} />
+        <PurchasePaymentSelect
+          value={newMethod}
+          onChange={setNewMethod}
+          amount={methodTarget?.total}
+        />
       </ResponsiveDialog>
 
       {/* Correction tracée */}
@@ -790,14 +1141,33 @@ const CashPage = () => {
         actions={
           <>
             <Button onClick={() => setCorrecting(null)}>Annuler</Button>
-            <Button variant="contained" onClick={saveCorrection} disabled={!correction.reason.trim() || correctOp.busy}>
+            <Button
+              variant="contained"
+              onClick={saveCorrection}
+              disabled={!correction.reason.trim() || correctOp.busy}
+            >
               Enregistrer la correction
             </Button>
           </>
         }
       >
-        <TextField fullWidth size="small" type="number" label="Montant correct (DT)" value={correction.amount} onChange={(e) => setCorrection({ ...correction, amount: e.target.value })} sx={{ mt: 1, mb: 2 }} />
-        <TextField fullWidth size="small" required label="Raison" value={correction.reason} onChange={(e) => setCorrection({ ...correction, reason: e.target.value })} />
+        <TextField
+          fullWidth
+          size="small"
+          type="number"
+          label="Montant correct (DT)"
+          value={correction.amount}
+          onChange={(e) => setCorrection({ ...correction, amount: e.target.value })}
+          sx={{ mt: 1, mb: 2 }}
+        />
+        <TextField
+          fullWidth
+          size="small"
+          required
+          label="Raison"
+          value={correction.reason}
+          onChange={(e) => setCorrection({ ...correction, reason: e.target.value })}
+        />
       </ResponsiveDialog>
 
       {/* Annuler une dépense */}
@@ -814,13 +1184,27 @@ const CashPage = () => {
         actions={
           <>
             <Button onClick={() => setCancelTarget(null)}>Retour</Button>
-            <Button variant="contained" color="error" onClick={cancelExpense} disabled={cancelReason.trim().length < 3 || cancelOp.busy}>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={cancelExpense}
+              disabled={cancelReason.trim().length < 3 || cancelOp.busy}
+            >
               Annuler la dépense
             </Button>
           </>
         }
       >
-        <TextField fullWidth required autoFocus size="small" label="Raison" value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} sx={{ mt: 1 }} />
+        <TextField
+          fullWidth
+          required
+          autoFocus
+          size="small"
+          label="Raison"
+          value={cancelReason}
+          onChange={(e) => setCancelReason(e.target.value)}
+          sx={{ mt: 1 }}
+        />
       </ResponsiveDialog>
     </Box>
   );

@@ -23,7 +23,7 @@ const Header = () => {
 
   const navigationItems = [
     { label: 'Accueil', path: '/', icon: <Home /> },
-    { label: 'Recettes', path: '/recipes', icon: <Cake /> },
+    { label: 'Catalogue', path: '/recipes', icon: <Cake /> },
   ];
 
   return (

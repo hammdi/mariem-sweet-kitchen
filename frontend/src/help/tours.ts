@@ -49,10 +49,22 @@ export const TOURS: Record<string, Tour> = {
     title: 'Créer une commande',
     route: '/admin/orders/new',
     steps: [
-      { target: 'order-client', title: '1. Le client', body: 'Choisissez votre client, ou tapez son nom et son téléphone.' },
-      { target: 'order-product', title: '2. Le produit', body: 'Choisissez la recette et la taille.' },
+      {
+        target: 'order-client',
+        title: '1. Le client',
+        body: 'Choisissez votre client, ou tapez son nom et son téléphone.',
+      },
+      {
+        target: 'order-product',
+        title: '2. Le produit',
+        body: 'Choisissez la recette et la taille.',
+      },
       { target: 'order-quantity', title: '3. La quantité', body: 'Indiquez combien en faire.' },
-      { target: 'order-date', title: '4. La date', body: 'Quand le client vient chercher sa commande.' },
+      {
+        target: 'order-date',
+        title: '4. La date',
+        body: 'Quand le client vient chercher sa commande.',
+      },
       {
         target: 'order-stock',
         title: '5. Les ingrédients nécessaires',
@@ -81,14 +93,26 @@ export const TOURS: Record<string, Tour> = {
     title: 'Comprendre mes statistiques',
     route: '/admin/statistics',
     steps: [
-      { target: 'stats-period', title: 'La période', body: 'Aujourd’hui, cette semaine, ce mois… ou vos propres dates.' },
+      {
+        target: 'stats-period',
+        title: 'La période',
+        body: 'Aujourd’hui, cette semaine, ce mois… ou vos propres dates.',
+      },
       {
         target: 'stats-kpis',
         title: 'Les chiffres clés',
         body: 'Chiffre d’affaires = ce que vous avez vendu (payé ou non). Encaissé = l’argent reçu. À encaisser = la différence.',
       },
-      { title: 'Vendre ≠ encaisser', body: 'Une vente compte tout de suite ; la caisse augmente seulement quand le client paie.', flow: 'sale' },
-      { target: 'stats-sales-chart', title: 'L’évolution des ventes', body: 'Survolez une barre pour voir le détail. Le bouton tableau affiche les chiffres.' },
+      {
+        title: 'Vendre ≠ encaisser',
+        body: 'Une vente compte tout de suite ; la caisse augmente seulement quand le client paie.',
+        flow: 'sale',
+      },
+      {
+        target: 'stats-sales-chart',
+        title: 'L’évolution des ventes',
+        body: 'Survolez une barre pour voir le détail. Le bouton tableau affiche les chiffres.',
+      },
       {
         target: 'stats-cash',
         title: 'La caisse',
@@ -131,7 +155,11 @@ export const TOURS: Record<string, Tour> = {
     title: 'Comprendre mon stock',
     route: '/admin/stock',
     steps: [
-      { target: 'stock-summary', title: 'Le résumé', body: 'Combien d’ingrédients sont OK, à surveiller ou manquants.' },
+      {
+        target: 'stock-summary',
+        title: 'Le résumé',
+        body: 'Combien d’ingrédients sont OK, à surveiller ou manquants.',
+      },
       {
         target: 'stock-table',
         title: 'Chaque ingrédient',
@@ -142,7 +170,11 @@ export const TOURS: Record<string, Tour> = {
         body: 'Il augmente à chaque achat, et diminue quand une commande passe « En préparation ». Créer une commande ne le change pas.',
         flow: 'purchase',
       },
-      { target: 'stock-history-tab', title: 'L’historique', body: 'Chaque mouvement est noté : achats, utilisations, corrections (avec leur raison).' },
+      {
+        target: 'stock-history-tab',
+        title: 'L’historique',
+        body: 'Chaque mouvement est noté : achats, utilisations, corrections (avec leur raison).',
+      },
     ],
   },
 
@@ -160,7 +192,11 @@ export const TOURS: Record<string, Tour> = {
         title: 'Une raison est demandée',
         body: 'Inventaire, erreur de saisie, perte, casse… L’ancienne valeur, la nouvelle, la différence et la raison sont gardées dans l’historique.',
       },
-      { target: 'stock-history-tab', title: 'Retrouver une correction', body: 'Toutes les corrections apparaissent dans l’historique.' },
+      {
+        target: 'stock-history-tab',
+        title: 'Retrouver une correction',
+        body: 'Toutes les corrections apparaissent dans l’historique.',
+      },
     ],
   },
 
@@ -179,7 +215,11 @@ export const TOURS: Record<string, Tour> = {
         title: 'Le bouton « Acheter »',
         body: 'Indiquez la quantité achetée, le prix réellement payé et avec quel argent.',
       },
-      { title: 'Ce que fait un achat', body: 'Le stock augmente ; la caisse baisse seulement si vous avez payé avec la caisse.', flow: 'purchase' },
+      {
+        title: 'Ce que fait un achat',
+        body: 'Le stock augmente ; la caisse baisse seulement si vous avez payé avec la caisse.',
+        flow: 'purchase',
+      },
     ],
   },
 
@@ -193,7 +233,11 @@ export const TOURS: Record<string, Tour> = {
         title: 'Les commandes bloquées sont signalées',
         body: 'Une pastille rouge « ingrédient manquant » apparaît sur la commande concernée.',
       },
-      { title: 'D’où vient le manque ?', body: 'Le stock est réservé aux commandes les plus proches en premier.', flow: 'missing' },
+      {
+        title: 'D’où vient le manque ?',
+        body: 'Le stock est réservé aux commandes les plus proches en premier.',
+        flow: 'missing',
+      },
     ],
     finish: { label: 'Voir la liste de courses', to: '/admin/shopping-list' },
   },
@@ -203,8 +247,16 @@ export const TOURS: Record<string, Tour> = {
     title: 'Préparer une commande',
     route: '/admin/orders',
     steps: [
-      { target: 'orders-filters', title: 'Trouver la commande', body: 'Filtrez par avancement : « Confirmées » sont prêtes à être préparées.' },
-      { target: 'orders-list', title: 'Ouvrir la commande', body: 'Cliquez sur une commande pour ouvrir sa fiche.' },
+      {
+        target: 'orders-filters',
+        title: 'Trouver la commande',
+        body: 'Filtrez par avancement : « Confirmées » sont prêtes à être préparées.',
+      },
+      {
+        target: 'orders-list',
+        title: 'Ouvrir la commande',
+        body: 'Cliquez sur une commande pour ouvrir sa fiche.',
+      },
       {
         title: 'Lancer la préparation',
         body: 'Sur la fiche, le bouton « Commencer la préparation » utilise les ingrédients (une seule fois). Il est disponible même si la commande n’est pas payée, dès que le stock suffit.',
@@ -218,8 +270,16 @@ export const TOURS: Record<string, Tour> = {
     title: 'Encaisser une commande',
     route: '/admin/cash?tab=receivables',
     steps: [
-      { target: 'cash-receivables-tab', title: 'Commandes à encaisser', body: 'Toutes les ventes pas encore (entièrement) payées.' },
-      { title: 'Encaisser', body: 'Le bouton « Encaisser » enregistre l’argent reçu : la caisse augmente, le reste à encaisser diminue.', flow: 'sale' },
+      {
+        target: 'cash-receivables-tab',
+        title: 'Commandes à encaisser',
+        body: 'Toutes les ventes pas encore (entièrement) payées.',
+      },
+      {
+        title: 'Encaisser',
+        body: 'Le bouton « Encaisser » enregistre l’argent reçu : la caisse augmente, le reste à encaisser diminue.',
+        flow: 'sale',
+      },
     ],
   },
 
@@ -228,7 +288,11 @@ export const TOURS: Record<string, Tour> = {
     title: 'Ajouter une entrée',
     route: '/admin/cash',
     steps: [
-      { target: 'cash-tiles', title: 'Votre caisse', body: 'Liquidité, entrées, sorties et ce qui reste à encaisser.' },
+      {
+        target: 'cash-tiles',
+        title: 'Votre caisse',
+        body: 'Liquidité, entrées, sorties et ce qui reste à encaisser.',
+      },
       {
         target: 'cash-add-income',
         title: '« + Entrée »',
@@ -261,8 +325,16 @@ export const TOURS: Record<string, Tour> = {
     title: 'Acheter du stock',
     route: '/admin/cash',
     steps: [
-      { target: 'cash-add-purchase', title: '« Achat de stock »', body: 'Pour enregistrer des ingrédients achetés.' },
-      { title: 'Ce que fait un achat', body: 'Stock +, et caisse − seulement si payé avec la caisse.', flow: 'purchase' },
+      {
+        target: 'cash-add-purchase',
+        title: '« Achat de stock »',
+        body: 'Pour enregistrer des ingrédients achetés.',
+      },
+      {
+        title: 'Ce que fait un achat',
+        body: 'Stock +, et caisse − seulement si payé avec la caisse.',
+        flow: 'purchase',
+      },
     ],
     finish: { label: 'Ouvrir le formulaire d’achat', to: '/admin/cash?open=purchase' },
   },
@@ -272,8 +344,16 @@ export const TOURS: Record<string, Tour> = {
     title: 'Comprendre les besoins',
     route: '/admin/shopping-list',
     steps: [
-      { target: 'shop-summary', title: 'Le total', body: 'Le nombre d’ingrédients à acheter, les commandes concernées et le coût estimé.' },
-      { target: 'shop-card', title: 'Un ingrédient', body: 'La priorité dépend de la commande la plus proche : Urgent, Bientôt ou Plus tard.' },
+      {
+        target: 'shop-summary',
+        title: 'Le total',
+        body: 'Le nombre d’ingrédients à acheter, les commandes concernées et le coût estimé.',
+      },
+      {
+        target: 'shop-card',
+        title: 'Un ingrédient',
+        body: 'La priorité dépend de la commande la plus proche : Urgent, Bientôt ou Plus tard.',
+      },
       {
         target: 'shop-orders',
         title: 'Le détail par commande',
@@ -287,7 +367,11 @@ export const TOURS: Record<string, Tour> = {
     title: 'Voir les commandes bloquées',
     route: '/admin',
     steps: [
-      { target: 'dash-action', title: 'Commandes bloquées', body: 'Elles attendent un ingrédient. Achetez-le depuis la liste de courses pour les débloquer.' },
+      {
+        target: 'dash-action',
+        title: 'Commandes bloquées',
+        body: 'Elles attendent un ingrédient. Achetez-le depuis la liste de courses pour les débloquer.',
+      },
     ],
     finish: { label: 'Ouvrir la liste de courses', to: '/admin/shopping-list' },
   },
@@ -296,8 +380,15 @@ export const TOURS: Record<string, Tour> = {
     title: 'La page Ingrédients',
     route: '/admin/ingredients',
     steps: [
-      { title: 'Vos ingrédients', body: 'Chaque ingrédient a un prix de référence (utilisé pour le prix des recettes), une unité et un seuil d’alerte de stock.' },
-      { title: 'Prix chez vos sources', body: 'Ouvrez un ingrédient pour noter les prix vus chez Carrefour, au grossiste… et enregistrer vos achats réels.', flow: 'purchase' },
+      {
+        title: 'Vos ingrédients',
+        body: 'Le prix utilisé dans les recettes est la moyenne des prix de vos sources d’achat. « Ajoutez une source » signale un prix fixe, « à vérifier » un prix vieux de plus de 3 mois.',
+      },
+      {
+        title: 'Prix chez vos sources',
+        body: 'Ouvrez un ingrédient pour noter les prix vus chez Carrefour, au grossiste… et enregistrer vos achats réels.',
+        flow: 'purchase',
+      },
     ],
     finish: { label: 'Voir les sources d’achat', to: '/admin/sources' },
   },
@@ -306,8 +397,15 @@ export const TOURS: Record<string, Tour> = {
     title: 'La page Recettes',
     route: '/admin/recipes',
     steps: [
-      { title: 'Une carte par recette', body: 'Chaque taille affiche ses portions et son prix de vente calculé.' },
-      { title: 'Comment le prix est calculé', body: 'Ingrédients + électricité des machines + eau + marge. Les commandes déjà prises gardent leur prix.', flow: 'recipe' },
+      {
+        title: 'Une carte par recette',
+        body: 'Chaque taille affiche ses portions et son prix de vente calculé.',
+      },
+      {
+        title: 'Comment le prix est calculé',
+        body: 'Ingrédients + électricité des machines + eau + marge. Les commandes déjà prises gardent leur prix.',
+        flow: 'recipe',
+      },
     ],
   },
   'clients-overview': {
@@ -315,8 +413,15 @@ export const TOURS: Record<string, Tour> = {
     title: 'La page Clients',
     route: '/admin/clients',
     steps: [
-      { title: 'Vos clients', body: 'Particuliers et cafés, avec leur nombre de commandes, le chiffre d’affaires généré et leur dernière commande.' },
-      { title: 'Généré ≠ encaissé', body: 'Le chiffre d’affaires généré compte les commandes confirmées, payées ou non. Ouvrez un client pour voir ce qui a été encaissé.', flow: 'sale' },
+      {
+        title: 'Vos clients',
+        body: 'Particuliers et cafés, avec leur nombre de commandes, le chiffre d’affaires généré et leur dernière commande.',
+      },
+      {
+        title: 'Généré ≠ encaissé',
+        body: 'Le chiffre d’affaires généré compte les commandes confirmées, payées ou non. Ouvrez un client pour voir ce qui a été encaissé.',
+        flow: 'sale',
+      },
     ],
   },
 };

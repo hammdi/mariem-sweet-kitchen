@@ -14,6 +14,7 @@ import { createError } from '../middleware/errorHandler';
 import { Actor, correctMovement, recordPurchaseOutflow } from './cashService';
 import { syncPurchaseNeeds } from './purchaseNeedService';
 import { round } from './unitService';
+import { syncIngredientPrice } from './ingredientPriceService';
 
 /**
  * ACHAT DE STOCK = une seule opération synchronisée :
@@ -46,7 +47,11 @@ export interface PurchaseItemInput {
   ingredientId: string;
   quantity: unknown; // dans l'unité de stock de l'ingrédient
   unitPrice: unknown; // prix réellement payé, DT par unité de stock (obligatoire)
+  // Par défaut, un achat chez une source met à jour le prix de cette source
+  // (et donc la moyenne utilisée). Désactivé si updateSourcePrice === false
+  // ou si le prix était promotionnel (la promo est un gain, pas le prix normal).
   updateSourcePrice?: boolean;
+  promotion?: boolean;
 }
 
 function parsePositive(input: unknown, message: string): number {
@@ -101,7 +106,7 @@ export async function recordStockPurchase(opts: {
       ingredient,
       quantity,
       unitPrice,
-      updateSourcePrice: item.updateSourcePrice === true,
+      updateSourcePrice: item.updateSourcePrice !== false && item.promotion !== true,
     });
   }
 
@@ -132,7 +137,7 @@ export async function recordStockPurchase(opts: {
       })
     );
 
-    // Optionnel : reporter ce prix comme dernier prix constaté chez la source
+    // Reporter ce prix comme dernier prix constaté chez la source (sauf promo)
     if (l.updateSourcePrice && source) {
       let offer = await IngredientPrice.findOne({
         ingredientId: l.ingredient._id,
@@ -153,6 +158,7 @@ export async function recordStockPurchase(opts: {
         recordedAt: new Date(),
       });
       await offer.save();
+      await syncIngredientPrice(l.ingredient._id); // prix utilisé = moyenne des sources
     }
   }
 

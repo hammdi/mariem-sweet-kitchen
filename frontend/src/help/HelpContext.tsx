@@ -1,4 +1,12 @@
-import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { FlowId } from './types';
 
 /**
@@ -107,7 +115,17 @@ export function HelpProvider({ children }: { children: ReactNode }) {
       userReducedMotion,
       setUserReducedMotion,
     }),
-    [panelOpen, activeTourId, startTour, endTour, flowId, aiOpen, userReducedMotion, sysReduced, setUserReducedMotion]
+    [
+      panelOpen,
+      activeTourId,
+      startTour,
+      endTour,
+      flowId,
+      aiOpen,
+      userReducedMotion,
+      sysReduced,
+      setUserReducedMotion,
+    ]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

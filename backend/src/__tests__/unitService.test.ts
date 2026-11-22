@@ -17,6 +17,11 @@ describe('unitService — conversions supportées', () => {
     [3, 'piece', 'piece', 3],
     [2, 'cuillere', 'cuillere', 2],
     [1, 'tasse', 'tasse', 1],
+    [1, 'cuillere', 'g', 10], // 1 cuillère = 10 g
+    [3, 'cuillere', 'kg', 0.03],
+    [50, 'g', 'cuillere', 5],
+    [2, 'cuillere', 'ml', 20], // liquide : 1 cuillère = 10 ml
+    [1, 'cuillere', 'l', 0.01],
     [1.2, 'kg', 'kg', 1.2],
   ])('%s %s → %s = %s', (q, from, to, expected) => {
     expect(convertQuantity(q, from, to)).toBeCloseTo(expected, 10);
@@ -28,7 +33,8 @@ describe('unitService — conversions supportées', () => {
     ['kg', 'l'],
     ['ml', 'g'],
     ['piece', 'kg'],
-    ['cuillere', 'g'],
+    ['cuillere', 'piece'],
+    ['cuillere', 'tasse'],
     ['tasse', 'ml'],
   ])('refuse %s → %s', (from, to) => {
     expect(convertQuantity(1, from, to)).toBeNull();
@@ -144,5 +150,38 @@ describe('prix figé (instantané de commande)', () => {
     farine.pricePerUnit = 1.6;
     expect(PriceCalculationService.recomputeFromSnapshot(snapshot).total).toBe(price.total);
     farine.pricePerUnit = 0.8;
+  });
+});
+
+describe('café à 10 DT/kg : 100 g = 1 DT, 1 cuillère (10 g) = 0,10 DT', () => {
+  const cafe = { _id: 'cafe', name: 'Café', unit: 'kg', pricePerUnit: 10, stockQuantity: 1 };
+  const priceOf = (quantity: number, unit: string) =>
+    PriceCalculationService.computeVariantPrice(
+      { portions: 6, ingredients: [{ ingredientId: cafe, quantity, unit }], appliances: [] },
+      settings
+    ).ingredientsCost;
+
+  it('1 kg coûte 10 DT', () => expect(priceOf(1, 'kg')).toBe(10));
+  it('100 g coûtent 1 DT', () => expect(priceOf(100, 'g')).toBe(1));
+  it('1 cuillère (10 g) coûte 0,10 DT', () => expect(priceOf(1, 'cuillere')).toBe(0.1));
+  it('10 cuillères = 100 g = 1 DT', () => expect(priceOf(10, 'cuillere')).toBe(1));
+
+  it('stock : 3 cuillères retirent 0,03 kg (même calcul que le prix)', () => {
+    const lines = [
+      {
+        variant: {
+          portions: 6,
+          ingredients: [{ ingredientId: cafe, quantity: 3, unit: 'cuillere' }],
+          appliances: [],
+        },
+        quantity: 2, // 2 gâteaux
+        clientProvidedIngredients: [],
+        label: 'Cloudy Cake',
+      },
+    ];
+    const { items, unitIssues } = computeConsumption(lines as any);
+    expect(unitIssues).toHaveLength(0);
+    expect(items[0]).toMatchObject({ unit: 'kg', quantity: 0.06 }); // 2 × 3 cuillères × 10 g
+    expect(computeStockNeeds(lines as any)[0]).toMatchObject({ needed: 0.06, remaining: 0.94 });
   });
 });

@@ -50,7 +50,10 @@ export default function GuidedTour() {
     setIndex(0);
     if (tour?.route) {
       const current = location.pathname + location.search;
-      if (pathOf(tour.route) !== location.pathname || (tour.route.includes('?') && current !== tour.route)) {
+      if (
+        pathOf(tour.route) !== location.pathname ||
+        (tour.route.includes('?') && current !== tour.route)
+      ) {
         navigate(tour.route);
       }
     }
@@ -62,7 +65,12 @@ export default function GuidedTour() {
     setViewport({ w: window.innerWidth, h: window.innerHeight });
     if (!el || el.getClientRects().length === 0) return;
     const r = el.getBoundingClientRect();
-    setRect({ top: r.top - PAD, left: r.left - PAD, width: r.width + PAD * 2, height: r.height + PAD * 2 });
+    setRect({
+      top: r.top - PAD,
+      left: r.left - PAD,
+      width: r.width + PAD * 2,
+      height: r.height + PAD * 2,
+    });
   }, []);
 
   // Trouver l'élément de l'étape (il peut apparaître après un chargement)
@@ -81,7 +89,11 @@ export default function GuidedTour() {
         targetRef.current = el;
         // élément très haut : on le cale en haut de l'écran pour laisser la place à la bulle
         const tall = el.getBoundingClientRect().height > window.innerHeight * 0.45;
-        el.scrollIntoView({ block: tall ? 'start' : 'center', inline: 'nearest', behavior: reducedMotion ? 'auto' : 'smooth' });
+        el.scrollIntoView({
+          block: tall ? 'start' : 'center',
+          inline: 'nearest',
+          behavior: reducedMotion ? 'auto' : 'smooth',
+        });
         timer = window.setTimeout(measure, reducedMotion ? 0 : 350);
         return;
       }
@@ -113,7 +125,8 @@ export default function GuidedTour() {
   useLayoutEffect(() => {
     if (!bubbleRef.current) return;
     const r = bubbleRef.current.getBoundingClientRect();
-    if (Math.abs(r.width - size.w) > 1 || Math.abs(r.height - size.h) > 1) setSize({ w: r.width, h: r.height });
+    if (Math.abs(r.width - size.w) > 1 || Math.abs(r.height - size.h) > 1)
+      setSize({ w: r.width, h: r.height });
   }, [index, rect, missing, viewport, size.w, size.h, activeTourId]);
 
   // Focus sur la bulle à chaque étape (lecteurs d'écran, clavier)
@@ -148,7 +161,13 @@ export default function GuidedTour() {
   const mobile = vw < 600;
   const m = 12;
   let maxHeight = vh - 2 * m;
-  const style: { top?: number; left?: number; right?: number; bottom?: number; width: number | string } = {
+  const style: {
+    top?: number;
+    left?: number;
+    right?: number;
+    bottom?: number;
+    width: number | string;
+  } = {
     width: mobile ? `calc(100vw - ${2 * 16}px)` : Math.min(380, vw - 2 * m),
   };
   if (!rect) {
@@ -189,7 +208,10 @@ export default function GuidedTour() {
     const bTop = style.top;
     const bBottom = bTop + Math.min(size.h, maxHeight);
     const rBottom = rect.top + rect.height;
-    const horizontal = typeof style.left === 'number' && (style.left >= rect.left + rect.width || style.left + (typeof style.width === 'number' ? style.width : vw) <= rect.left);
+    const horizontal =
+      typeof style.left === 'number' &&
+      (style.left >= rect.left + rect.width ||
+        style.left + (typeof style.width === 'number' ? style.width : vw) <= rect.left);
     if (!horizontal && bTop < rBottom && bBottom > rect.top) {
       if (bTop >= rect.top + 40) shown = { ...rect, height: Math.max(40, bTop - m - rect.top) };
       else shown = { ...rect, top: bBottom + m, height: Math.max(40, rBottom - (bBottom + m)) };
@@ -197,7 +219,9 @@ export default function GuidedTour() {
   }
 
   const last = index === tour.steps.length - 1;
-  const trans = reducedMotion ? 'none' : 'top 320ms cubic-bezier(0.2,0,0,1), left 320ms cubic-bezier(0.2,0,0,1), width 320ms cubic-bezier(0.2,0,0,1), height 320ms cubic-bezier(0.2,0,0,1)';
+  const trans = reducedMotion
+    ? 'none'
+    : 'top 320ms cubic-bezier(0.2,0,0,1), left 320ms cubic-bezier(0.2,0,0,1), width 320ms cubic-bezier(0.2,0,0,1), height 320ms cubic-bezier(0.2,0,0,1)';
 
   return (
     <>
@@ -205,7 +229,13 @@ export default function GuidedTour() {
       <Box
         aria-hidden
         onClick={(e) => e.stopPropagation()}
-        sx={{ position: 'fixed', inset: 0, zIndex: Z, cursor: 'default', bgcolor: rect ? 'transparent' : 'rgba(28,18,10,0.55)' }}
+        sx={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: Z,
+          cursor: 'default',
+          bgcolor: rect ? 'transparent' : 'rgba(28,18,10,0.55)',
+        }}
       />
       {shown && (
         <Box
@@ -256,7 +286,9 @@ export default function GuidedTour() {
           boxShadow: shadow.floating,
           border: `1px solid ${color.border}`,
           outline: 'none',
-          transition: reducedMotion ? 'none' : 'top 320ms cubic-bezier(0.2,0,0,1), left 320ms cubic-bezier(0.2,0,0,1)',
+          transition: reducedMotion
+            ? 'none'
+            : 'top 320ms cubic-bezier(0.2,0,0,1), left 320ms cubic-bezier(0.2,0,0,1)',
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -270,7 +302,12 @@ export default function GuidedTour() {
         <Typography id="tour-title" variant="h6" sx={{ fontSize: '1.05rem', mb: 0.75 }}>
           {step.title}
         </Typography>
-        <Typography id="tour-body" variant="body2" sx={{ color: color.inkSoft, lineHeight: 1.55 }} component="div">
+        <Typography
+          id="tour-body"
+          variant="body2"
+          sx={{ color: color.inkSoft, lineHeight: 1.55 }}
+          component="div"
+        >
           {step.body}
         </Typography>
         {missing && (
@@ -299,10 +336,20 @@ export default function GuidedTour() {
           ))}
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5, flexWrap: 'wrap' }}>
-          <Button size="small" onClick={() => endTour(true)} sx={{ color: color.inkSoft, mr: 'auto' }}>
+          <Button
+            size="small"
+            onClick={() => endTour(true)}
+            sx={{ color: color.inkSoft, mr: 'auto' }}
+          >
             Retour à l’aide
           </Button>
-          <Button size="small" variant="outlined" startIcon={<ArrowBack />} onClick={prev} disabled={index === 0}>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<ArrowBack />}
+            onClick={prev}
+            disabled={index === 0}
+          >
             Précédent
           </Button>
           {last && tour.finish ? (
@@ -317,7 +364,13 @@ export default function GuidedTour() {
               {tour.finish.label}
             </Button>
           ) : (
-            <Button size="small" variant="contained" endIcon={!last ? <ArrowForward /> : undefined} onClick={next} autoFocus>
+            <Button
+              size="small"
+              variant="contained"
+              endIcon={!last ? <ArrowForward /> : undefined}
+              onClick={next}
+              autoFocus
+            >
               {last ? 'Terminer' : 'Suivant'}
             </Button>
           )}

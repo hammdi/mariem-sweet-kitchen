@@ -24,7 +24,7 @@ export function useIdempotentAction() {
     keyRef.current = newKey();
   }, []);
 
-  const run = useCallback(async <T,>(fn: (key: string) => Promise<T>): Promise<T | undefined> => {
+  const run = useCallback(async <T>(fn: (key: string) => Promise<T>): Promise<T | undefined> => {
     if (busyRef.current) return undefined; // clic pendant l'envoi : ignoré
     busyRef.current = true;
     setBusy(true);

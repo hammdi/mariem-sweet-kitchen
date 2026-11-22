@@ -55,12 +55,37 @@ export default function QuickActionCard({
       }}
     >
       {status && <Box sx={{ position: 'absolute', top: 8, right: 8 }}>{status}</Box>}
-      <Box className="qa-icon" sx={{ color: t.accent, display: 'flex', transition: `transform ${motion.base}ms ${motion.ease}`, '& svg': { fontSize: 38 } }}>
+      <Box
+        className="qa-icon"
+        sx={{
+          color: t.accent,
+          display: 'flex',
+          transition: `transform ${motion.base}ms ${motion.ease}`,
+          '& svg': { fontSize: 38 },
+        }}
+      >
         {icon}
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, maxWidth: '100%' }}>
-        <Typography sx={{ fontWeight: 700, color: tone === 'success' || tone === 'warning' ? color.ink : t.fg, lineHeight: 1.25, fontSize: '0.95rem' }}>{title}</Typography>
-        <ChevronRight className="qa-arrow" sx={{ color: t.accent, fontSize: 20, flexShrink: 0, transition: `transform ${motion.base}ms ${motion.ease}` }} />
+        <Typography
+          sx={{
+            fontWeight: 700,
+            color: tone === 'success' || tone === 'warning' ? color.ink : t.fg,
+            lineHeight: 1.25,
+            fontSize: '0.95rem',
+          }}
+        >
+          {title}
+        </Typography>
+        <ChevronRight
+          className="qa-arrow"
+          sx={{
+            color: t.accent,
+            fontSize: 20,
+            flexShrink: 0,
+            transition: `transform ${motion.base}ms ${motion.ease}`,
+          }}
+        />
       </Box>
     </ButtonBase>
   );

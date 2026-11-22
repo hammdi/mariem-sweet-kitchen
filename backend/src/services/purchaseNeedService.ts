@@ -33,10 +33,13 @@ import { StockHistory } from '../models/StockHistory';
 // Commandes acceptées dont le stock n'a pas encore été déduit
 export const ACTIVE_STATUSES = ['pending', 'confirmed', 'paid'];
 
-const POPULATE_STOCK = {
-  path: 'items.recipeId',
-  populate: [{ path: 'variants.ingredients.ingredientId' }],
-};
+const POPULATE_STOCK = [
+  {
+    path: 'items.recipeId',
+    populate: [{ path: 'variants.ingredients.ingredientId' }],
+  },
+  { path: 'items.packaging.packagingId' }, // emballages : même stock que les ingrédients
+];
 
 export const orderNeededBy = (o: { confirmedDate?: Date | null; requestedDate?: Date | null }) =>
   o.confirmedDate || o.requestedDate || null;

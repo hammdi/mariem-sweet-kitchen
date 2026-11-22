@@ -20,8 +20,18 @@ export async function assertRecipeUnits(variants: VariantInput[] | undefined): P
   const ids = variants
     .flatMap((v) => (v.ingredients || []).map((i) => String(i.ingredientId)))
     .filter((id) => Types.ObjectId.isValid(id));
-  const ingredients = await Ingredient.find({ _id: { $in: ids } }).select('name unit');
+  const ingredients = await Ingredient.find({ _id: { $in: ids } }).select('name unit kind');
   const byId = new Map(ingredients.map((i) => [i._id.toString(), i]));
+
+  // Un emballage se choisit dans la commande (une recette peut partir dans
+  // plusieurs emballages), jamais dans la recette : son coût n'est pas un coût produit.
+  const packaging = ingredients.filter((i) => i.kind === 'packaging').map((i) => i.name);
+  if (packaging.length > 0) {
+    throw createError(
+      `${packaging.join(', ')} : c'est un emballage. Choisissez-le dans la commande, pas dans la recette.`,
+      400
+    );
+  }
 
   const problems: string[] = [];
   for (const v of variants) {
@@ -29,14 +39,14 @@ export async function assertRecipeUnits(variants: VariantInput[] | undefined): P
       const ing = byId.get(String(vi.ingredientId));
       if (ing && vi.unit && !areUnitsCompatible(vi.unit, ing.unit)) {
         problems.push(
-          `${v.sizeName ? `Taille "${v.sizeName}" : ` : ''}${ing.name} en "${vi.unit}" alors qu'il est géré en "${ing.unit}"`
+          `${v.sizeName ? `Taille « ${v.sizeName} » : ` : ''}${ing.name} est compté en ${ing.unit} dans le stock, la quantité ne peut pas être en « ${vi.unit} »`
         );
       }
     }
   }
   if (problems.length > 0) {
     throw createError(
-      `Unité incompatible (utilisez g/kg, ml/l ou l'unité de l'ingrédient) :\n${problems.join('\n')}`,
+      `Unité impossible à convertir :\n${problems.join('\n')}\n(une cuillère = 10 g ou 10 ml ; les pièces et tasses restent dans leur propre unité)`,
       400
     );
   }

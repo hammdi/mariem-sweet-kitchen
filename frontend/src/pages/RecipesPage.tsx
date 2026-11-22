@@ -1,304 +1,135 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import { useState } from 'react';
 import {
-  Container,
-  Typography,
   Box,
-  Grid,
-  TextField,
-  Card,
-  CardContent,
-  CardMedia,
-  Button,
-  Chip,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
+  ButtonBase,
+  Container,
   InputAdornment,
   Skeleton,
-  Pagination,
+  TextField,
+  Typography,
 } from '@mui/material';
-import { Search, AccessTime, Cake } from '@mui/icons-material';
+import { Search } from '@mui/icons-material';
+import CatalogCard from '../components/catalog/CatalogCard';
+import { useCatalog } from '../components/catalog/useCatalog';
+import { color, font, radius } from '../theme/tokens';
 
+/** Catalogue client : photos, descriptions et prix — sans composition. */
 const RecipesPage = () => {
-  const navigate = useNavigate();
-  const [recipes, setRecipes] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
-  const [categories, setCategories] = useState<string[]>([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const PAGE_SIZE = 12;
-
-  const load = async (targetPage = page) => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(targetPage));
-      params.set('limit', String(PAGE_SIZE));
-      if (search) params.set('search', search);
-      if (category) params.set('category', category);
-      const res = await api.get(`/recipes?${params}`);
-      const data = res.data.data?.recipes || [];
-      setRecipes(data);
-      setTotalPages(res.data.data?.pagination?.totalPages || 1);
-      // Extraire les categories uniques
-      const cats = [
-        ...new Set(data.flatMap((r: any) => r.categories || []).filter(Boolean)),
-      ] as string[];
-      if (cats.length > 0 && categories.length === 0) setCategories(cats);
-    } catch {
-      /* ignore */
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    setPage(1);
-    load(1);
-    // rechargement seulement quand la catégorie change (load lit l'état courant)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category]);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPage(1);
-    load(1);
-  };
-
-  const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
-    setPage(value);
-    load(value);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const getMinPrice = (recipe: any) => {
-    // Calculer le prix minimum approximatif a partir des ingredients
-    if (!recipe.variants || recipe.variants.length === 0) return null;
-    const variant = recipe.variants[0];
-    let total = 0;
-    for (const ing of variant.ingredients || []) {
-      const ingredient = ing.ingredientId;
-      if (ingredient && typeof ingredient === 'object') {
-        total += (ingredient.pricePerUnit || 0) * (ing.quantity || 0);
-      }
-    }
-    return total > 0 ? total : null;
-  };
+  const { items, categories } = useCatalog({ search, category });
 
   return (
-    <Box sx={{ py: 4, minHeight: '80vh' }}>
-      <Container maxWidth="lg">
-        {/* Header */}
-        <Box sx={{ mb: 4 }}>
+    <Box sx={{ bgcolor: color.bg, minHeight: '70vh' }}>
+      <Box
+        sx={{
+          background: `linear-gradient(135deg, ${color.cream} 0%, ${color.primaryTint} 100%)`,
+          py: { xs: 5, md: 7 },
+        }}
+      >
+        <Container maxWidth="lg">
+          <Typography variant="overline" sx={{ color: color.primaryDark }}>
+            Fait maison, sur commande
+          </Typography>
           <Typography
-            variant="h2"
             component="h1"
-            sx={{ fontFamily: 'Playfair Display', fontWeight: 600, color: 'text.primary', mb: 1 }}
+            sx={{ fontFamily: font.brand, fontWeight: 700, fontSize: { xs: '2.2rem', md: '3rem' } }}
           >
-            Nos Recettes
+            Notre catalogue
           </Typography>
-          <Typography variant="h6" sx={{ color: 'text.secondary' }}>
-            Chaque recette affiche ses ingredients et le detail des couts — 100% transparent
+          <Typography sx={{ color: color.inkSoft, mt: 1, maxWidth: 560 }}>
+            Choisissez votre création, sa taille et la date : Mariem vous rappelle pour confirmer.
           </Typography>
+          <TextField
+            placeholder="Rechercher une création…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            inputProps={{ 'aria-label': 'Rechercher une création' }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              mt: 3,
+              width: { xs: '100%', sm: 420 },
+              bgcolor: color.surface,
+              borderRadius: `${radius.md}px`,
+            }}
+          />
+        </Container>
+      </Box>
+
+      <Container maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
+        {categories.length > 1 && (
+          <Box
+            role="group"
+            aria-label="Catégories"
+            sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 3 }}
+          >
+            {['', ...categories].map((c) => {
+              const active = category === c;
+              return (
+                <ButtonBase
+                  key={c || 'all'}
+                  aria-pressed={active}
+                  onClick={() => setCategory(c)}
+                  sx={{
+                    px: 2,
+                    py: 0.9,
+                    borderRadius: `${radius.pill}px`,
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    textTransform: 'capitalize',
+                    border: `1px solid ${active ? color.primary : color.borderStrong}`,
+                    bgcolor: active ? color.primary : color.surface,
+                    color: active ? '#fff' : color.ink,
+                    transition: 'background-color 200ms ease, border-color 200ms ease',
+                  }}
+                >
+                  {c || 'Tout'}
+                </ButtonBase>
+              );
+            })}
+          </Box>
+        )}
+
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: 'minmax(0, 1fr)',
+              sm: 'repeat(2, minmax(0, 1fr))',
+              md: 'repeat(3, minmax(0, 1fr))',
+            },
+            gap: 3,
+          }}
+        >
+          {items === null
+            ? [0, 1, 2, 3, 4, 5].map((i) => (
+                <Skeleton
+                  key={i}
+                  variant="rounded"
+                  sx={{ height: 360, borderRadius: `${radius.xl}px` }}
+                />
+              ))
+            : items.map((item) => <CatalogCard key={item._id} item={item} />)}
         </Box>
 
-        {/* Filtres */}
-        <Card sx={{ p: 3, mb: 4 }}>
-          <Box component="form" onSubmit={handleSearch}>
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Rechercher une recette"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  size="small"
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Search />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Categorie</InputLabel>
-                  <Select
-                    label="Categorie"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                  >
-                    <MenuItem value="">Toutes</MenuItem>
-                    {categories.map((c) => (
-                      <MenuItem key={c} value={c}>
-                        {c}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <Button type="submit" variant="contained" fullWidth sx={{ height: 40 }}>
-                  Rechercher
-                </Button>
-              </Grid>
-            </Grid>
-          </Box>
-        </Card>
-
-        {/* Resultats */}
-        {loading ? (
-          <Grid container spacing={3}>
-            {[1, 2, 3].map((i) => (
-              <Grid item xs={12} sm={6} md={4} key={i}>
-                <Card>
-                  <Skeleton variant="rectangular" height={200} />
-                  <CardContent>
-                    <Skeleton variant="text" width="60%" height={32} />
-                    <Skeleton variant="text" width="100%" />
-                    <Skeleton variant="text" width="40%" />
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        ) : recipes.length > 0 ? (
-          <>
-            <Grid container spacing={3}>
-              {recipes.map((recipe) => {
-                const minPrice = getMinPrice(recipe);
-                const sizes = recipe.variants?.map((v: any) => v.sizeName) || [];
-
-                return (
-                  <Grid item xs={12} sm={6} md={4} key={recipe._id}>
-                    <Card
-                      sx={{
-                        height: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        cursor: 'pointer',
-                        transition: 'transform 0.2s, box-shadow 0.2s',
-                        '&:hover': {
-                          transform: 'translateY(-6px)',
-                          boxShadow: '0 12px 24px rgba(0,0,0,0.12)',
-                        },
-                      }}
-                      onClick={() => navigate(`/recipes/${recipe._id}`)}
-                    >
-                      {recipe.images?.[0] ? (
-                        <CardMedia
-                          component="img"
-                          height="200"
-                          image={recipe.images[0]}
-                          alt={recipe.name}
-                          sx={{ objectFit: 'cover' }}
-                        />
-                      ) : (
-                        <Box
-                          sx={{
-                            height: 200,
-                            bgcolor: 'linear-gradient(135deg, #fef7ee, #fad7a5)',
-                            background: 'linear-gradient(135deg, #fef7ee, #fad7a5)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <Cake sx={{ fontSize: 72, color: 'primary.main', opacity: 0.5 }} />
-                        </Box>
-                      )}
-
-                      <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-                          {recipe.name}
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{
-                            mb: 2,
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                          }}
-                        >
-                          {recipe.description}
-                        </Typography>
-
-                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 2 }}>
-                          {recipe.categories?.map((cat: string, ci: number) => (
-                            <Chip
-                              key={ci}
-                              label={cat}
-                              size="small"
-                              color="primary"
-                              variant="outlined"
-                            />
-                          ))}
-                          {sizes.map((s: string, i: number) => (
-                            <Chip key={i} label={s} size="small" variant="outlined" />
-                          ))}
-                          {recipe.variants?.[0]?.ingredients?.length > 0 && (
-                            <Chip
-                              icon={<AccessTime />}
-                              label={`${recipe.variants[0].ingredients.length} ingredients`}
-                              size="small"
-                              variant="outlined"
-                            />
-                          )}
-                        </Box>
-
-                        <Box sx={{ mt: 'auto' }}>
-                          {minPrice && (
-                            <Typography
-                              variant="h6"
-                              color="primary.main"
-                              sx={{ fontWeight: 600, mb: 1 }}
-                            >
-                              A partir de {minPrice.toFixed(2)} DT
-                            </Typography>
-                          )}
-                          <Button variant="contained" fullWidth>
-                            Voir les details et prix
-                          </Button>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                );
-              })}
-            </Grid>
-            {totalPages > 1 && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-                <Pagination
-                  count={totalPages}
-                  page={page}
-                  onChange={handlePageChange}
-                  color="primary"
-                  size="large"
-                />
-              </Box>
-            )}
-          </>
-        ) : (
+        {items !== null && items.length === 0 && (
           <Box sx={{ textAlign: 'center', py: 8 }}>
-            <Cake sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
-            <Typography variant="h6" color="text.secondary">
-              {search || category
-                ? 'Aucune recette trouvee pour cette recherche'
-                : 'Les recettes arrivent bientot'}
+            <Box sx={{ fontSize: 48 }} aria-hidden>
+              🧁
+            </Box>
+            <Typography sx={{ fontWeight: 700, mt: 1 }}>
+              {search || category ? 'Aucune création ne correspond' : 'Le catalogue arrive bientôt'}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            <Typography variant="body2" sx={{ color: color.inkSoft }}>
               {search || category
-                ? "Essayez avec d'autres criteres"
-                : 'Mariem prepare ses meilleures creations'}
+                ? 'Essayez un autre mot ou une autre catégorie.'
+                : 'Revenez très vite !'}
             </Typography>
           </Box>
         )}

@@ -34,9 +34,21 @@ export default function SectionCard({
       data-tour={tourId}
       sx={{ p: padding, display: 'flex', flexDirection: 'column', minWidth: 0, ...sx }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5, mb: 2, minWidth: 0 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 1.5,
+          mb: 2,
+          minWidth: 0,
+        }}
+      >
         {icon && (
-          <Box aria-hidden sx={{ display: 'flex', color: tones[tone].accent, '& svg': { fontSize: 26 } }}>
+          <Box
+            aria-hidden
+            sx={{ display: 'flex', color: tones[tone].accent, '& svg': { fontSize: 26 } }}
+          >
             {icon}
           </Box>
         )}
@@ -56,7 +68,14 @@ export default function SectionCard({
             size="small"
             onClick={onAction}
             endIcon={<ChevronRight />}
-            sx={{ flexShrink: 0, color: 'primary.main', fontWeight: 600, px: 0.75, minWidth: 0, '& .MuiButton-endIcon': { ml: 0.25 } }}
+            sx={{
+              flexShrink: 0,
+              color: 'primary.main',
+              fontWeight: 600,
+              px: 0.75,
+              minWidth: 0,
+              '& .MuiButton-endIcon': { ml: 0.25 },
+            }}
           >
             {actionLabel}
           </Button>

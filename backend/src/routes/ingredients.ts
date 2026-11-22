@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { Ingredient } from '../models/Ingredient';
+import { Ingredient, PACKAGING_TYPES, PACKAGING_USES } from '../models/Ingredient';
 import { authenticate, authorize } from '../middleware/auth';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
@@ -7,6 +7,10 @@ import { syncPurchaseNeedsSafe } from '../services/purchaseNeedService';
 import { roundQty } from '../services/unitService';
 import { idempotent } from '../middleware/idempotency';
 import { adjustStock } from '../services/stockAdjustmentService';
+import { Types } from 'mongoose';
+import { IngredientPrice } from '../models/IngredientPrice';
+import { PurchaseSource } from '../models/PurchaseSource';
+import { syncIngredientPrice } from '../services/ingredientPriceService';
 
 const router = express.Router();
 
@@ -38,6 +42,13 @@ router.get(
     // Filtre par catégorie
     if (category) {
       query.category = category;
+    }
+
+    // Ingrédients de recette ou emballages (?kind=ingredient|packaging ; sans filtre : tout)
+    if (req.query.kind === 'packaging') {
+      query.kind = 'packaging';
+    } else if (req.query.kind === 'ingredient') {
+      query.kind = { $ne: 'packaging' };
     }
 
     // Options de tri
@@ -99,7 +110,20 @@ router.post(
   authenticate,
   authorize('admin'),
   asyncHandler(async (req: Request, res: Response) => {
-    const { name, pricePerUnit, unit, category, description, supplier, minStock } = req.body;
+    const { name, category, description, supplier, minStock, sourceId } = req.body;
+    let { unit } = req.body;
+    const kind = req.body.kind === 'packaging' ? 'packaging' : 'ingredient';
+    const packagingFields: Record<string, unknown> = {};
+    if (kind === 'packaging') {
+      unit = 'piece'; // un emballage se compte à la pièce (boîte, sachet, rouleau…)
+      if (!PACKAGING_TYPES.includes(req.body.packagingType)) {
+        throw createError("Type d'emballage invalide", 400);
+      }
+      packagingFields.packagingType = req.body.packagingType;
+      packagingFields.packagingUse =
+        req.body.packagingUse === 'per_portion' ? 'per_portion' : 'per_item';
+    }
+    let { pricePerUnit } = req.body;
 
     // Vérifier si l'ingrédient existe déjà
     const existingIngredient = await Ingredient.findOne({ name });
@@ -107,7 +131,28 @@ router.post(
       throw createError('Un ingrédient avec ce nom existe déjà', 400);
     }
 
-    const ingredient = new Ingredient({
+    // Première source d'achat (recommandée) : son prix devient le prix utilisé
+    let source = null;
+    let sourcePrice: number | null = null;
+    if (sourceId) {
+      if (!Types.ObjectId.isValid(sourceId)) {
+        throw createError('Source invalide', 400);
+      }
+      source = await PurchaseSource.findOne({ _id: sourceId, isActive: true });
+      if (!source) {
+        throw createError('Source non trouvée', 404);
+      }
+      sourcePrice =
+        typeof req.body.sourcePrice === 'string'
+          ? parseFloat(req.body.sourcePrice)
+          : req.body.sourcePrice;
+      if (typeof sourcePrice !== 'number' || !Number.isFinite(sourcePrice) || sourcePrice <= 0) {
+        throw createError('Prix chez la source invalide', 400);
+      }
+      pricePerUnit = sourcePrice;
+    }
+
+    let ingredient = new Ingredient({
       name,
       pricePerUnit,
       unit,
@@ -115,9 +160,34 @@ router.post(
       description,
       supplier,
       minStock: typeof minStock === 'number' && minStock > 0 ? minStock : undefined,
+      kind,
+      ...packagingFields,
     });
 
     await ingredient.save();
+
+    if (source && sourcePrice !== null) {
+      await IngredientPrice.create({
+        ingredientId: ingredient._id,
+        sourceId: source._id,
+        price: sourcePrice,
+        unit: ingredient.unit,
+        lastCheckedAt: new Date(),
+        history: [
+          {
+            price: sourcePrice,
+            unit: ingredient.unit,
+            checkedAt: new Date(),
+            note: 'création',
+            recordedAt: new Date(),
+          },
+        ],
+      });
+      const synced = await syncIngredientPrice(ingredient._id);
+      if (synced) {
+        ingredient = synced.ingredient; // priceBasis 'sources' dans la réponse
+      }
+    }
 
     logger.info(`✅ Nouvel ingrédient créé: ${name} par ${req.user!.email}`);
 
@@ -149,8 +219,9 @@ router.put(
         throw createError("ID d'ingrédient et nouveau prix requis", 400);
       }
 
-      return Ingredient.findByIdAndUpdate(
-        ingredientId,
+      // prix calculé depuis les sources : non modifiable à la main
+      return Ingredient.findOneAndUpdate(
+        { _id: ingredientId, priceBasis: { $ne: 'sources' } },
         {
           pricePerUnit: newPrice,
           lastPriceUpdate: new Date(),
@@ -162,7 +233,7 @@ router.put(
       );
     });
 
-    const updatedIngredients = await Promise.all(updatePromises);
+    const updatedIngredients = (await Promise.all(updatePromises)).filter(Boolean);
 
     logger.info(
       `✅ Prix mis à jour pour ${updatedIngredients.length} ingrédients par ${req.user!.email}`
@@ -204,6 +275,24 @@ router.put(
     delete updates.lastPriceUpdate;
     delete updates._id;
     delete updates.stockNote;
+    delete updates.priceBasis;
+    delete updates.kind; // un ingrédient ne devient pas un emballage (et inversement)
+    if (ingredient.kind === 'packaging') {
+      delete updates.unit;
+      if (updates.packagingType !== undefined && !PACKAGING_TYPES.includes(updates.packagingType)) {
+        throw createError("Type d'emballage invalide", 400);
+      }
+      if (updates.packagingUse !== undefined && !PACKAGING_USES.includes(updates.packagingUse)) {
+        throw createError('Usage invalide', 400);
+      }
+    } else {
+      delete updates.packagingType;
+      delete updates.packagingUse;
+    }
+    // Prix = moyenne des sources : il se change via les prix des sources, pas ici
+    if (ingredient.priceBasis === 'sources') {
+      delete updates.pricePerUnit;
+    }
     // Le stock ne se modifie pas ici : correction tracee avec raison obligatoire
     // (POST /:id/stock-adjustment), achat ou preparation.
     if (updates.stockQuantity !== undefined) {
@@ -219,8 +308,12 @@ router.put(
     if (updates.minStock === '' || updates.minStock === null) {
       updates.minStock = undefined;
     }
+    const unitChanged = updates.unit !== undefined && updates.unit !== ingredient.unit;
     Object.assign(ingredient, updates);
     await ingredient.save();
+    if (unitChanged && ingredient.priceBasis === 'sources') {
+      await syncIngredientPrice(ingredient._id); // moyenne ré-exprimée dans la nouvelle unité
+    }
     // stock (ou unite) modifie : recalculer les besoins d'achat des commandes
     await syncPurchaseNeedsSafe();
 

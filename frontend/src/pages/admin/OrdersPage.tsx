@@ -19,7 +19,14 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { Search, Add, ReceiptLong, EventNote, CheckCircle, WarningAmber } from '@mui/icons-material';
+import {
+  Search,
+  Add,
+  ReceiptLong,
+  EventNote,
+  CheckCircle,
+  WarningAmber,
+} from '@mui/icons-material';
 import PeriodFilter, { Range } from '../../components/admin/PeriodFilter';
 import { orderRef, formatDT } from '../../utils/format';
 import {
@@ -61,17 +68,33 @@ type StockAlert = { missingCount: number; ingredients: string[] };
 
 const when = (d?: string | null) =>
   d
-    ? new Date(d).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+    ? new Date(d).toLocaleString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
     : '—';
 
 const itemsSummary = (o: any) =>
-  (o.items || [])
-    .map((it: any) => `${it.quantity}× ${it.recipeId?.name || 'Recette'}`)
-    .join(', ');
+  (o.items || []).map((it: any) => `${it.quantity}× ${it.recipeId?.name || 'Recette'}`).join(', ');
 
 /** État des ingrédients d'une commande pas encore préparée. */
-function StockState({ order, alert, preparable }: { order: any; alert?: StockAlert; preparable?: boolean }) {
-  if (!ACTIVE.includes(order.status)) return <Typography variant="body2" sx={{ color: color.inkMuted }}>—</Typography>;
+function StockState({
+  order,
+  alert,
+  preparable,
+}: {
+  order: any;
+  alert?: StockAlert;
+  preparable?: boolean;
+}) {
+  if (!ACTIVE.includes(order.status))
+    return (
+      <Typography variant="body2" sx={{ color: color.inkMuted }}>
+        —
+      </Typography>
+    );
   if (alert)
     return (
       <StatusBadge
@@ -126,7 +149,9 @@ const OrdersPage = () => {
       });
       const data = res.data.data;
       setOrders((prev) => (nextPage === 1 || !prev ? data.orders : [...prev, ...data.orders]));
-      setStockAlerts((prev) => (nextPage === 1 ? data.stockAlerts || {} : { ...prev, ...(data.stockAlerts || {}) }));
+      setStockAlerts((prev) =>
+        nextPage === 1 ? data.stockAlerts || {} : { ...prev, ...(data.stockAlerts || {}) }
+      );
       setCounts(data.counts || {});
       setTotal(data.pagination?.total || 0);
       setPage(nextPage);
@@ -153,7 +178,11 @@ const OrdersPage = () => {
 
   const allCount = Object.values(counts).reduce((a, b) => a + b, 0);
   const countOf = (v: string) =>
-    v === '' ? allCount : v === 'confirmed' ? (counts.confirmed || 0) + (counts.paid || 0) : counts[v] || 0;
+    v === ''
+      ? allCount
+      : v === 'confirmed'
+        ? (counts.confirmed || 0) + (counts.paid || 0)
+        : counts[v] || 0;
   const blockedCount = Object.keys(stockAlerts).length;
   const open = (id: string) => navigate(`/admin/orders/${id}`);
 
@@ -167,14 +196,27 @@ const OrdersPage = () => {
         helpTour="understand-missing"
         helpFlow="order-check"
         actions={
-          <Button data-tour="orders-new" variant="contained" startIcon={<Add />} onClick={() => navigate('/admin/orders/new')}>
+          <Button
+            data-tour="orders-new"
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => navigate('/admin/orders/new')}
+          >
             Nouvelle commande
           </Button>
         }
       />
 
       <Card data-tour="orders-filters" sx={{ p: { xs: 1.5, md: 2 }, mb: 2 }}>
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 1.5, alignItems: { md: 'center' }, mb: 1.5 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            gap: 1.5,
+            alignItems: { md: 'center' },
+            mb: 1.5,
+          }}
+        >
           <TextField
             size="small"
             placeholder="Client, téléphone ou CMD-12…"
@@ -192,7 +234,12 @@ const OrdersPage = () => {
           />
           <Box sx={{ flex: 1 }} />
           {blockedCount > 0 && (
-            <StatusBadge tone="danger" icon={<WarningAmber />} label={`${blockedCount} bloquée${blockedCount > 1 ? 's' : ''} (ingrédient manquant)`} size="medium" />
+            <StatusBadge
+              tone="danger"
+              icon={<WarningAmber />}
+              label={`${blockedCount} bloquée${blockedCount > 1 ? 's' : ''} (ingrédient manquant)`}
+              size="medium"
+            />
           )}
         </Box>
         <FilterChips
@@ -201,10 +248,33 @@ const OrdersPage = () => {
           onChange={setStatusFilter}
           options={STATUS_FILTERS.map((f) => ({ ...f, count: countOf(f.value) }))}
         />
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 1, md: 2.5 }, mt: 1.5, alignItems: 'center' }}>
-          <FilterChips ariaLabel="Paiement" value={paymentFilter} onChange={setPaymentFilter} options={PAYMENT_FILTERS} />
-          <FilterChips ariaLabel="Type de client" value={clientType} onChange={setClientType} options={CLIENT_FILTERS} />
-          <Button size="small" startIcon={<EventNote />} variant={withDates ? 'contained' : 'outlined'} onClick={() => setWithDates(!withDates)}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: { xs: 1, md: 2.5 },
+            mt: 1.5,
+            alignItems: 'center',
+          }}
+        >
+          <FilterChips
+            ariaLabel="Paiement"
+            value={paymentFilter}
+            onChange={setPaymentFilter}
+            options={PAYMENT_FILTERS}
+          />
+          <FilterChips
+            ariaLabel="Type de client"
+            value={clientType}
+            onChange={setClientType}
+            options={CLIENT_FILTERS}
+          />
+          <Button
+            size="small"
+            startIcon={<EventNote />}
+            variant={withDates ? 'contained' : 'outlined'}
+            onClick={() => setWithDates(!withDates)}
+          >
             {withDates ? 'Filtre date actif' : 'Filtrer par date'}
           </Button>
         </Box>
@@ -234,10 +304,18 @@ const OrdersPage = () => {
             <EmptyState
               icon={<ReceiptLong />}
               tone="rose"
-              title={searchName || statusFilter || paymentFilter || clientType ? 'Aucune commande trouvée' : 'Aucune commande pour le moment'}
+              title={
+                searchName || statusFilter || paymentFilter || clientType
+                  ? 'Aucune commande trouvée'
+                  : 'Aucune commande pour le moment'
+              }
               description="Les commandes reçues du site ou saisies à la main apparaissent ici."
               action={
-                <Button variant="contained" startIcon={<Add />} onClick={() => navigate('/admin/orders/new')}>
+                <Button
+                  variant="contained"
+                  startIcon={<Add />}
+                  onClick={() => navigate('/admin/orders/new')}
+                >
                   Nouvelle commande
                 </Button>
               }
@@ -261,7 +339,14 @@ const OrdersPage = () => {
                     borderLeft: `4px solid ${alert ? color.danger : color.border}`,
                   }}
                 >
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, alignItems: 'flex-start' }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      gap: 1,
+                      alignItems: 'flex-start',
+                    }}
+                  >
                     <Box sx={{ minWidth: 0 }}>
                       <Typography sx={{ fontWeight: 800 }} noWrap>
                         {order.clientName}
@@ -272,10 +357,13 @@ const OrdersPage = () => {
                         )}
                       </Typography>
                       <Typography variant="caption" sx={{ color: color.inkSoft }}>
-                        {orderRef(order)} · prévue {when(order.confirmedDate || order.requestedDate)}
+                        {orderRef(order)} · prévue{' '}
+                        {when(order.confirmedDate || order.requestedDate)}
                       </Typography>
                     </Box>
-                    <Typography sx={{ fontWeight: 800, whiteSpace: 'nowrap' }}>{formatDT(order.totalPrice)}</Typography>
+                    <Typography sx={{ fontWeight: 800, whiteSpace: 'nowrap' }}>
+                      {formatDT(order.totalPrice)}
+                    </Typography>
                   </Box>
                   <Typography variant="body2" sx={{ color: color.inkSoft, mt: 0.5 }} noWrap>
                     {itemsSummary(order)}
@@ -283,7 +371,13 @@ const OrdersPage = () => {
                   <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mt: 1 }}>
                     <OrderStatusBadge status={order.status} />
                     <PaymentStatusBadge status={order.paymentStatus} />
-                    {ACTIVE.includes(order.status) && <StockState order={order} alert={alert} preparable={preparableMap[order._id]} />}
+                    {ACTIVE.includes(order.status) && (
+                      <StockState
+                        order={order}
+                        alert={alert}
+                        preparable={preparableMap[order._id]}
+                      />
+                    )}
                   </Box>
                 </ButtonBase>
               );
@@ -315,12 +409,16 @@ const OrdersPage = () => {
                       onClick={() => open(order._id)}
                       sx={{
                         cursor: 'pointer',
-                        '& td:first-of-type': { boxShadow: alert ? `inset 4px 0 0 ${color.danger}` : 'none' },
+                        '& td:first-of-type': {
+                          boxShadow: alert ? `inset 4px 0 0 ${color.danger}` : 'none',
+                        },
                         bgcolor: alert ? color.dangerSoft : undefined,
                       }}
                     >
                       <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                        <Typography sx={{ fontWeight: 800, fontSize: '0.9rem' }}>{orderRef(order)}</Typography>
+                        <Typography sx={{ fontWeight: 800, fontSize: '0.9rem' }}>
+                          {orderRef(order)}
+                        </Typography>
                         <Typography variant="caption" sx={{ color: color.inkSoft }}>
                           prévue {when(order.confirmedDate || order.requestedDate)}
                         </Typography>
@@ -328,7 +426,9 @@ const OrdersPage = () => {
                       <TableCell>
                         <Typography sx={{ fontWeight: 700, fontSize: '0.9rem' }}>
                           {order.clientName}{' '}
-                          {order.clientId?.type === 'cafe' && <StatusBadge tone="info" label="Café" />}
+                          {order.clientId?.type === 'cafe' && (
+                            <StatusBadge tone="info" label="Café" />
+                          )}
                         </Typography>
                         <Typography variant="caption" sx={{ color: color.inkSoft }}>
                           {order.clientPhone}
@@ -349,7 +449,11 @@ const OrdersPage = () => {
                         <PaymentStatusBadge status={order.paymentStatus} />
                       </TableCell>
                       <TableCell>
-                        <StockState order={order} alert={alert} preparable={preparableMap[order._id]} />
+                        <StockState
+                          order={order}
+                          alert={alert}
+                          preparable={preparableMap[order._id]}
+                        />
                       </TableCell>
                     </TableRow>
                   );
@@ -363,7 +467,8 @@ const OrdersPage = () => {
       {orders && orders.length > 0 && (
         <Box sx={{ textAlign: 'center', mt: 2 }}>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-            {orders.length} commande{orders.length > 1 ? 's' : ''} affichée{orders.length > 1 ? 's' : ''} sur {total}
+            {orders.length} commande{orders.length > 1 ? 's' : ''} affichée
+            {orders.length > 1 ? 's' : ''} sur {total}
           </Typography>
           {orders.length < total && (
             <Button variant="outlined" onClick={() => load(page + 1)}>

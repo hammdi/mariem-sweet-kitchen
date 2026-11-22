@@ -1,5 +1,13 @@
 import { Box, Container, Typography, Link, Grid, IconButton } from '@mui/material';
-import { Facebook, Instagram, Twitter, Email, Phone, LocationOn } from '@mui/icons-material';
+import {
+  Facebook,
+  Instagram,
+  Twitter,
+  Email,
+  Phone,
+  LocationOn,
+  LockOutlined,
+} from '@mui/icons-material';
 
 const Footer = () => {
   return (
@@ -28,8 +36,8 @@ const Footer = () => {
               Mariem's Sweet Kitchen
             </Typography>
             <Typography variant="body2" sx={{ mb: 2, opacity: 0.9 }}>
-              Pâtisserie artisanale avec calcul de coûts transparent. Découvrez nos délicieuses
-              recettes et leurs prix détaillés.
+              Pâtisserie artisanale faite maison, sur commande. Découvrez nos créations et commandez
+              en quelques clics.
             </Typography>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <IconButton color="inherit" size="small">
@@ -54,13 +62,16 @@ const Footer = () => {
                 Accueil
               </Link>
               <Link href="/recipes" color="inherit" underline="hover">
-                Recettes
+                Catalogue
               </Link>
-              <Link href="/cart" color="inherit" underline="hover">
-                Panier
-              </Link>
-              <Link href="/profile" color="inherit" underline="hover">
-                Mon Profil
+              {/* Accès gestion : connexion si besoin, sinon tableau de bord */}
+              <Link
+                href="/admin"
+                color="inherit"
+                underline="hover"
+                sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
+              >
+                <LockOutlined sx={{ fontSize: 16 }} /> Espace Mariem
               </Link>
             </Box>
           </Grid>

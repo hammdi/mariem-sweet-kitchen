@@ -14,7 +14,20 @@ const ALLOWED_SETTING_KEYS = [
   'marginPercent',
   'orderMinLeadHours', // delai minimum entre commande et date de recuperation souhaitee
   'actionAlertHours', // alerte "ingredients manquants" quand la commande est dans moins de X heures
+  'catalogShowPrices', // 1 : prix affichés dans le catalogue client ; 0 : « prix sur demande »
+  'homeLat', // domicile (carte) : départ des trajets vers les sources
+  'homeLng',
+  'fuelConsumption', // voiture : litres aux 100 km
+  'fuelPrice', // prix du litre d'essence (DT)
 ] as const;
+
+// Bornes propres à certaines clés (les autres : nombre ≥ 0)
+const RANGES: Record<string, [number, number]> = {
+  homeLat: [-90, 90],
+  homeLng: [-180, 180],
+  fuelConsumption: [0, 50],
+  fuelPrice: [0, 100],
+};
 
 // Libelles utilises si le parametre n'existe pas encore en base (creation a la volee)
 const SETTING_LABELS: Record<string, string> = {
@@ -24,6 +37,11 @@ const SETTING_LABELS: Record<string, string> = {
   marginPercent: 'Marge effort (%)',
   orderMinLeadHours: 'Delai minimum de commande (heures)',
   actionAlertHours: 'Alerte ingredients manquants (heures avant la commande)',
+  catalogShowPrices: 'Afficher les prix dans le catalogue (1 = oui, 0 = non)',
+  homeLat: 'Domicile — latitude',
+  homeLng: 'Domicile — longitude',
+  fuelConsumption: 'Consommation de la voiture (L/100 km)',
+  fuelPrice: "Prix du litre d'essence (DT)",
 };
 
 // @desc    Récupérer tous les paramètres (admin)
@@ -33,7 +51,7 @@ router.get(
   authenticate,
   authorize('admin'),
   asyncHandler(async (_req: Request, res: Response) => {
-    const settings = await Settings.find();
+    const settings = await Settings.find({ key: { $in: ALLOWED_SETTING_KEYS } }); // anciennes clés ignorées
     res.json({ success: true, data: { settings } });
   })
 );
@@ -63,7 +81,8 @@ router.put(
       if (value === undefined) {
         continue;
       }
-      if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+      const [min, max] = RANGES[key] || [0, Infinity];
+      if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) {
         throw createError(`Valeur invalide pour ${key}`, 400);
       }
       // upsert : un parametre jamais seede (ex: base de production) est cree au lieu d'etre ignore
@@ -74,7 +93,7 @@ router.put(
       );
     }
 
-    const settings = await Settings.find();
+    const settings = await Settings.find({ key: { $in: ALLOWED_SETTING_KEYS } }); // anciennes clés ignorées
 
     logger.info(`Parametres mis a jour par ${req.user!.email}`);
 

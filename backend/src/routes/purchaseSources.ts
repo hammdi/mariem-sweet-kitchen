@@ -5,6 +5,7 @@ import { authenticate, authorize } from '../middleware/auth';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 import { escapeRegex } from '../utils/regex';
+import { syncIngredientsOfSource } from '../services/ingredientPriceService';
 
 const router = express.Router();
 
@@ -24,12 +25,29 @@ const FIELDS = [
   'notes',
 ] as const;
 
+/** Position sur la carte : { lat, lng } valides, ou null pour l'effacer. */
+export function parseLocation(input: unknown): { lat: number; lng: number } | null {
+  if (input === null) {
+    return null;
+  }
+  const loc = input as { lat?: unknown; lng?: unknown };
+  const lat = Number(loc?.lat);
+  const lng = Number(loc?.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+    throw createError('Position sur la carte invalide', 400);
+  }
+  return { lat: Math.round(lat * 1e6) / 1e6, lng: Math.round(lng * 1e6) / 1e6 };
+}
+
 function pickFields(body: any) {
   const data: Record<string, unknown> = {};
   for (const key of FIELDS) {
     if (body[key] !== undefined) {
       data[key] = typeof body[key] === 'string' ? body[key].trim() : body[key];
     }
+  }
+  if (body.location !== undefined) {
+    data.location = parseLocation(body.location);
   }
   return data;
 }
@@ -117,6 +135,7 @@ router.delete(
     }
     source.isActive = false;
     await source.save();
+    await syncIngredientsOfSource(source._id); // ses prix sortent de la moyenne
     logger.info(`Source d'achat archivee: ${source.name} par ${req.user!.email}`);
     res.json({ success: true, message: 'Source archivée' });
   })
