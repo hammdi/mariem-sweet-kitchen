@@ -185,3 +185,15 @@ describe('café à 10 DT/kg : 100 g = 1 DT, 1 cuillère (10 g) = 0,10 DT', () =>
     expect(computeStockNeeds(lines as any)[0]).toMatchObject({ needed: 0.06, remaining: 0.94 });
   });
 });
+
+import { cleanMongoUri } from '../config/database';
+
+describe('MONGODB_URI collée dans un hébergeur', () => {
+  it('retire espaces, guillemets et « MONGODB_URI= » recopiés par erreur', () => {
+    const uri = 'mongodb+srv://u:p@h.mongodb.net/db?x=1';
+    expect(cleanMongoUri(`  ${uri}\n`)).toBe(uri);
+    expect(cleanMongoUri(`"${uri}"`)).toBe(uri);
+    expect(cleanMongoUri(`MONGODB_URI=${uri}`)).toBe(uri);
+    expect(cleanMongoUri(undefined)).toBe('');
+  });
+});

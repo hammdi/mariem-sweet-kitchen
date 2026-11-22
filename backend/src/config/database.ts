@@ -1,12 +1,31 @@
 import mongoose from 'mongoose';
 import { logger } from '../utils/logger';
 
+/**
+ * Valeur collée dans un hébergeur : espaces, retours à la ligne, guillemets ou
+ * « MONGODB_URI= » recopiés par erreur sont retirés.
+ */
+export const cleanMongoUri = (raw?: string) =>
+  (raw || '')
+    .trim()
+    .replace(/^MONGODB_URI\s*=\s*/, '')
+    .replace(/^["']|["']$/g, '')
+    .trim();
+
 export const connectDatabase = async (): Promise<void> => {
   try {
-    const mongoUri = process.env.MONGODB_URI;
+    const mongoUri = cleanMongoUri(process.env.MONGODB_URI);
 
     if (!mongoUri) {
       throw new Error("MONGODB_URI n'est pas définie dans les variables d'environnement");
+    }
+    if (!/^mongodb(\+srv)?:\/\//.test(mongoUri)) {
+      // indice sans révéler le secret : seulement le début, s'il ne contient pas de mot de passe
+      const start = mongoUri.slice(0, 12);
+      throw new Error(
+        `MONGODB_URI doit commencer par "mongodb+srv://" ou "mongodb://"` +
+          (start.includes('@') || start.includes(':') ? '' : ` (elle commence par "${start}…")`)
+      );
     }
 
     // Options de connexion MongoDB
