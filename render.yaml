@@ -1,0 +1,33 @@
+# Hébergement gratuit sur Render (Blueprint) : UN service qui sert l'API et
+# l'interface (site client + admin). Base de données : MongoDB Atlas (gratuit).
+# Guide pas à pas : docs/deploiement-render.md
+services:
+  - type: web
+    name: mariem-sweet-kitchen
+    runtime: node
+    plan: free
+    region: frankfurt # le plus proche de la Tunisie
+    branch: main
+    autoDeploy: true # chaque push sur main redéploie
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: node --max-old-space-size=400 backend/dist/index.js # 512 Mo sur l'offre gratuite
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20.19.3
+      - key: NODE_ENV
+        value: production
+      - key: SERVE_FRONTEND # le serveur sert aussi frontend/dist
+        value: '1'
+      - key: VITE_API_URL # même adresse que le site
+        value: /api
+      - key: TRUST_PROXY # Render est devant le serveur
+        value: '1'
+      - key: JWT_SECRET # généré par Render, jamais dans le code
+        generateValue: true
+      - key: MONGODB_URI # à coller dans Render (lien Atlas), jamais dans le code
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN # facultatif : notifications des commandes
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false

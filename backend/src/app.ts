@@ -4,6 +4,7 @@
  */
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -23,6 +24,7 @@ import applianceRoutes from './routes/appliances';
 import priceRoutes from './routes/prices';
 import settingsRoutes from './routes/settings';
 import uploadRoutes from './routes/upload';
+import filesRoutes from './routes/files';
 import aiRoutes from './routes/ai';
 import availabilityRoutes from './routes/availability';
 import clientRoutes from './routes/clients';
@@ -37,8 +39,31 @@ import expenseRoutes from './routes/expenses';
 
 const app = express();
 
-// Middleware de sécurité
-app.use(helmet());
+// Derrière un proxy (Render, Nginx) : vraie IP du client pour le rate limiting
+if (process.env.TRUST_PROXY) {
+  app.set('trust proxy', parseInt(process.env.TRUST_PROXY) || 1);
+}
+
+// Middleware de sécurité. La politique de contenu autorise seulement ce dont
+// l'interface a besoin : carte OpenStreetMap (tuiles + recherche d'adresse)
+// et polices Google.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https://*.tile.openstreetmap.org'],
+        connectSrc: ["'self'", 'https://nominatim.openstreetmap.org'],
+        frameAncestors: ["'self'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+      },
+    },
+  })
+);
 app.use(
   cors({
     origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
@@ -82,8 +107,10 @@ const authLimiter = rateLimit({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Servir les fichiers uploadés (images recettes, etc.)
+// Anciennes photos enregistrées sur le disque (installations existantes)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Photos enregistrées dans la base (GridFS) : /api/files/<id>
+app.use('/api/files', filesRoutes);
 
 // Routes de l'API (authLimiter appliqué avant le routeur d'auth)
 app.use('/api/auth', authLimiter, authRoutes);
@@ -117,6 +144,31 @@ app.get('/api/health', (req, res) => {
     version: '1.0.0',
   });
 });
+
+// Interface (site client + admin) servie par le même serveur quand
+// SERVE_FRONTEND est défini (hébergement en un seul service, ex : Render).
+// Les routes /api restent prioritaires ; toute autre adresse renvoie la page.
+const frontendDist = process.env.SERVE_FRONTEND
+  ? path.resolve(process.env.SERVE_FRONTEND_DIR || path.join(__dirname, '../../frontend/dist'))
+  : null;
+if (frontendDist && fs.existsSync(path.join(frontendDist, 'index.html'))) {
+  app.use(
+    express.static(frontendDist, {
+      index: false,
+      setHeaders: (res, file) => {
+        // fichiers versionnés par Vite : cache long ; la page elle-même : jamais
+        res.setHeader(
+          'Cache-Control',
+          /[\\/]assets[\\/]/.test(file) ? 'public, max-age=31536000, immutable' : 'no-cache'
+        );
+      },
+    })
+  );
+  app.get(/^\/(?!api\/|uploads\/).*/, (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(path.join(frontendDist, 'index.html'));
+  });
+}
 
 // Route 404
 app.use('*', (req, res) => {

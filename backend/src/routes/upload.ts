@@ -1,30 +1,29 @@
 import express, { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
 import { authenticate, authorize } from '../middleware/auth';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
+import { IMAGE_TYPES, saveFile } from '../services/fileStorage';
 
 const router = express.Router();
 
-// Ensure uploads directory exists
-const uploadDir = path.join(__dirname, '../../uploads/recipes');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+/** Signature binaire d'une image JPEG, PNG ou WebP. */
+export function looksLikeImage(b: Buffer): boolean {
+  if (b.length < 12) {
+    return false;
+  }
+  const jpeg = b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
+  const png = b
+    .subarray(0, 8)
+    .equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  const webp =
+    b.subarray(0, 4).toString('ascii') === 'RIFF' && b.subarray(8, 12).toString('ascii') === 'WEBP';
+  return jpeg || png || webp;
 }
 
-// Multer storage configuration
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `recipe-${uniqueSuffix}${ext}`);
-  },
-});
+// Photos gardées en mémoire le temps de l'envoi, puis enregistrées dans la base
+const storage = multer.memoryStorage();
 
 // File filter: only accept jpeg, png, webp
 const fileFilter = (
@@ -32,8 +31,7 @@ const fileFilter = (
   file: Express.Multer.File,
   cb: multer.FileFilterCallback
 ) => {
-  const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
-  if (allowedMimes.includes(file.mimetype)) {
+  if (IMAGE_TYPES.includes(file.mimetype)) {
     cb(null, true);
   } else {
     cb(new Error('Type de fichier non autorise. Seuls JPEG, PNG et WebP sont acceptes.'));
@@ -78,7 +76,21 @@ router.post(
       throw createError('Aucun fichier envoye', 400);
     }
 
-    const urls = files.map((file) => `/uploads/recipes/${file.filename}`);
+    // Contenu vérifié (pas seulement le type annoncé par le navigateur)
+    if (files.some((f) => !looksLikeImage(f.buffer))) {
+      throw createError('Fichier non reconnu comme une image JPEG, PNG ou WebP', 400);
+    }
+
+    const urls: string[] = [];
+    for (const file of files) {
+      const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+      urls.push(
+        await saveFile(file.buffer, `recipe-${Date.now()}${ext}`, file.mimetype, {
+          uploadedBy: req.user!.email,
+          kind: 'recipe',
+        })
+      );
+    }
 
     logger.info(`${files.length} image(s) uploadee(s) par ${req.user!.email}`);
 

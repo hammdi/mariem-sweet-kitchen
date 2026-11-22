@@ -12,7 +12,8 @@
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "migrate": "ts-node src/scripts/migrate.ts",
-    "seed": "ts-node src/scripts/seed.ts"
+    "seed": "ts-node src/scripts/seed.ts",
+    "copy:atlas": "ts-node src/scripts/copyToAtlas.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
